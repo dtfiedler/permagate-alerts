@@ -11,17 +11,17 @@
     />
     <style>
       body {
-        font-family: "Inter", sans-serif;
+        font-family: 'Inter', sans-serif;
       }
 
       body::after {
-        content: "";
+        content: '';
         position: fixed;
         left: -100px;
         bottom: -100px;
         width: 500px;
         height: 500px;
-        background-image: url("assets/arweave_glyph_light.svg");
+        background-image: url('assets/arweave_glyph_light.svg');
         background-size: contain;
         background-repeat: no-repeat;
         background-position: center;
@@ -147,14 +147,14 @@
           <a href="https://arweave.org"
             ><img
               src="./assets/arweave_light.svg"
-              class="w-16 inline-block"
+              class="w-24 inline-block"
               alt="Arweave"
           /></a>
           |
           <a href="https://ar.io" class="hover:text-white"
             ><img
               src="./assets/ar_io_light.svg"
-              class="w-8 inline-block"
+              class="w-12 inline-block"
               alt="AR.IO"
           /></a>
           | <a href="https://permagate.io">permagate.io</a>
@@ -164,37 +164,37 @@
   </body>
   <script>
     document
-      .getElementById("subscribeForm")
-      .addEventListener("submit", async function (e) {
+      .getElementById('subscribeForm')
+      .addEventListener('submit', async function (e) {
         e.preventDefault();
         const form = this;
-        const submitButton = document.getElementById("submitButton");
-        const errorMessage = document.getElementById("errorMessage");
-        const successMessage = document.getElementById("successMessage");
-        const email = document.getElementById("email").value;
+        const submitButton = document.getElementById('submitButton');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const email = document.getElementById('email').value;
 
-        submitButton.innerHTML = "Subscribing...";
+        submitButton.innerHTML = 'Subscribing...';
         submitButton.disabled = true;
-        errorMessage.classList.add("hidden");
+        errorMessage.classList.add('hidden');
 
         try {
           const response = await fetch(
             `/api/subscribe?email=${encodeURIComponent(email)}`,
             {
-              method: "POST",
+              method: 'POST',
             },
           );
 
           if (response.ok) {
-            form.classList.add("hidden");
-            successMessage.classList.remove("hidden");
+            form.classList.add('hidden');
+            successMessage.classList.remove('hidden');
           } else {
-            throw new Error("Subscription failed");
+            throw new Error('Subscription failed');
           }
         } catch (error) {
-          errorMessage.textContent = "An error occurred. Please try again.";
-          errorMessage.classList.remove("hidden");
-          submitButton.innerHTML = "Subscribe to Alerts";
+          errorMessage.textContent = 'An error occurred. Please try again.';
+          errorMessage.classList.remove('hidden');
+          submitButton.innerHTML = 'Subscribe to Alerts';
           submitButton.disabled = false;
         }
       });
