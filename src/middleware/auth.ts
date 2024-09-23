@@ -1,12 +1,12 @@
-import { auth } from "express-oauth2-jwt-bearer";
+import { auth } from 'express-oauth2-jwt-bearer';
 import {
   auth0Audience,
   auth0Domain,
   auth0ClientId,
   auth0ClientSecret,
-} from "../config.js";
-import { ManagementClient } from "auth0";
-import { Response, Request, NextFunction } from "express";
+} from '../config.js';
+import { ManagementClient } from 'auth0';
+import { Response, Request, NextFunction } from 'express';
 
 export const auth0: ManagementClient = new ManagementClient({
   domain: auth0Domain!,
@@ -30,7 +30,7 @@ export const authMiddleware = async (
   checkJwt(req, res, async () => {
     // return unauthorized if no user
     if (!req.auth?.payload) {
-      res.status(401).json({ error: "Unauthorized" });
+      res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 

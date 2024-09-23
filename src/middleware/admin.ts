@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from "express";
-import * as config from "../config.js";
+import { Request, Response, NextFunction } from 'express';
+import * as config from '../config.js';
 
 export const adminMiddleware = async (
   req: Request,
@@ -10,7 +10,7 @@ export const adminMiddleware = async (
     return next();
   }
   res.status(401).json({
-    error: "Unauthorized",
+    error: 'Unauthorized',
   });
   return;
 };

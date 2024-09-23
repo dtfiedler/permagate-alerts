@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { Request } from '../types.js';
-import { aoRawEventSchema } from '../db/schema.js';
+import { webhookEventSchema } from '../db/schema.js';
 import { ZodError } from 'zod';
 
 const arioRouter = Router();
@@ -11,7 +11,7 @@ arioRouter.post('/ar-io/webhook', async (req: Request, res: Response) => {
   // Handle the webhook request here
   req.logger.info('Received webhook:', req.body);
   try {
-    const parsedEvent = aoRawEventSchema.parse(req.body);
+    const parsedEvent = webhookEventSchema.parse(req.body);
     req.processor.processEvent(parsedEvent); // don't await this
     res.status(200).json({ message: 'Webhook received successfully' });
   } catch (error: any) {

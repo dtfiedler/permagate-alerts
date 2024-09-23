@@ -49,6 +49,27 @@ const newEventSchema = eventSchema.omit({
   processedAt: true,
 });
 
+export const webhookEventSchema = z.object({
+  data: z.object({
+    tags: z.array(
+      z.object({
+        name: z.string(),
+        value: z.string(),
+      }),
+    ),
+    data_hash: z.string(),
+    data_offset: z.number(),
+    data_size: z.number(),
+    filter: z.string(),
+  }),
+  event: z.string(),
+  level: z.string(),
+  message: z.string(),
+  timestamp: z.string(),
+});
+
+export type WebhookEvent = z.infer<typeof webhookEventSchema>;
+
 export type NewEvent = z.infer<typeof newEventSchema>;
 
 const eventMessageSchema = z.object({

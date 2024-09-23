@@ -1,13 +1,16 @@
 import { EventEmail, EventProvider } from './email/mailgun.js';
-import { EventMessage, NewEvent, RawEvent } from './db/schema.js';
+import { NewEvent, WebhookEvent } from './db/schema.js';
 import { SqliteDatabase } from './db/sqlite.js';
 import * as winston from 'winston';
 
 interface IEventProcessor {
-  processEvent(event: RawEvent): Promise<void>;
+  processEvent(event: WebhookEvent): Promise<void>;
 }
 
-function parseBase64Tags(tags: EventMessage['Tags']) {
+function parseBase64Tags(tags: { name: string; value: string }[]): {
+  name: string;
+  value: string;
+}[] {
   return tags.map((tag) => {
     return {
       name: tag.name,
@@ -36,10 +39,10 @@ export class EventProcessor implements IEventProcessor {
     });
   }
 
-  async processEvent(event: RawEvent): Promise<void> {
+  async processEvent(event: WebhookEvent): Promise<void> {
     try {
       // parse out the nonce from the tags
-      const tags = parseBase64Tags(event.Messages[0].Tags);
+      const tags = parseBase64Tags(event.data.tags);
       const nonce = tags.find((tag) => tag.name.startsWith('Ref_'))?.value;
       const action = tags.find((tag) => tag.name.startsWith('Action'))?.value;
       if (!nonce || !action) {
@@ -60,7 +63,10 @@ export class EventProcessor implements IEventProcessor {
       for (const subscriber of subscribers) {
         const eventEmail: EventEmail = {
           eventType: action,
-          eventData: JSON.parse(event.Messages[0].Data), // already stringified
+          eventData: {
+            tags: event.data.tags,
+            data: undefined, // TODO: fetch event data from ao
+          },
           to: [subscriber.email],
           subject: `New ${action} event`,
         };
@@ -68,7 +74,10 @@ export class EventProcessor implements IEventProcessor {
       }
       const newEvent: NewEvent = {
         eventType: action,
-        eventData: JSON.parse(event.Messages[0].Data), // already stringified
+        eventData: {
+          tags: event.data.tags,
+          data: undefined, // TODO: fetch event data from ao
+        },
         nonce: +nonce,
       };
       await this.db.createEvent(newEvent);
