@@ -60,18 +60,17 @@ export class EventProcessor implements IEventProcessor {
         return;
       }
       const subscribers = await this.db.findSubscribersByEvent(action);
-      for (const subscriber of subscribers) {
-        const eventEmail: EventEmail = {
-          eventType: action,
-          eventData: {
-            tags: event.data.tags,
-            data: undefined, // TODO: fetch event data from ao
-          },
-          to: [subscriber.email],
-          subject: `New ${action} event`,
-        };
-        await this.notifier?.sendEventEmail(eventEmail);
-      }
+      const eventEmail: EventEmail = {
+        eventType: action,
+        eventData: {
+          tags: event.data.tags,
+          data: undefined, // TODO: fetch event data from ao
+        },
+        to: subscribers.map((subscriber) => subscriber.email),
+        subject: `New ${action} event`,
+      };
+      this.logger.debug('Sending event email', { eventEmail });
+      await this.notifier?.sendEventEmail(eventEmail);
       const newEvent: NewEvent = {
         eventType: action,
         eventData: {

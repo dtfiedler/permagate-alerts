@@ -12,7 +12,12 @@ arioRouter.post('/ar-io/webhook', async (req: Request, res: Response) => {
   req.logger.info('Received webhook:', req.body);
   try {
     const parsedEvent = webhookEventSchema.parse(req.body);
-    req.processor.processEvent(parsedEvent); // don't await this
+    // process event in background
+    req.processor.processEvent(parsedEvent).catch((error) => {
+      req.logger.error('Error processing event:', {
+        message: error.message,
+      });
+    });
     res.status(200).json({ message: 'Webhook received successfully' });
   } catch (error: any) {
     // catch the error if conflict on insert
