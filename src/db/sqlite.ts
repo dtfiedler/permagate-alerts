@@ -1,7 +1,13 @@
 import { Knex } from 'knex';
 import * as winston from 'winston';
 
-import { Subscriber, NewSubscriber, Event, NewEvent } from './schema.js';
+import {
+  Subscriber,
+  NewSubscriber,
+  Event,
+  NewEvent,
+  DBEvent,
+} from './schema.js';
 
 interface BaseStore {
   migrate(): Promise<void>;
@@ -84,23 +90,56 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
   }
 
   async findSubscribersByEvent(event: string): Promise<Subscriber[]> {
-    return this.knex<Subscriber>('subscribers').whereRaw(
-      'JSON_ARRAY_CONTAINS(events, ?)',
-      [JSON.stringify(event)],
+    return this.knex<Subscriber>('subscribers').where(
+      'events',
+      'LIKE',
+      `%${event}%`,
     );
   }
 
   // Event Store Methods
   async getEvent(id: number): Promise<Event | undefined> {
-    return this.knex<Event>('events').where({ id }).first();
+    const event = await this.knex<DBEvent>('events').where({ id }).first();
+    if (!event) {
+      return undefined;
+    }
+    return {
+      id: event.id,
+      nonce: event.nonce,
+      eventData: JSON.parse(event.event_data),
+      emailsSent: event.emails_sent,
+      eventType: event.event_type,
+      createdAt: event.created_at,
+      processedAt: event.processed_at,
+    };
   }
 
   async getAllEvents(): Promise<Event[]> {
-    return this.knex<Event>('events').select('*');
+    const events = await this.knex<DBEvent>('events')
+      .select('*')
+      .orderBy('created_at', 'desc');
+    return events.map(
+      (event: DBEvent): Event => ({
+        id: event.id,
+        nonce: event.nonce,
+        eventData: JSON.parse(event.event_data),
+        emailsSent: event.emails_sent,
+        eventType: event.event_type,
+        createdAt: event.created_at,
+        processedAt: event.processed_at,
+      }),
+    );
   }
 
   async createEvent(event: NewEvent): Promise<Event | undefined> {
-    const [id] = await this.knex<Event>('events').insert(event);
+    const [id] = await this.knex<DBEvent>('events')
+      .insert({
+        event_type: event.eventType,
+        event_data: JSON.stringify(event.eventData),
+        nonce: event.nonce,
+      })
+      .onConflict('nonce')
+      .merge();
     return this.getEvent(id);
   }
 
@@ -118,13 +157,26 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
   }
 
   async findEventsByEventType(eventType: string): Promise<Event[]> {
-    return this.knex<Event>('events').where({ eventType });
+    const events = await this.knex<DBEvent>('events').where({
+      event_type: eventType,
+    });
+    return events.map(
+      (event: DBEvent): Event => ({
+        id: event.id,
+        nonce: event.nonce,
+        eventData: JSON.parse(event.event_data),
+        emailsSent: event.emails_sent,
+        eventType: event.event_type,
+        createdAt: event.created_at,
+        processedAt: event.processed_at,
+      }),
+    );
   }
 
   async markEventAsProcessed(id: number): Promise<boolean> {
-    const updated = await this.knex<Event>('events')
+    const updated = await this.knex<DBEvent>('events')
       .where({ id })
-      .update({ processedAt: this.knex.fn.now() });
+      .update({ processed_at: this.knex.fn.now() });
     return updated > 0;
   }
 

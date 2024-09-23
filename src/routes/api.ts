@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { Request } from '../types.js';
 import * as config from '../config.js';
 import { z } from 'zod';
+import { NewSubscriber } from '../db/schema.js';
 
 const apiRouter = Router();
 
@@ -29,10 +30,12 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    const subscriberData = { email: validatedEmail.data };
+    const subscriberData: NewSubscriber = {
+      email: validatedEmail.data,
+    };
     const subscriber = await req.db.createSubscriber(subscriberData);
     logger.info(`New subscriber added: ${email}`);
-    // send intro email - do not wait though
+    // send intro email in background
     req.notifier.sendRawEmail({
       to: [email],
       text: 'You have successfully been subscribed to alerts.permagate.io!',

@@ -13,7 +13,7 @@ function parseBase64Tags(tags: { name: string; value: string }[]): {
 }[] {
   return tags.map((tag) => {
     return {
-      name: tag.name,
+      name: Buffer.from(tag.name, 'base64').toString('utf-8'),
       value: Buffer.from(tag.value, 'base64').toString('utf-8'),
     };
   });

@@ -18,11 +18,11 @@ export async function up(knex: Knex): Promise<void> {
     table.timestamps(true, true);
   });
 
-  // Create a table to track incoming alerts
-  await knex.schema.createTable('alerts', (table) => {
+  // create a table to track incoming events
+  await knex.schema.createTable('events', (table) => {
     table.increments('id').primary();
     table.string('event_type').notNullable();
-    table.jsonb('event_data').notNullable();
+    table.text('event_data').notNullable();
     table.integer('nonce').notNullable().unique();
     table.boolean('emails_sent').notNullable().defaultTo(false);
     table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
@@ -33,7 +33,7 @@ export async function up(knex: Knex): Promise<void> {
 
 export async function down(knex: Knex): Promise<void> {
   // Drop the 'alerts' table
-  await knex.schema.dropTableIfExists('alerts');
+  await knex.schema.dropTableIfExists('events');
 
   // Drop the 'subscribers' table
   await knex.schema.dropTableIfExists('subscribers');

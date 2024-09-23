@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { Request } from '../types.js';
-import { webhookEventSchema } from '../db/schema.js';
+import { schemas } from '../db/schema.js';
 import { ZodError } from 'zod';
 
 const arioRouter = Router();
@@ -9,12 +9,13 @@ const arioRouter = Router();
 // @ts-ignore
 arioRouter.post('/ar-io/webhook', async (req: Request, res: Response) => {
   // Handle the webhook request here
-  req.logger.info('Received webhook:', req.body);
+  const { logger, processor } = req;
+  logger.info('Received webhook:', req.body);
   try {
-    const parsedEvent = webhookEventSchema.parse(req.body);
+    const parsedEvent = schemas.webhookEvent.parse(req.body);
     // process event in background
-    req.processor.processEvent(parsedEvent).catch((error) => {
-      req.logger.error('Error processing event:', {
+    processor.processEvent(parsedEvent).catch((error) => {
+      logger.error('Error processing event:', {
         message: error.message,
       });
     });
@@ -22,16 +23,16 @@ arioRouter.post('/ar-io/webhook', async (req: Request, res: Response) => {
   } catch (error: any) {
     // catch the error if conflict on insert
     if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      req.logger.info('Event already exists:', error);
+      logger.info('Event already exists:', error);
       return res.status(202).json({ message: 'Webhook received successfully' });
     }
     if (error instanceof ZodError) {
-      req.logger.error('Error creating event:', {
+      logger.error('Error creating event:', {
         message: error.message,
       });
       return res.status(400).json({ message: 'Bad request' });
     }
-    req.logger.error('Error creating event:', {
+    logger.error('Error creating event:', {
       message: error.message,
       stack: error.stack,
     });
