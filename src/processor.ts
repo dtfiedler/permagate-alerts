@@ -41,10 +41,12 @@ export class EventProcessor implements IEventProcessor {
 
   async processEvent(event: WebhookEvent): Promise<void> {
     try {
-      // parse out the nonce from the tags
+      this.logger.debug('Processing event', { event });
       const tags = parseBase64Tags(event.data.tags);
       const nonce = tags.find((tag) => tag.name.startsWith('Ref_'))?.value;
-      const action = tags.find((tag) => tag.name.startsWith('Action'))?.value;
+      const action = tags
+        .find((tag) => tag.name.startsWith('Action'))
+        ?.value.toLowerCase();
       if (!nonce || !action) {
         this.logger.error('No nonce or action found in event', {
           tags,
@@ -60,6 +62,7 @@ export class EventProcessor implements IEventProcessor {
         return;
       }
       const subscribers = await this.db.findSubscribersByEvent(action);
+      this.logger.debug('Found subscribers', { subscribers });
       const eventEmail: EventEmail = {
         eventType: action,
         eventData: {
