@@ -1,5 +1,5 @@
 import { EventEmail, EventProvider } from './email/mailgun.js';
-import { EventMessage, RawEvent } from './db/schema.js';
+import { EventMessage, NewEvent, RawEvent } from './db/schema.js';
 import { SqliteDatabase } from './db/sqlite.js';
 import * as winston from 'winston';
 
@@ -66,7 +66,12 @@ export class EventProcessor implements IEventProcessor {
         };
         await this.notifier?.sendEventEmail(eventEmail);
       }
-      await this.db.createEvent(event);
+      const newEvent: NewEvent = {
+        eventType: action,
+        eventData: JSON.parse(event.Messages[0].Data), // already stringified
+        nonce: +nonce,
+      };
+      await this.db.createEvent(newEvent);
       await this.db.markEventAsProcessed(+nonce);
     } catch (error) {
       this.logger.error('Error creating event:', error);

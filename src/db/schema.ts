@@ -41,6 +41,16 @@ const eventSchema = z.object({
 
 export type Event = z.infer<typeof eventSchema>;
 
+// new event schema (for insertion)
+const newEventSchema = eventSchema.omit({
+  id: true,
+  createdAt: true,
+  emailsSent: true,
+  processedAt: true,
+});
+
+export type NewEvent = z.infer<typeof newEventSchema>;
+
 const eventMessageSchema = z.object({
   Tags: z.array(
     z.object({
