@@ -1,7 +1,7 @@
-import { Knex } from "knex";
-import * as winston from "winston";
+import { Knex } from 'knex';
+import * as winston from 'winston';
 
-import { Subscriber, NewSubscriber, Alert, NewAlert } from "./schema.js";
+import { Subscriber, NewSubscriber, Event, NewEvent } from './schema.js';
 
 interface BaseStore {
   migrate(): Promise<void>;
@@ -22,13 +22,13 @@ interface SubscriberStore extends BaseStore {
 }
 
 interface EventStore extends BaseStore {
-  getAlert(id: number): Promise<Alert | undefined>;
-  getAllAlerts(): Promise<Alert[]>;
-  createAlert(alert: NewAlert): Promise<Alert>;
-  updateAlert(id: number, alert: Partial<Alert>): Promise<Alert | undefined>;
-  deleteAlert(id: number): Promise<boolean>;
-  findAlertsByEventType(eventType: string): Promise<Alert[]>;
-  markAlertAsProcessed(id: number): Promise<boolean>;
+  getEvent(id: number): Promise<Event | undefined>;
+  getAllEvents(): Promise<Event[]>;
+  createEvent(event: NewEvent): Promise<Event | undefined>;
+  updateEvent(id: number, event: Partial<Event>): Promise<Event | undefined>;
+  deleteEvent(id: number): Promise<boolean>;
+  findEventsByEventType(eventType: string): Promise<Event[]>;
+  markEventAsProcessed(id: number): Promise<boolean>;
   rawQuery(query: string, params?: any[]): Promise<any>;
 }
 
@@ -42,9 +42,9 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
   }
 
   async migrate() {
-    this.logger.info("Migrating database");
+    this.logger.info('Migrating database');
     await this.knex.migrate.latest();
-    this.logger.info("Database migrated");
+    this.logger.info('Database migrated');
   }
 
   async close() {
@@ -53,17 +53,17 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
 
   // Subscriber Store Methods
   async getSubscriber(id: number): Promise<Subscriber | undefined> {
-    return this.knex<Subscriber>("subscribers").where({ id }).first();
+    return this.knex<Subscriber>('subscribers').where({ id }).first();
   }
 
   async getAllSubscribers(): Promise<Subscriber[]> {
-    return this.knex<Subscriber>("subscribers").select("*");
+    return this.knex<Subscriber>('subscribers').select('*');
   }
 
   async createSubscriber(subscriber: NewSubscriber): Promise<Subscriber> {
-    const [id] = await this.knex<Subscriber>("subscribers")
+    const [id] = await this.knex<Subscriber>('subscribers')
       .insert(subscriber)
-      .onConflict("email")
+      .onConflict('email')
       .merge();
     return this.getSubscriber(id) as Promise<Subscriber>;
   }
@@ -72,55 +72,57 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
     id: number,
     subscriber: Partial<Subscriber>,
   ): Promise<Subscriber | undefined> {
-    await this.knex<Subscriber>("subscribers").where({ id }).update(subscriber);
+    await this.knex<Subscriber>('subscribers').where({ id }).update(subscriber);
     return this.getSubscriber(id);
   }
 
   async deleteSubscriber(id: number): Promise<boolean> {
-    const deleted = await this.knex<Subscriber>("subscribers")
+    const deleted = await this.knex<Subscriber>('subscribers')
       .where({ id })
       .del();
     return deleted > 0;
   }
 
   async findSubscribersByEvent(event: string): Promise<Subscriber[]> {
-    return this.knex<Subscriber>("subscribers")
-      .whereRaw("JSON_ARRAY_CONTAINS(events, ?)", [JSON.stringify(event)]);
+    return this.knex<Subscriber>('subscribers').whereRaw(
+      'JSON_ARRAY_CONTAINS(events, ?)',
+      [JSON.stringify(event)],
+    );
   }
 
   // Event Store Methods
-  async getAlert(id: number): Promise<Alert | undefined> {
-    return this.knex<Alert>("alerts").where({ id }).first();
+  async getEvent(id: number): Promise<Event | undefined> {
+    return this.knex<Event>('events').where({ id }).first();
   }
 
-  async getAllAlerts(): Promise<Alert[]> {
-    return this.knex<Alert>("alerts").select("*");
+  async getAllEvents(): Promise<Event[]> {
+    return this.knex<Event>('events').select('*');
   }
 
-  async createAlert(alert: NewAlert): Promise<Alert> {
-    const [id] = await this.knex<Alert>("alerts").insert(alert);
-    return this.getAlert(id) as Promise<Alert>;
+  async createEvent(event: NewEvent): Promise<Event | undefined> {
+    const [id] = await this.knex<Event>('events').insert(event);
+    return this.getEvent(id);
   }
 
-  async updateAlert(
+  async updateEvent(
     id: number,
-    alert: Partial<Alert>,
-  ): Promise<Alert | undefined> {
-    await this.knex<Alert>("alerts").where({ id }).update(alert);
-    return this.getAlert(id);
+    event: Partial<Event>,
+  ): Promise<Event | undefined> {
+    await this.knex<Event>('events').where({ id }).update(event);
+    return this.getEvent(id);
   }
 
-  async deleteAlert(id: number): Promise<boolean> {
-    const deleted = await this.knex<Alert>("alerts").where({ id }).del();
+  async deleteEvent(id: number): Promise<boolean> {
+    const deleted = await this.knex<Event>('events').where({ id }).del();
     return deleted > 0;
   }
 
-  async findAlertsByEventType(eventType: string): Promise<Alert[]> {
-    return this.knex<Alert>("alerts").where({ eventType });
+  async findEventsByEventType(eventType: string): Promise<Event[]> {
+    return this.knex<Event>('events').where({ eventType });
   }
 
-  async markAlertAsProcessed(id: number): Promise<boolean> {
-    const updated = await this.knex<Alert>("alerts")
+  async markEventAsProcessed(id: number): Promise<boolean> {
+    const updated = await this.knex<Event>('events')
       .where({ id })
       .update({ processedAt: this.knex.fn.now() });
     return updated > 0;

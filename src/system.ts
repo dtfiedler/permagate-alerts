@@ -3,6 +3,7 @@ import { knex } from './db/knexfile.js';
 import { logger } from './logger.js';
 import * as config from './config.js';
 import { MailgunEmailProvider } from './email/mailgun.js';
+import { EventProcessor } from './processor.js';
 
 // TODO: replace with composite provider that sends to all EventProviders
 export const notifier = config.mailgunApiKey
@@ -16,6 +17,12 @@ export const notifier = config.mailgunApiKey
 export const db = new SqliteDatabase({
   knex,
   logger,
+});
+
+export const processor = new EventProcessor({
+  db,
+  logger,
+  notifier,
 });
 
 process.on('unhandledRejection', (error: any) => {

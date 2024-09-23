@@ -15,6 +15,8 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   req.notifier = system.notifier;
   // @ts-ignore
   req.logger = logger;
+  // @ts-ignore
+  req.processor = system.processor;
   next();
 });
 

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 // Subscriber schema
 const subscriberSchema = z.object({
@@ -6,10 +6,10 @@ const subscriberSchema = z.object({
   email: z.string().email(),
   events: z.array(
     z.enum([
-      "buy-record-notice",
-      "name-expiration-notice",
-      "distribution-notice",
-      "save-observations-notice",
+      'buy-record-notice',
+      'name-expiration-notice',
+      'distribution-notice',
+      'save-observations-notice',
     ]),
   ),
   createdAt: z.date(),
@@ -29,7 +29,7 @@ const newSubscriberSchema = subscriberSchema.omit({
 export type NewSubscriber = z.infer<typeof newSubscriberSchema>;
 
 // Alert schema
-const alertSchema = z.object({
+const eventSchema = z.object({
   id: z.number(),
   eventType: z.string(),
   eventData: z.record(z.unknown()),
@@ -39,22 +39,22 @@ const alertSchema = z.object({
   processedAt: z.date().nullable(),
 });
 
-export type Alert = z.infer<typeof alertSchema>;
+export type Event = z.infer<typeof eventSchema>;
 
 // New alert schema (for insertion)
-const newAlertSchema = alertSchema.omit({
+const newEventSchema = eventSchema.omit({
   id: true,
   emailsSent: true,
   createdAt: true,
   processedAt: true,
 });
 
-export type NewAlert = z.infer<typeof newAlertSchema>;
+export type NewEvent = z.infer<typeof newEventSchema>;
 
 // Export schemas for validation
 export const schemas = {
   subscriber: subscriberSchema,
   newSubscriber: newSubscriberSchema,
-  alert: alertSchema,
-  newAlert: newAlertSchema,
+  event: eventSchema,
+  newEvent: newEventSchema,
 };

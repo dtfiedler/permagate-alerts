@@ -25,7 +25,7 @@ const createDb = async () => {
     }),
   });
 };
-describe('photo-enhancer', function () {
+describe('container', function () {
   let compose: StartedDockerComposeEnvironment;
   let database: SqliteDatabase;
 
@@ -49,5 +49,35 @@ describe('photo-enhancer', function () {
   it('should pass the health check', async function () {
     const response = await fetch('http://localhost:3000/healthcheck');
     assert.equal(response.status, 200);
+  });
+
+  it('should add a new event to the database when posted to /ar-io/webhook', async function () {
+    const response = await fetch('http://localhost:3000/ar-io/webhook', {
+      method: 'POST',
+      body: JSON.stringify({
+        eventType: 'buy-record-notice',
+        eventData: {
+          record: '123456',
+        },
+        nonce: 1,
+      }),
+    });
+    assert.equal(response.status, 200);
+    const events = await database.getAllEvents();
+    assert.equal(events.length, 1);
+  });
+
+  it('should throw 202 if the event is already processed', async function () {
+    const response = await fetch('http://localhost:3000/ar-io/webhook', {
+      method: 'POST',
+      body: JSON.stringify({
+        eventType: 'buy-record-notice',
+        eventData: {
+          record: '123456',
+        },
+        nonce: 1,
+      }),
+    });
+    assert.equal(response.status, 202);
   });
 });

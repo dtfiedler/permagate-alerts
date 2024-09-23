@@ -1,20 +1,20 @@
-import Mailgun from "mailgun.js";
-import { IMailgunClient } from "mailgun.js/Interfaces";
-import FormData from "form-data";
+import Mailgun from 'mailgun.js';
+import { IMailgunClient } from 'mailgun.js/Interfaces';
+import FormData from 'form-data';
 
 const mailgun = new Mailgun.default(FormData);
 
-export interface AlertEmailData {
+export interface EventEmail {
+  eventType: string;
+  eventData: Record<string, unknown>;
   to: string[];
   subject: string;
-  alertType: string;
-  alertDetails: Record<string, unknown>;
 }
 
 export interface DigestEmailData {
   to: string[];
   subject: string;
-  digestPeriod: "daily" | "weekly" | "monthly";
+  digestPeriod: 'daily' | 'weekly' | 'monthly';
   digestItems: Array<{
     type: string;
     details: Record<string, unknown>;
@@ -22,8 +22,7 @@ export interface DigestEmailData {
 }
 
 export interface EventProvider {
-  sendAlert(data: AlertEmailData): Promise<void>;
-  sendDigest(data: DigestEmailData): Promise<void>;
+  sendEventEmail(data: EventEmail): Promise<void>;
   sendRawEmail(data: {
     to: string[];
     subject: string;
@@ -47,7 +46,7 @@ export class MailgunEmailProvider implements EventProvider {
     domain,
   }: EmailProviderOptions & { domain: string }) {
     this.client = mailgun.client({
-      username: "api",
+      username: 'api',
       key: apiKey,
     });
     this.domain = domain;
@@ -80,15 +79,15 @@ export class MailgunEmailProvider implements EventProvider {
       to: data.to,
       subject: data.subject,
       template: data.templateId,
-      "h:X-Mailgun-Variables": JSON.stringify(data.variables),
+      'h:X-Mailgun-Variables': JSON.stringify(data.variables),
     };
 
     await this.client.messages.create(this.domain, emailData);
   }
 
-  async sendAlert(data: AlertEmailData): Promise<void> {
-    const { to, subject, alertType, alertDetails } = data;
-    const text = `Alert Type: ${alertType}\n\nDetails:\n${JSON.stringify(alertDetails, null, 2)}`;
+  async sendEventEmail(data: EventEmail): Promise<void> {
+    const { eventType, eventData, to, subject } = data;
+    const text = `Alert Type: ${eventType}\n\nDetails:\n${JSON.stringify(eventData, null, 2)}`;
     await this.sendRawEmail({ to, subject, text });
   }
 
@@ -99,7 +98,7 @@ export class MailgunEmailProvider implements EventProvider {
         (item) =>
           `Type: ${item.type}\nDetails: ${JSON.stringify(item.details, null, 2)}`,
       )
-      .join("\n\n")}`;
+      .join('\n\n')}`;
     await this.sendRawEmail({ to, subject, text });
   }
 }
