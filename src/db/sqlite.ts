@@ -98,8 +98,8 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
   }
 
   // Event Store Methods
-  async getEvent(id: number): Promise<Event | undefined> {
-    const event = await this.knex<DBEvent>('events').where({ id }).first();
+  async getEvent(nonce: number): Promise<Event | undefined> {
+    const event = await this.knex<DBEvent>('events').where({ nonce }).first();
     if (!event) {
       return undefined;
     }

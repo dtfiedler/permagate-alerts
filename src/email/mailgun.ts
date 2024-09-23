@@ -87,7 +87,7 @@ export class MailgunEmailProvider implements EventProvider {
 
   async sendEventEmail(data: EventEmail): Promise<void> {
     const { eventType, eventData, to, subject } = data;
-    const text = `Alert Type: ${eventType}\n\nDetails:\n${JSON.stringify(eventData, null, 2)}`;
+    const text = `Alert Type: ${eventType}\nDetails:\n${JSON.stringify(eventData.tags, null, 2)}`;
     await this.sendRawEmail({ to, subject, text });
   }
 
