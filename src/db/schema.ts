@@ -63,9 +63,6 @@ export const webhookEventSchema = z.object({
     filter: z.string(),
   }),
   event: z.string(),
-  level: z.string(),
-  message: z.string(),
-  timestamp: z.string(),
 });
 
 export type WebhookEvent = z.infer<typeof webhookEventSchema>;
