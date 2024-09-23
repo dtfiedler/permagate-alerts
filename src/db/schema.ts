@@ -41,20 +41,31 @@ const eventSchema = z.object({
 
 export type Event = z.infer<typeof eventSchema>;
 
-// New alert schema (for insertion)
-const newEventSchema = eventSchema.omit({
-  id: true,
-  emailsSent: true,
-  createdAt: true,
-  processedAt: true,
+const eventMessageSchema = z.object({
+  Tags: z.array(
+    z.object({
+      name: z.string(),
+      value: z.string(),
+    }),
+  ),
+  Data: z.string(),
 });
 
-export type NewEvent = z.infer<typeof newEventSchema>;
+export type EventMessage = z.infer<typeof eventMessageSchema>;
+
+// New alert schema (for insertion)
+export const aoRawEventSchema = z.object({
+  Messages: z.array(eventMessageSchema),
+  Output: z.string(),
+  Error: z.string(),
+});
+
+export type RawEvent = z.infer<typeof aoRawEventSchema>;
 
 // Export schemas for validation
 export const schemas = {
   subscriber: subscriberSchema,
   newSubscriber: newSubscriberSchema,
   event: eventSchema,
-  newEvent: newEventSchema,
+  rawEvent: aoRawEventSchema,
 };
