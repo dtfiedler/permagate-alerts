@@ -61,6 +61,14 @@ export class EventProcessor implements IEventProcessor {
         });
         return;
       }
+      const lastEvent = await this.db.getLatestEvent();
+      if (lastEvent && +nonce < lastEvent.nonce) {
+        this.logger.info('Event is older than the last event, ignoring', {
+          nonce,
+          lastEvent,
+        });
+        return;
+      }
       const subscribers = await this.db.findSubscribersByEvent(action);
       this.logger.debug('Found subscribers', { subscribers });
       const newEvent: NewEvent = {

@@ -29,7 +29,8 @@ interface SubscriberStore extends BaseStore {
 
 interface EventStore extends BaseStore {
   getEvent(id: number): Promise<Event | undefined>;
-  getAllEvents(): Promise<Event[]>;
+  getAllEvents(limit?: number): Promise<Event[]>;
+  getLatestEvent(): Promise<Event | undefined>;
   createEvent(event: NewEvent): Promise<Event | undefined>;
   updateEvent(id: number, event: Partial<Event>): Promise<Event | undefined>;
   deleteEvent(id: number): Promise<boolean>;
@@ -114,10 +115,11 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
     };
   }
 
-  async getAllEvents(): Promise<Event[]> {
+  async getAllEvents(limit: number = 100): Promise<Event[]> {
     const events = await this.knex<DBEvent>('events')
       .select('*')
-      .orderBy('created_at', 'desc');
+      .orderBy('nonce', 'desc')
+      .limit(limit);
     return events.map(
       (event: DBEvent): Event => ({
         id: event.id,
@@ -129,6 +131,11 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
         processedAt: event.processed_at,
       }),
     );
+  }
+
+  async getLatestEvent(): Promise<Event | undefined> {
+    const events = await this.getAllEvents(1);
+    return events[0];
   }
 
   async createEvent(event: NewEvent): Promise<Event | undefined> {
