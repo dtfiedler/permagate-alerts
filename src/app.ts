@@ -4,6 +4,8 @@ import { logger } from './logger.js';
 import { router } from './router.js';
 import * as system from './system.js';
 
+system.dailyDigestCron.start();
+
 const app = express();
 const port = process.env.PORT || 3000; // define port with environment variable or default to 3000
 

@@ -1,3 +1,4 @@
+import cron from 'node-cron';
 import { SqliteDatabase } from './db/sqlite.js';
 import { knex } from './db/knexfile.js';
 import { logger } from './logger.js';
@@ -11,6 +12,7 @@ export const notifier = config.mailgunApiKey
       apiKey: config.mailgunApiKey!,
       domain: config.mailgunDomain!,
       from: config.mailgunFromEmail!,
+      logger,
     })
   : undefined;
 
@@ -25,6 +27,11 @@ export const processor = new EventProcessor({
   notifier,
 });
 
+// create a daily cron for 8 AM local time (EST)
+export const dailyDigestCron = cron.schedule('* 8 * * *', () => {
+  processor.processDailyDigest();
+});
+
 process.on('unhandledRejection', (error: any) => {
   logger.error('Unhandled Rejection at:', error);
 });
@@ -35,10 +42,15 @@ process.on('uncaughtException', (error: unknown) => {
 
 process.on('SIGTERM', () => {
   logger.info('Received SIGTERM, exiting...');
-  process.exit(0);
+  shutdown();
 });
 
 process.on('SIGINT', () => {
   logger.info('Received SIGINT, exiting...');
-  process.exit(0);
+  shutdown();
 });
+
+export const shutdown = () => {
+  dailyDigestCron.stop();
+  process.exit(0);
+};

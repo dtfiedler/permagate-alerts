@@ -1,6 +1,8 @@
 import Mailgun from 'mailgun.js';
 import { IMailgunClient } from 'mailgun.js/Interfaces';
 import FormData from 'form-data';
+import { Event } from '../db/schema.js';
+import { Logger } from 'winston';
 
 const mailgun = new Mailgun.default(FormData);
 
@@ -14,15 +16,12 @@ export interface EventEmail {
 export interface DigestEmailData {
   to: string[];
   subject: string;
-  digestPeriod: 'daily' | 'weekly' | 'monthly';
-  digestItems: Array<{
-    type: string;
-    details: Record<string, unknown>;
-  }>;
+  digestItems: Map<string, Event[]>;
 }
 
 export interface EmailProvider {
   sendEventEmail(data: EventEmail): Promise<void>;
+  sendDigestEmail(data: DigestEmailData): Promise<void>;
   sendRawEmail(data: {
     to: string[];
     subject: string;
@@ -39,18 +38,23 @@ export class MailgunEmailProvider implements EmailProvider {
   private client: IMailgunClient;
   private from: string;
   private domain: string;
+  private logger: Logger;
 
   constructor({
     apiKey,
     from,
     domain,
-  }: EmailProviderOptions & { domain: string }) {
+    logger,
+  }: EmailProviderOptions & { domain: string; logger: Logger }) {
     this.client = mailgun.client({
       username: 'api',
       key: apiKey,
     });
     this.domain = domain;
     this.from = from;
+    this.logger = logger.child({
+      module: 'MailgunEmailProvider',
+    });
   }
 
   async sendRawEmail(data: {
@@ -85,20 +89,30 @@ export class MailgunEmailProvider implements EmailProvider {
     await this.client.messages.create(this.domain, emailData);
   }
 
+  async sendDigestEmail(data: DigestEmailData): Promise<void> {
+    const { to, subject, digestItems } = data;
+    this.logger.info('Sending digest email', {
+      to,
+      subject,
+    });
+    let text = '';
+    for (const [eventType, events] of digestItems) {
+      text += `\n${eventType}\n${events
+        .map(
+          (event: Event) => `${JSON.stringify(event.eventData.tags, null, 2)}`,
+        )
+        .join('\n')}\n`;
+    }
+    const fullText = `Permagate Digest\n\n${text}`;
+    this.logger.info(`Sending digest email to ${to} with subject ${subject}`, {
+      text: fullText,
+    });
+    return this.sendRawEmail({ to, subject, text });
+  }
+
   async sendEventEmail(data: EventEmail): Promise<void> {
     const { eventType, eventData, to, subject } = data;
     const text = `Alert Type: ${eventType}\nDetails:\n${JSON.stringify(eventData.tags, null, 2)}`;
-    await this.sendRawEmail({ to, subject, text });
-  }
-
-  async sendDigest(data: DigestEmailData): Promise<void> {
-    const { to, subject, digestPeriod, digestItems } = data;
-    const text = `Digest Period: ${digestPeriod}\n\nItems:\n${digestItems
-      .map(
-        (item) =>
-          `Type: ${item.type}\nDetails: ${JSON.stringify(item.details, null, 2)}`,
-      )
-      .join('\n\n')}`;
-    await this.sendRawEmail({ to, subject, text });
+    return this.sendRawEmail({ to, subject, text });
   }
 }

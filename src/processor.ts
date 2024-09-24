@@ -1,10 +1,11 @@
 import { EmailProvider } from './email/mailgun.js';
-import { NewEvent, WebhookEvent } from './db/schema.js';
+import { NewEvent, WebhookEvent, Event, DBEvent } from './db/schema.js';
 import { SqliteDatabase } from './db/sqlite.js';
 import * as winston from 'winston';
 
 interface IEventProcessor {
   processEvent(event: WebhookEvent): Promise<void>;
+  processDailyDigest(): Promise<void>;
 }
 
 function parseBase64Tags(tags: { name: string; value: string }[]): {
@@ -90,5 +91,44 @@ export class EventProcessor implements IEventProcessor {
     } catch (error) {
       this.logger.error('Error creating event:', error);
     }
+  }
+
+  private createDigestEventMap(events: Event[]): Map<string, Event[]> {
+    const eventMap = new Map<string, Event[]>();
+    for (const event of events) {
+      const eventType = event.eventType;
+      if (!eventMap.has(eventType)) {
+        eventMap.set(eventType, []);
+      }
+      eventMap.get(eventType)?.push(event);
+    }
+    return eventMap;
+  }
+
+  async processDailyDigest(): Promise<void> {
+    this.logger.info('Processing daily digest');
+    const events: Event[] = await this.db
+      .rawQuery(
+        `SELECT * FROM events WHERE created_at > datetime('now', '-1 day')`,
+      )
+      .then((events: DBEvent[]) =>
+        events.map((event) => ({
+          id: event.id,
+          emailsSent: event.emails_sent,
+          eventType: event.event_type,
+          eventData: JSON.parse(event.event_data),
+          nonce: event.nonce,
+          createdAt: event.created_at,
+          processedAt: event.processed_at,
+        })),
+      );
+    const subscribers = await this.db.getAllSubscribers();
+    const eventMap = this.createDigestEventMap(events);
+    const subject = `ℹ️ Permagate Daily Digest 📝 `;
+    await this.notifier?.sendDigestEmail({
+      to: subscribers.map((subscriber) => subscriber.email),
+      subject,
+      digestItems: eventMap,
+    });
   }
 }
