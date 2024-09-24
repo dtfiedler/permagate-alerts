@@ -34,3 +34,7 @@ export const secretKey = process.env.SECRET_KEY || 'default_secret_key';
 
 // Database
 export const debugKnex = process.env.DEBUG_KNEX === 'true';
+
+// AO
+export const cuUrl = process.env.CU_URL || 'https://cu.ar-io.dev';
+export const gatewayHost = process.env.GATEWAY_HOST || 'arweave.net';

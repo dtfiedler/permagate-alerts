@@ -32,7 +32,16 @@ export type NewSubscriber = z.infer<typeof newSubscriberSchema>;
 const eventSchema = z.object({
   id: z.number(),
   eventType: z.string(),
-  eventData: z.record(z.unknown()),
+  eventData: z.object({
+    tags: z.array(
+      z.object({
+        name: z.string(),
+        value: z.string(),
+      }),
+    ),
+    data: z.any(),
+    target: z.string(),
+  }),
   nonce: z.number(),
   emailsSent: z.boolean(),
   createdAt: z.date(),
@@ -59,8 +68,11 @@ const newEventSchema = eventSchema.omit({
   processedAt: true,
 });
 
+export type NewEvent = z.infer<typeof newEventSchema>;
+
 const webhookEventSchema = z.object({
   data: z.object({
+    id: z.string(),
     tags: z.array(
       z.object({
         name: z.string(),
@@ -71,31 +83,28 @@ const webhookEventSchema = z.object({
     data_offset: z.number(),
     data_size: z.number(),
     filter: z.string(),
+    target: z.string(),
   }),
   event: z.string(),
 });
 
 export type WebhookEvent = z.infer<typeof webhookEventSchema>;
 
-export type NewEvent = z.infer<typeof newEventSchema>;
-
-const eventMessageSchema = z.object({
-  Tags: z.array(
-    z.object({
-      name: z.string(),
-      value: z.string(),
-    }),
-  ),
-  Data: z.string(),
-});
-
-export type EventMessage = z.infer<typeof eventMessageSchema>;
-
 // New alert schema (for insertion)
 const aoRawEventSchema = z.object({
-  Messages: z.array(eventMessageSchema),
+  Messages: z.array(
+    z.object({
+      Tags: z.array(
+        z.object({
+          name: z.string(),
+          value: z.string(),
+        }),
+      ),
+      Data: z.string(),
+    }),
+  ),
   Output: z.string(),
-  Error: z.string(),
+  Error: z.string().nullable(),
 });
 
 export type RawEvent = z.infer<typeof aoRawEventSchema>;
@@ -107,5 +116,4 @@ export const schemas = {
   event: eventSchema,
   rawEvent: aoRawEventSchema,
   webhookEvent: webhookEventSchema,
-  eventMessage: eventMessageSchema,
 };

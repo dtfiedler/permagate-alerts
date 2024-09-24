@@ -1,14 +1,12 @@
 import Mailgun from 'mailgun.js';
 import { IMailgunClient } from 'mailgun.js/Interfaces';
 import FormData from 'form-data';
-import { Event } from '../db/schema.js';
+import { NewEvent, Event } from '../db/schema.js';
 import { Logger } from 'winston';
 
 const mailgun = new Mailgun.default(FormData);
 
-export interface EventEmail {
-  eventType: string;
-  eventData: Record<string, unknown>;
+export interface EventEmail extends NewEvent {
   to: string[];
   subject: string;
 }
@@ -112,7 +110,7 @@ export class MailgunEmailProvider implements EmailProvider {
 
   async sendEventEmail(data: EventEmail): Promise<void> {
     const { eventType, eventData, to, subject } = data;
-    const text = `Alert Type: ${eventType}\nDetails:\n${JSON.stringify(eventData.tags, null, 2)}`;
+    const text = `Alert Type: ${eventType}\nDetails:\n${JSON.stringify(eventData, null, 2)}`;
     return this.sendRawEmail({ to, subject, text });
   }
 }

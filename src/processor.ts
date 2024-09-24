@@ -2,6 +2,7 @@ import { EmailProvider } from './email/mailgun.js';
 import { NewEvent, WebhookEvent, Event, DBEvent } from './db/schema.js';
 import { SqliteDatabase } from './db/sqlite.js';
 import * as winston from 'winston';
+import Arweave from 'arweave';
 
 interface IEventProcessor {
   processEvent(event: WebhookEvent): Promise<void>;
@@ -24,20 +25,25 @@ export class EventProcessor implements IEventProcessor {
   private db: SqliteDatabase;
   private notifier: EmailProvider | undefined;
   private logger: winston.Logger;
+  private arweave: Arweave;
+
   constructor({
     db,
     notifier,
     logger,
+    arweave,
   }: {
     logger: winston.Logger;
     db: SqliteDatabase;
     notifier?: EmailProvider;
+    arweave: any;
   }) {
     this.db = db;
     this.notifier = notifier;
     this.logger = logger.child({
       module: 'EventProcessor',
     });
+    this.arweave = arweave;
   }
 
   async processEvent(event: WebhookEvent): Promise<void> {
@@ -70,14 +76,17 @@ export class EventProcessor implements IEventProcessor {
         });
         return;
       }
+      const messageData = await this.arweave.api
+        .get(event.data.id)
+        .then((data) => data.data);
       const subscribers = await this.db.findSubscribersByEvent(action);
       this.logger.debug('Found subscribers', { subscribers });
       const newEvent: NewEvent = {
         eventType: action,
         eventData: {
+          target: event.data.target,
           tags: tags,
-          rawTags: event.data.tags,
-          data: undefined, // TODO: fetch event data from ao
+          data: messageData,
         },
         nonce: +nonce,
       };

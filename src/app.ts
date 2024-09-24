@@ -19,6 +19,8 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   req.logger = logger;
   // @ts-ignore
   req.processor = system.processor;
+  // @ts-ignore
+  req.arweave = system.arweave;
   next();
 });
 
