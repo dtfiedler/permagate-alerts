@@ -1,4 +1,4 @@
-import { EventEmail, EventProvider } from './email/mailgun.js';
+import { EventProvider } from './email/mailgun.js';
 import { NewEvent, WebhookEvent } from './db/schema.js';
 import { SqliteDatabase } from './db/sqlite.js';
 import * as winston from 'winston';
