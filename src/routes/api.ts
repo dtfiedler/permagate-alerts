@@ -36,7 +36,7 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
     const subscriber = await req.db.createSubscriber(subscriberData);
     logger.info(`New subscriber added: ${email}`);
     // send intro email in background
-    req.notifier.sendRawEmail({
+    req.notifier?.sendRawEmail({
       to: [email],
       text: 'You have successfully been subscribed to alerts.permagate.io!',
       subject: 'Subscription successful! 🚀',

@@ -21,7 +21,7 @@ export interface DigestEmailData {
   }>;
 }
 
-export interface EventProvider {
+export interface EmailProvider {
   sendEventEmail(data: EventEmail): Promise<void>;
   sendRawEmail(data: {
     to: string[];
@@ -35,7 +35,7 @@ export interface EmailProviderOptions {
   from: string;
 }
 
-export class MailgunEmailProvider implements EventProvider {
+export class MailgunEmailProvider implements EmailProvider {
   private client: IMailgunClient;
   private from: string;
   private domain: string;
