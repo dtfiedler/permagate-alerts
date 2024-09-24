@@ -110,7 +110,16 @@ export class MailgunEmailProvider implements EmailProvider {
 
   async sendEventEmail(data: EventEmail): Promise<void> {
     const { eventType, eventData, to, subject } = data;
-    const text = `Alert Type: ${eventType}\nDetails:\n${JSON.stringify(eventData, null, 2)}`;
-    return this.sendRawEmail({ to, subject, text });
+    const text = `Details:\n${JSON.stringify(eventData, null, 2)}`;
+    return this.sendEmailFromTemplate({
+      to,
+      subject,
+      templateId: 'permagate-alert',
+      variables: {
+        title: subject,
+        heading: eventType.toUpperCase(),
+        body: text,
+      },
+    });
   }
 }
