@@ -1,4 +1,4 @@
-import { EventProvider } from './email/mailgun.js';
+import { EmailProvider } from './email/mailgun.js';
 import { NewEvent, WebhookEvent } from './db/schema.js';
 import { SqliteDatabase } from './db/sqlite.js';
 import * as winston from 'winston';
@@ -21,7 +21,7 @@ function parseBase64Tags(tags: { name: string; value: string }[]): {
 
 export class EventProcessor implements IEventProcessor {
   private db: SqliteDatabase;
-  private notifier: EventProvider | undefined;
+  private notifier: EmailProvider | undefined;
   private logger: winston.Logger;
   constructor({
     db,
@@ -30,7 +30,7 @@ export class EventProcessor implements IEventProcessor {
   }: {
     logger: winston.Logger;
     db: SqliteDatabase;
-    notifier?: EventProvider;
+    notifier?: EmailProvider;
   }) {
     this.db = db;
     this.notifier = notifier;

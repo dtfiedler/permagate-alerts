@@ -11,7 +11,7 @@ import { SqliteDatabase } from '../src/db/sqlite.js';
 import fs from 'node:fs';
 import { createLogger } from 'winston';
 
-const cleanDb = () => {
+const cleanDb = async () => {
   if (fs.existsSync(`${process.cwd()}/data/sqlite/core-test.db`)) {
     return fs.promises.unlink(`${process.cwd()}/data/sqlite/core-test.db`);
   }
@@ -52,23 +52,23 @@ const testEvent = {
     signature_type: 1,
     size: 1561,
     tags: [
-      { name: 'UmVmXw', value: 'NjY3MzU' },
-      { name: 'TmFtZQ', value: 'dGVzdC13ZWJob29rLTEy' },
-      { name: 'QWN0aW9u', value: 'QnV5LVJlY29yZC1Ob3RpY2U' },
-      { name: 'RGF0YS1Qcm90b2NvbA', value: 'YW8' },
-      { name: 'VHlwZQ', value: 'TWVzc2FnZQ' },
-      { name: 'VmFyaWFudA', value: 'YW8uVE4uMQ' },
+      { name: 'UmVmXw', value: 'NjY3MzU' }, // Ref_: 66735
+      { name: 'TmFtZQ', value: 'dGVzdC13ZWJob29rLTEy' }, // test-worker-12
+      { name: 'QWN0aW9u', value: 'QnV5LVJlY29yZC1Ob3RpY2U' }, // Action: Buy-Record-Notice
+      { name: 'RGF0YS1Qcm90b2NvbA', value: 'YW8' }, // Data-Protocol:ao
+      { name: 'VHlwZQ', value: 'TWVzc2FnZQ' }, // Type: Message
+      { name: 'VmFyaWFudA', value: 'YW8uVE4uMQ' }, // ao.TN.1
       {
-        name: 'RnJvbS1Qcm9jZXNz',
-        value: 'YWdZY0NGSnRyTUc2Y3FNdVpmc2tJa0ZUR3ZVUGRkSUNtdFFTQklvUGRpQQ',
+        name: 'RnJvbS1Qcm9jZXNz', // From-Process
+        value: 'YWdZY0NGSnRyTUc2Y3FNdVpmc2tJa0ZUR3ZVUGRkSUNtdFFTQklvUGRpQQ', // agYcCFJtrMG6cqMuZfskIkFTGvUPddICmtQSBIoPdiA
       },
       {
-        name: 'RnJvbS1Nb2R1bGU',
-        value: 'Y2JuMEtLckJaSDdoZE5rTm9rdVhMdEdyeXJXTS0tUGpTVEJxSXp3OUtraw',
+        name: 'RnJvbS1Nb2R1bGU', // From-Module
+        value: 'Y2JuMEtLckJaSDdoZE5rTm9rdVhMdEdyeXJXTS0tUGpTVEJxSXp3OUtraw', // cbn0KLrJBZHdZD7hZNKmNokUxLgRyxYWm-tPjSTBqIxZw9Kkraw
       },
       {
-        name: 'UHVzaGVkLUZvcg',
-        value: 'b1c5d1U1LW9SMHgxbXNPRVJEY0NPQ2U1MkZrV3RSNUFOU2J3dEZGQS1Fcw',
+        name: 'UHVzaGVkLUZvcg', // Triggered-By
+        value: 'b1c5d1U1LW9SMHgxbXNPRVJEY0NPQ2U1MkZrV3RSNUFOU2J3dEZGQS1Fcw', // 1c5d1U1-oR8x1msoERCD0cOE52FKWtR5UANSBwtfDFGQ-Es
       },
     ],
     target: 'ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo',
@@ -85,7 +85,13 @@ describe('container', function () {
       process.cwd(),
       'docker-compose.yaml',
     )
-      .withEnvironmentFile(`${process.cwd()}/.env.test`)
+      .withEnvironment({
+        NODE_ENV: 'test',
+        MAILGUN_API_KEY: '',
+        MAILGUN_DOMAIN: '',
+        MAILGUN_FROM_EMAIL: '',
+        DEBUG_KNEX: 'false',
+      })
       .withWaitStrategy('alerts-1', Wait.forHealthCheck())
       .withBuild()
       .up(['alerts']);
@@ -141,6 +147,34 @@ describe('container', function () {
       },
     });
     assert.equal(response.status, 200);
+    // let it process
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const events = await database.getAllEvents();
+    assert.equal(events.length, 1);
+  });
+
+  it('should not add an event that is older than the last event in the database', async function () {
+    // update the ref tag to be older
+    const olderTestEvent = {
+      ...testEvent,
+      data: {
+        ...testEvent.data,
+        tags: [
+          ...testEvent.data.tags,
+          { name: 'UmVmXw', value: 'NjY3MzQ' }, // 66734
+        ],
+      },
+    };
+    const response = await fetch('http://localhost:3000/ar-io/webhook', {
+      method: 'POST',
+      body: JSON.stringify(olderTestEvent),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    assert.equal(response.status, 200);
+    // let it process
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     const events = await database.getAllEvents();
     assert.equal(events.length, 1);
   });

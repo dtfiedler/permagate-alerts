@@ -17,7 +17,7 @@ interface BaseStore {
 interface SubscriberStore extends BaseStore {
   getSubscriber(id: number): Promise<Subscriber | undefined>;
   getAllSubscribers(): Promise<Subscriber[]>;
-  createSubscriber(subscriber: NewSubscriber): Promise<Subscriber>;
+  createSubscriber(subscriber: NewSubscriber): Promise<Subscriber | undefined>;
   updateSubscriber(
     id: number,
     subscriber: Partial<Subscriber>,
@@ -67,12 +67,14 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
     return this.knex<Subscriber>('subscribers').select('*');
   }
 
-  async createSubscriber(subscriber: NewSubscriber): Promise<Subscriber> {
+  async createSubscriber(
+    subscriber: NewSubscriber,
+  ): Promise<Subscriber | undefined> {
     const [id] = await this.knex<Subscriber>('subscribers')
       .insert(subscriber)
       .onConflict('email')
       .merge();
-    return this.getSubscriber(id) as Promise<Subscriber>;
+    return this.getSubscriber(id);
   }
 
   async updateSubscriber(
@@ -180,9 +182,9 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
     );
   }
 
-  async markEventAsProcessed(id: number): Promise<boolean> {
+  async markEventAsProcessed(nonce: number): Promise<boolean> {
     const updated = await this.knex<DBEvent>('events')
-      .where({ id })
+      .where({ nonce })
       .update({ processed_at: this.knex.fn.now() });
     return updated > 0;
   }
