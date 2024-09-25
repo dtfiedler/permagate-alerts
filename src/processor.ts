@@ -4,7 +4,6 @@ import { SqliteDatabase } from './db/sqlite.js';
 import * as winston from 'winston';
 import Arweave from 'arweave';
 import puppeteer from 'puppeteer';
-import fs from 'fs';
 import path from 'path';
 
 import { fileURLToPath } from 'url';
