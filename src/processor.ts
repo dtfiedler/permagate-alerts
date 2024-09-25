@@ -3,14 +3,6 @@ import { NewEvent, WebhookEvent, Event, DBEvent } from './db/schema.js';
 import { SqliteDatabase } from './db/sqlite.js';
 import * as winston from 'winston';
 import Arweave from 'arweave';
-import puppeteer from 'puppeteer';
-import path from 'path';
-
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 interface IEventProcessor {
   processEvent(event: WebhookEvent): Promise<void>;
