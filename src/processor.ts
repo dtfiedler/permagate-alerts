@@ -3,6 +3,15 @@ import { NewEvent, WebhookEvent, Event, DBEvent } from './db/schema.js';
 import { SqliteDatabase } from './db/sqlite.js';
 import * as winston from 'winston';
 import Arweave from 'arweave';
+import puppeteer from 'puppeteer';
+import fs from 'fs';
+import path from 'path';
+
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 interface IEventProcessor {
   processEvent(event: WebhookEvent): Promise<void>;
@@ -84,16 +93,19 @@ export class EventProcessor implements IEventProcessor {
       const newEvent: NewEvent = {
         eventType: action,
         eventData: {
+          id: event.data.id,
           target: event.data.target,
           tags: tags,
           data: messageData,
         },
         nonce: +nonce,
       };
+      const body = await createEmailBody(newEvent);
       await this.notifier?.sendEventEmail({
         ...newEvent,
         to: subscribers.map((subscriber) => subscriber.email),
         subject: `🚨 New ${action}!`,
+        body,
       });
       await this.db.createEvent(newEvent);
       await this.db.markEventAsProcessed(+nonce);
@@ -141,3 +153,51 @@ export class EventProcessor implements IEventProcessor {
     });
   }
 }
+
+const createEmailBody = async (event: NewEvent) => {
+  switch (event.eventType) {
+    case 'buy-record-notice':
+      const name = event.eventData.tags.find((t) => t.name === 'Name')?.value;
+      const url = `https://${name}.permagate.io`;
+      const browser = await puppeteer.launch();
+      const page = await browser.newPage();
+
+      // Navigate to the provided URL
+      await page.goto(url, {
+        waitUntil: 'networkidle2',
+      });
+
+      // Take a screenshot
+      const screenshot = await page.screenshot({
+        fullPage: true,
+        encoding: 'base64',
+        type: 'png',
+        optimizeForSpeed: true,
+      });
+
+      // Save the screenshot to a file in public/temp
+      const screenshotPath = path.join(
+        __dirname,
+        'public',
+        'temp',
+        `${name}.png`,
+      );
+      fs.writeFileSync(screenshotPath, screenshot);
+
+      // Close the browser
+      await browser.close();
+      const startTimestamp = new Date(
+        event.eventData.data.startTimestamp,
+      ).getTime();
+      const endTimestamp = new Date(
+        event.eventData.data.endTimestamp,
+      ).getTime();
+      const leaseDurationYears = Math.round(
+        (endTimestamp - startTimestamp) / (1000 * 60 * 60 * 24 * 365.25),
+      );
+      // TODO: get a snapshot of the html for the homepage
+      return `<div style=\"padding:5px; text-align: center\"><a href="https://${name}.permagate.io"><img style="height: 200px" src=\"https://alerts.permagate.io/temp/${name}.png\" /></a><h3 style="text-align: center; text-wrap: balance;   "><b><a href="https://${name}.permagate.io">${name}</a></b> was just bought by ${event.eventData.target} for <b>${event.eventData.data.purchasePrice / 1_000_000} IO</b>!</h3><br/><div style="text-align: left;"><h4>Details</h4>Owner: <a href=\"https://ao.link/#/entity/ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo\">ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo</a><br/>Type: ${event.eventData.data.type}<br/>Lease Duration: ${leaseDurationYears} years<br/>Process ID: <a href="https://ao.link/#/entity/${event.eventData.data.processId}">${event.eventData.data.processId}</a></div><br/><br/><a style="text-align: center" href="https://ao.link/#/message/${event.eventData.id}">View on AO</a></div>`;
+    default:
+      return '';
+  }
+};

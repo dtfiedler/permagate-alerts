@@ -41,6 +41,7 @@ const eventSchema = z.object({
     ),
     data: z.any(),
     target: z.string(),
+    id: z.string(),
   }),
   nonce: z.number(),
   emailsSent: z.boolean(),

@@ -9,6 +9,7 @@ const mailgun = new Mailgun.default(FormData);
 export interface EventEmail extends NewEvent {
   to: string[];
   subject: string;
+  body: string;
 }
 
 export interface DigestEmailData {
@@ -109,8 +110,7 @@ export class MailgunEmailProvider implements EmailProvider {
   }
 
   async sendEventEmail(data: EventEmail): Promise<void> {
-    const { eventType, eventData, to, subject } = data;
-    const text = `Details:\n${JSON.stringify(eventData, null, 2)}`;
+    const { eventType, to, body, subject } = data;
     return this.sendEmailFromTemplate({
       to,
       subject,
@@ -118,7 +118,7 @@ export class MailgunEmailProvider implements EmailProvider {
       variables: {
         title: subject,
         heading: eventType.toUpperCase(),
-        body: text,
+        body,
       },
     });
   }
