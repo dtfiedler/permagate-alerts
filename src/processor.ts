@@ -69,21 +69,21 @@ export class EventProcessor implements IEventProcessor {
         });
         return;
       }
-      // const existingEvent = await this.db.getEvent(+nonce);
-      // if (existingEvent) {
-      //   this.logger.info('Event already exists, ignoring', {
-      //     existingEvent,
-      //   });
-      //   return;
-      // }
-      // const lastEvent = await this.db.getLatestEvent();
-      // if (lastEvent && +nonce < lastEvent.nonce) {
-      //   this.logger.info('Event is older than the last event, ignoring', {
-      //     nonce,
-      //     lastEvent,
-      //   });
-      //   return;
-      // }
+      const existingEvent = await this.db.getEvent(+nonce);
+      if (existingEvent) {
+        this.logger.info('Event already exists, ignoring', {
+          existingEvent,
+        });
+        return;
+      }
+      const lastEvent = await this.db.getLatestEvent();
+      if (lastEvent && +nonce < lastEvent.nonce) {
+        this.logger.info('Event is older than the last event, ignoring', {
+          nonce,
+          lastEvent,
+        });
+        return;
+      }
       const messageData = await this.arweave.api
         .get(event.data.id)
         .then((data) => data.data);
@@ -157,25 +157,25 @@ const createEmailBody = async (event: NewEvent) => {
   switch (event.eventType) {
     case 'buy-record-notice':
       const name = event.eventData.tags.find((t) => t.name === 'Name')?.value;
-      const url = `https://${name}.permagate.io`;
-      const browser = await puppeteer.launch();
-      const page = await browser.newPage();
+      // const url = `https://${name}.permagate.io`;
+      // const browser = await puppeteer.launch();
+      // const page = await browser.newPage();
 
-      // Navigate to the provided URL
-      await page.goto(url, {
-        waitUntil: 'networkidle2',
-      });
+      // // Navigate to the provided URL
+      // await page.goto(url, {
+      //   waitUntil: 'networkidle2',
+      // });
 
-      // Take a screenshot
-      await page.screenshot({
-        fullPage: true,
-        type: 'png',
-        optimizeForSpeed: true,
-        path: path.join(__dirname, 'public', 'temp', `${name}.png`),
-      });
+      // // Take a screenshot
+      // await page.screenshot({
+      //   fullPage: true,
+      //   type: 'png',
+      //   optimizeForSpeed: true,
+      //   path: path.join(__dirname, 'public', 'temp', `${name}.png`),
+      // });
 
-      // Close the browser
-      await browser.close();
+      // // Close the browser
+      // await browser.close();
       const startTimestamp = new Date(
         event.eventData.data.startTimestamp,
       ).getTime();
@@ -185,7 +185,7 @@ const createEmailBody = async (event: NewEvent) => {
       const leaseDurationYears = Math.round(
         (endTimestamp - startTimestamp) / (1000 * 60 * 60 * 24 * 365.25),
       );
-      return `<div style=\"padding:5px; text-align: center\"><a href="https://${name}.permagate.io"><img style="height: 200px" src=\"https://alerts.permagate.io/temp/${name}.png\" /></a><h3 style="text-align: center; text-wrap: balance;   "><b><a href="https://${name}.permagate.io">${name}</a></b> was just bought by ${event.eventData.target} for <b>${event.eventData.data.purchasePrice / 1_000_000} IO</b>!</h3><br/><div style="text-align: left;"><h4>Details</h4>Owner: <a href=\"https://ao.link/#/entity/ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo\">ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo</a><br/>Type: ${event.eventData.data.type}<br/>Lease Duration: ${leaseDurationYears} years<br/>Process ID: <a href="https://ao.link/#/entity/${event.eventData.data.processId}">${event.eventData.data.processId}</a></div><br/><br/><a style="text-align: center" href="https://ao.link/#/message/${event.eventData.id}">View on AO</a></div>`;
+      return `<div style=\"padding:5px; text-align: center\"><a href="https://permagate.io/UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk"><img style="height: 200px" src=\"https://permagate.io/UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk\" /></a><h3 style="text-align: center; text-wrap: balance;   "><b><a href="https://${name}.permagate.io">${name}</a></b> was just bought by ${event.eventData.target} for <b>${event.eventData.data.purchasePrice / 1_000_000} IO</b>!</h3><br/><div style="text-align: left;"><h4>Details</h4>Owner: <a href=\"https://ao.link/#/entity/ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo\">ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo</a><br/>Type: ${event.eventData.data.type}<br/>Lease Duration: ${leaseDurationYears} years<br/>Process ID: <a href="https://ao.link/#/entity/${event.eventData.data.processId}">${event.eventData.data.processId}</a></div><br/><br/><a style="text-align: center" href="https://ao.link/#/message/${event.eventData.id}">View on AO</a></div>`;
     default:
       return '';
   }
