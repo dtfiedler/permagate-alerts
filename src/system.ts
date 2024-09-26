@@ -36,9 +36,15 @@ export const processor = new EventProcessor({
 });
 
 // create a daily cron for 8 AM local time (EST)
-export const dailyDigestCron = cron.schedule('* 8 * * *', () => {
-  processor.processDailyDigest();
-});
+export const dailyDigestCron = cron.schedule(
+  '0 8 * * *',
+  () => {
+    processor.processDailyDigest();
+  },
+  {
+    scheduled: false, // This prevents the cron job from starting immediately
+  },
+);
 
 process.on('unhandledRejection', (error: any) => {
   logger.error('Unhandled Rejection at:', error);
