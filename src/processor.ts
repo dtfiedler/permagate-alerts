@@ -48,23 +48,24 @@ export class EventProcessor implements IEventProcessor {
 
   async processEvent(event: WebhookEvent): Promise<void> {
     try {
-      this.logger.debug('Processing event', { event });
+      this.logger.debug('Processing event', { id: event.data.id });
       const tags = parseBase64Tags(event.data.tags);
-      const nonce = tags.find((tag) => tag.name.startsWith('Ref_'))?.value;
+      const nonce = tags.find((tag) => tag.name.startsWith('Reference'))?.value;
       const action = tags
         .find((tag) => tag.name.startsWith('Action'))
         ?.value.toLowerCase();
       if (!nonce || !action) {
         this.logger.error('No nonce or action found in event', {
           tags,
-          event,
+          id: event.data.id,
         });
         return;
       }
       const existingEvent = await this.db.getEvent(+nonce);
       if (existingEvent) {
         this.logger.info('Event already exists, ignoring', {
-          existingEvent,
+          id: event.data.id,
+          nonce,
         });
         return;
       }
@@ -72,7 +73,7 @@ export class EventProcessor implements IEventProcessor {
       if (lastEvent && +nonce < lastEvent.nonce) {
         this.logger.info('Event is older than the last event, ignoring', {
           nonce,
-          lastEvent,
+          lastNonce: lastEvent.nonce,
         });
         return;
       }
@@ -100,8 +101,11 @@ export class EventProcessor implements IEventProcessor {
       });
       await this.db.createEvent(newEvent);
       await this.db.markEventAsProcessed(+nonce);
-    } catch (error) {
-      this.logger.error('Error creating event:', error);
+    } catch (error: any) {
+      this.logger.error('Error creating event:', {
+        error: error.message,
+        stack: error.stack,
+      });
     }
   }
 

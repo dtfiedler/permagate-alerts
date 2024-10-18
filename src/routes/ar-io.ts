@@ -10,9 +10,11 @@ const arioRouter = Router();
 arioRouter.post('/ar-io/webhook', async (req: Request, res: Response) => {
   // Handle the webhook request here
   const { logger, processor } = req;
-  logger.info('Received webhook:', req.body);
+  logger.info('Received webhook event', {
+    id: req.body?.event?.data?.id || 'unknown',
+  });
   try {
-    const parsedEvent = schemas.webhookEvent.parse(req.body);
+    const parsedEvent = schemas.webhookEvent.parse(req.body.event);
     // process event in background
     processor.processEvent(parsedEvent).catch((error) => {
       logger.error('Error processing event:', {
