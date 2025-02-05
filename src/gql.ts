@@ -1,6 +1,7 @@
 import Arweave from 'arweave';
 import fs from 'fs';
 import { EventProcessor } from './processor.js';
+import winston from 'winston';
 
 interface EventPoller {
   fetchAndProcessEvents(): Promise<void>;
@@ -14,6 +15,7 @@ export class GQLEventPoller implements EventPoller {
   private processor: EventProcessor;
   private authorities: string[];
   private gqlUrl: string;
+  private logger: winston.Logger;
   constructor({
     processId,
     arweave,
@@ -21,6 +23,7 @@ export class GQLEventPoller implements EventPoller {
     processor,
     authorities,
     gqlUrl,
+    logger,
   }: {
     processId: string;
     arweave: Arweave;
@@ -28,7 +31,12 @@ export class GQLEventPoller implements EventPoller {
     processor: EventProcessor;
     authorities: string[];
     gqlUrl: string;
+    logger: winston.Logger;
   }) {
+    this.logger = logger.child({
+      processId,
+      gqlUrl,
+    });
     this.gqlUrl = gqlUrl;
     this.processId = processId;
     this.arweave = arweave;
@@ -49,8 +57,6 @@ export class GQLEventPoller implements EventPoller {
   async fetchAndProcessEvents(): Promise<void> {
     // fetch from gql
     // add three retries with exponential backoff
-    const cursor = await this.getCursor();
-    console.log('cursor', cursor);
     const query = eventsFromProcessGqlQuery({
       processId: this.processId,
       cursor: await this.getCursor(),
@@ -90,6 +96,11 @@ export class GQLEventPoller implements EventPoller {
           // write the last event cursor
           events[0].cursor,
         );
+        this.logger.info('Updated cursor', {
+          cursor: events[0].cursor,
+          id: events[0].node.id,
+          processId: this.processId,
+        });
         return;
       } catch (error) {
         if (i === this.retries - 1) throw error; // Re-throw on final attempt
@@ -108,7 +119,7 @@ export const eventsFromProcessGqlQuery = ({
   authorities,
 }: {
   processId: string;
-  cursor: string;
+  cursor: string | undefined;
   authorities: string[];
 }): string => {
   const gqlQuery = JSON.stringify({
@@ -117,10 +128,17 @@ export const eventsFromProcessGqlQuery = ({
       transactions(
         tags: [
             { name: "From-Process", values: ["${processId}"] },
-            { name: "Data-Protocol", values: ["ao"] }
+            { name: "Data-Protocol", values: ["ao"] },
+            { name: "Action", values: [
+                "Epoch-Distribution-Notice",
+                "Buy-Name-Notice",
+                "Join-Network-Notice",
+                "Leave-Network-Notice"
+              ]
+            }          
           ],
           owners: [${authorities.map((a) => `"${a}"`).join(',')}],
-          sort: HEIGHT_DESC,
+          sort: HEIGHT_ASC,
           ${cursor ? `after: "${cursor}"` : ''}
         ) {
           edges {

@@ -165,6 +165,22 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
     return deleted > 0;
   }
 
+  async findSubscribersWithAssociatedWalletAddresses(
+    walletAddresses: string[],
+  ): Promise<Subscriber[]> {
+    return (
+      this.knex<Subscriber>('subscribers')
+        .select('subscribers.*', 'subscriber_wallets.wallet_address')
+        // ensures only subscribers with an affiliated wallet address are returned
+        .innerJoin(
+          'subscriber_wallets',
+          'subscribers.id',
+          'subscriber_wallets.subscriber_id',
+        )
+        .whereIn('subscriber_wallets.wallet_address', walletAddresses)
+    );
+  }
+
   async findEventsByEventType(eventType: string): Promise<Event[]> {
     const events = await this.knex<DBEvent>('events').where({
       event_type: eventType,

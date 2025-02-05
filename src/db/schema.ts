@@ -12,6 +12,7 @@ const subscriberSchema = z.object({
       'save-observations-notice',
     ]),
   ),
+  wallet_addresses: z.array(z.string()),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -24,6 +25,7 @@ const newSubscriberSchema = subscriberSchema.omit({
   createdAt: true,
   updatedAt: true,
   events: true,
+  wallet_addresses: true,
 });
 
 export type NewSubscriber = z.infer<typeof newSubscriberSchema>;

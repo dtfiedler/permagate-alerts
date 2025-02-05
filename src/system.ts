@@ -37,6 +37,7 @@ export const processor = new EventProcessor({
 });
 
 export const eventGqlPoller = new GQLEventPoller({
+  logger,
   processId: ARIO_TESTNET_PROCESS_ID,
   processor,
   gqlUrl: 'https://arweave-search.goldsky.com/graphql',
