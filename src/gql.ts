@@ -51,7 +51,7 @@ export class GQLEventPoller implements EventPoller {
   }
 
   async getCursor(): Promise<string> {
-    return fs.readFileSync(this.cursorFile, 'utf8');
+    return fs.readFileSync(this.cursorFile, 'utf8').trim();
   }
 
   async fetchAndProcessEvents(): Promise<void> {
