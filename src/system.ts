@@ -6,6 +6,8 @@ import * as config from './config.js';
 import { MailgunEmailProvider } from './email/mailgun.js';
 import { EventProcessor } from './processor.js';
 import Arweave from 'arweave';
+import { GQLEventPoller } from './gql.js';
+import { ARIO_TESTNET_PROCESS_ID } from '@ar.io/sdk';
 
 // TODO: replace with composite provider that sends to all EventProviders
 export const notifier = config.mailgunApiKey
@@ -32,17 +34,29 @@ export const processor = new EventProcessor({
   db,
   logger,
   notifier,
-  arweave,
 });
 
-// create a daily cron for 8 AM local time (EST)
-export const dailyDigestCron = cron.schedule(
-  '0 8 * * *',
+export const eventGqlPoller = new GQLEventPoller({
+  processId: ARIO_TESTNET_PROCESS_ID,
+  processor,
+  gqlUrl: 'https://arweave-search.goldsky.com/graphql',
+  arweave: Arweave.init({
+    host: 'arweave.net',
+    port: 443,
+    protocol: 'https',
+  }),
+  authorities: ['fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY'],
+});
+
+// every 15 mins, check GQL for new events
+export const eventGqlCron = cron.schedule(
+  '*/1 * * * *',
   () => {
-    processor.processDailyDigest();
+    logger.info('Fetching and processing events from GQL');
+    eventGqlPoller.fetchAndProcessEvents();
   },
   {
-    scheduled: false, // This prevents the cron job from starting immediately
+    runOnInit: true,
   },
 );
 
@@ -65,6 +79,6 @@ process.on('SIGINT', () => {
 });
 
 export const shutdown = () => {
-  dailyDigestCron.stop();
+  eventGqlCron.stop();
   process.exit(0);
 };

@@ -93,6 +93,7 @@ export type WebhookEvent = z.infer<typeof webhookEventSchema>;
 
 // New alert schema (for insertion)
 const aoRawEventSchema = z.object({
+  Id: z.string(),
   Messages: z.array(
     z.object({
       Tags: z.array(
@@ -104,12 +105,24 @@ const aoRawEventSchema = z.object({
       Data: z.string(),
     }),
   ),
-  Output: z.string(),
-  Error: z.string().nullable(),
+  Output: z.any(),
+  Error: z.any().nullable(),
 });
 
 export type RawEvent = z.infer<typeof aoRawEventSchema>;
 
+const gqlEventSchema = z.object({
+  id: z.string(),
+  tags: z.array(
+    z.object({
+      name: z.string(),
+      value: z.string(),
+    }),
+  ),
+  data: z.string(),
+});
+
+export type GQLEvent = z.infer<typeof gqlEventSchema>;
 // Export schemas for validation
 export const schemas = {
   subscriber: subscriberSchema,
@@ -117,4 +130,5 @@ export const schemas = {
   event: eventSchema,
   rawEvent: aoRawEventSchema,
   webhookEvent: webhookEventSchema,
+  gqlEvent: gqlEventSchema,
 };
