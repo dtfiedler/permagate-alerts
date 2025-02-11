@@ -110,14 +110,14 @@ export class MailgunEmailProvider implements EmailProvider {
   }
 
   async sendEventEmail(data: EventEmail): Promise<void> {
-    const { eventType, to, body, subject } = data;
+    const { to, body, subject } = data;
     return this.sendEmailFromTemplate({
       to,
       subject,
       templateId: 'permagate-alert',
       variables: {
         title: subject,
-        heading: eventType.replace(/-/g, ' ').toUpperCase(),
+        heading: subject,
         body,
       },
     });
