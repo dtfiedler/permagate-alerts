@@ -40,7 +40,7 @@ export const eventGqlPoller = new GQLEventPoller({
   logger,
   processId: ARIO_TESTNET_PROCESS_ID,
   processor,
-  gqlUrl: 'https://arweave-search.goldsky.com/graphql',
+  gqlUrl: 'https://arweave.net/graphql',
   arweave: Arweave.init({
     host: 'arweave.net',
     port: 443,
@@ -53,7 +53,6 @@ export const eventGqlPoller = new GQLEventPoller({
 export const eventGqlCron = cron.schedule(
   '*/1 * * * *',
   () => {
-    logger.info('Fetching and processing events from GQL');
     eventGqlPoller.fetchAndProcessEvents();
   },
   {

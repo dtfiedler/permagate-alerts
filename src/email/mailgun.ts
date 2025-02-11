@@ -117,7 +117,7 @@ export class MailgunEmailProvider implements EmailProvider {
       templateId: 'permagate-alert',
       variables: {
         title: subject,
-        heading: eventType.toUpperCase(),
+        heading: eventType.replace(/-/g, ' ').toUpperCase(),
         body,
       },
     });

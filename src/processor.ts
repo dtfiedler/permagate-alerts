@@ -111,33 +111,24 @@ export class EventProcessor implements IEventProcessor {
   private async storeAndNotify(event: NewEvent): Promise<void> {
     const subscribers = await this.db.findSubscribersByEvent(event.eventType);
 
-    let subscribersToNotify = subscribers;
-    if (event.eventType === 'save-observations-notice') {
-      const failedGateways = Object.keys(
-        event.eventData.data.failureSummaries || {},
-      );
-      const subscribersWithAssociatedWalletAddresses =
-        await this.db.findSubscribersWithAssociatedWalletAddresses(
-          failedGateways,
-        );
-      subscribersToNotify = subscribersWithAssociatedWalletAddresses;
-    }
-
     this.logger.info('Sending email to subscribers', {
       eventId: event.eventData.id,
       eventType: event.eventType,
-      subscribers: subscribersToNotify.length,
+      subscribers: subscribers.length,
     });
 
     // make sure the event is created
     await this.db.createEvent(event);
-    if (subscribersToNotify.length > 0) {
+    if (subscribers.length > 0) {
       // send email, but don't await
       this.notifier
-        ?.sendRawEmail({
-          to: subscribersToNotify.map((subscriber) => subscriber.email),
-          subject: `🚨 New ${event.eventType}!`,
-          text: createEmailBody(event),
+        ?.sendEventEmail({
+          to: subscribers.map((subscriber) => subscriber.email),
+          subject: getEmailSubjectForEvent(event),
+          body: getEmailBodyForEvent(event),
+          eventType: event.eventType,
+          eventData: event.eventData,
+          nonce: event.nonce,
         })
         .then(() => this.db.markEventAsProcessed(+event.nonce))
         .catch((error) => {
@@ -153,21 +144,52 @@ export class EventProcessor implements IEventProcessor {
   }
 }
 
-const createEmailBody = (event: NewEvent) => {
+const getEmailSubjectForEvent = (event: NewEvent) => {
   switch (event.eventType) {
+    case 'buy-name-notice':
     case 'buy-record-notice':
-      const name = event.eventData.tags.find((t) => t.name === 'Name')?.value;
+      const name = event.eventData.data.name;
+      const type = event.eventData.data.type;
+      return `👀 ${name} has been ${type === 'permabuy' ? 'permabought' : 'leased'}!`;
+    case 'epoch-distribution-notice':
+      return `🪙 Epoch ${event.eventData.data.epochIndex} has been distributed! 🚀`;
+    case 'join-network-notice':
+      return `👀 ${event.eventData.data.settings.fqdn} has joined the network! 👋`;
+    case 'leave-network-notice':
+      return `🤖 ${event.eventData.data.settings.fqdn} has left the network!😢`;
+    default:
+      return `🚨 New ${event.eventType.replace(/-/g, ' ').toUpperCase()}!`;
+  }
+};
+
+const getEmailBodyForEvent = (event: NewEvent) => {
+  switch (event.eventType.toLowerCase()) {
+    case 'buy-name-notice':
+    case 'buy-record-notice':
+      const name = event.eventData.data.name;
+      const type = event.eventData.data.type;
       const startTimestamp = new Date(
         event.eventData.data.startTimestamp,
       ).getTime();
-      const endTimestamp = new Date(
-        event.eventData.data.endTimestamp,
-      ).getTime();
-      const leaseDurationYears = Math.round(
-        (endTimestamp - startTimestamp) / (1000 * 60 * 60 * 24 * 365.25),
-      );
-      return `<div style=\"padding:5px; text-align: center\"><a href="https://permagate.io/UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk"><img style="height: 200px" src=\"https://permagate.io/YSS-NnRuBLrJ1TvWFPTohK7VGKUlaUgWiG9IN9U-hjY\" /></a><h3 style="text-align: center; text-wrap: balance;   "><b><a href="https://${name}.permagate.io">${name}</a></b> was just bought by ${event.eventData.target} for <b>${event.eventData.data.purchasePrice / 1_000_000} IO</b>!</h3><br/><div style="text-align: left;"><h4>Details</h4>Owner: <a href=\"https://ao.link/#/entity/ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo\">ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo</a><br/>Type: ${event.eventData.data.type}<br/>Lease Duration: ${leaseDurationYears} years<br/>Process ID: <a href="https://ao.link/#/entity/${event.eventData.data.processId}">${event.eventData.data.processId}</a></div><br/><br/><a style="text-align: center" href="https://ao.link/#/message/${event.eventData.id}">View on AO</a></div>`;
+      const endTimestamp =
+        type === 'permabuy'
+          ? undefined
+          : new Date(event.eventData.data.endTimestamp).getTime();
+      const getLeaseDurationYears = (
+        startTimestamp: number,
+        endTimestamp: number | undefined,
+      ) => {
+        return startTimestamp && endTimestamp
+          ? Math.round(
+              (endTimestamp - startTimestamp) / (1000 * 60 * 60 * 24 * 365),
+            )
+          : undefined;
+      };
+      const leaseDurationYears =
+        getLeaseDurationYears(startTimestamp, endTimestamp) || 'Permanent';
+      return `<div style=\"padding:5px; text-align: center\"><a href="https://permagate.io/UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk"><img style="height: 200px" src=\"https://permagate.io/YSS-NnRuBLrJ1TvWFPTohK7VGKUlaUgWiG9IN9U-hjY\" /></a><h3 style="text-align: center; text-wrap: balance;   "><b><a href="https://${name}.permagate.io">${name}</a></b> was purchased for <b>${event.eventData.data.purchasePrice / 1_000_000} IO</b>!</h3><br/><div style="text-align: left;"><h4>Details</h4>Owner: <a href=\"https://ao.link/#/entity/ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo\">ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo</a><br/>Type: ${event.eventData.data.type}<br/>Lease Duration: ${leaseDurationYears ? `${leaseDurationYears} years` : 'Permanent'}<br/>Process ID: <a href="https://ao.link/#/entity/${event.eventData.data.processId}">${event.eventData.data.processId}</a></div><br/><br/><a style="text-align: center" href="https://ao.link/#/message/${event.eventData.id}">View on AO</a></div>`;
+
     default:
-      return `<div style=\"padding:5px; text-align: center\"><a href="https://permagate.io/UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk"><img style="height: 200px" src=\"https://permagate.io/YSS-NnRuBLrJ1TvWFPTohK7VGKUlaUgWiG9IN9U-hjY\" /></a><h3 style="text-align: center; text-wrap: balance;">${event.eventType}</h3><br/><div style="text-align: left;"><h4>Details</h4><pre>${JSON.stringify(event.eventData.data, null, 2)}</pre></div><br/><br/><a style="text-align: center" href="https://ao.link/#/message/${event.eventData.id}">View on AO</a></div>`;
+      return `<div style=\"padding:5px; text-align: center\"><a href="https://permagate.io/UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk"><br/><div style="text-align: left;"><h4>Details</h4><pre>${JSON.stringify(event.eventData.data, null, 2)}</pre></div><br/><br/><a style="text-align: center" href="https://ao.link/#/message/${event.eventData.id}">View on AO</a></div>`;
   }
 };

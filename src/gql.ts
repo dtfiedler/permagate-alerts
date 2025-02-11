@@ -10,16 +10,15 @@ interface EventPoller {
 export class GQLEventPoller implements EventPoller {
   private processId: string;
   private arweave: Arweave;
-  private retries: number = 3;
-  private cursorFile: string;
+  private lastBlockHeightFile: string;
   private processor: EventProcessor;
   private authorities: string[];
   private gqlUrl: string;
   private logger: winston.Logger;
+  private fetching = false;
   constructor({
     processId,
     arweave,
-    retries = 3,
     processor,
     authorities,
     gqlUrl,
@@ -27,7 +26,6 @@ export class GQLEventPoller implements EventPoller {
   }: {
     processId: string;
     arweave: Arweave;
-    retries?: number;
     processor: EventProcessor;
     authorities: string[];
     gqlUrl: string;
@@ -40,76 +38,116 @@ export class GQLEventPoller implements EventPoller {
     this.gqlUrl = gqlUrl;
     this.processId = processId;
     this.arweave = arweave;
-    this.retries = retries;
     this.processor = processor;
     this.authorities = authorities;
-    // write the file for cursor to disk
-    this.cursorFile = `./data/cursor-${processId}.tx`;
-    if (!fs.existsSync(this.cursorFile)) {
-      fs.writeFileSync(this.cursorFile, '');
+    this.lastBlockHeightFile = `./data/last-block-height-${processId}.tx`;
+    if (!fs.existsSync(this.lastBlockHeightFile)) {
+      fs.writeFileSync(this.lastBlockHeightFile, '0');
     }
+    this.fetching = false;
   }
 
-  async getCursor(): Promise<string> {
-    return fs.readFileSync(this.cursorFile, 'utf8').trim();
+  async getLastBlockHeight(): Promise<number> {
+    const lastBlockHeight = parseInt(
+      fs.readFileSync(this.lastBlockHeightFile, 'utf8').trim(),
+    );
+    if (isNaN(lastBlockHeight)) {
+      return await this.arweave.blocks
+        .getCurrent()
+        .then((block) => block.height);
+    }
+    return lastBlockHeight;
   }
 
+  /**
+   * Fetches and processes events from the GQL API. Avoids fetching the same events multiple times and ensures that the events are processed in order.
+   * @returns void
+   */
   async fetchAndProcessEvents(): Promise<void> {
-    // fetch from gql
-    // add three retries with exponential backoff
-    const query = eventsFromProcessGqlQuery({
-      processId: this.processId,
-      cursor: await this.getCursor(),
-      authorities: this.authorities,
-    });
-    for (let i = 0; i < this.retries; i++) {
-      try {
-        const response = await fetch(this.gqlUrl, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          method: 'POST',
-          body: query,
-        }).then((res) => res.json());
-
-        // parse the nodes to get the id
-        if (response?.data?.transactions?.edges?.length === 0) {
-          return;
-        }
-
-        // now get all the events
-        const events = response.data.transactions.edges;
-        for (const event of events) {
-          // fetch the transaction from arweave
-          const eventResult = await this.arweave.api.get(event.node.id);
-          const gqlEvent = {
-            id: event.node.id,
-            tags: event.node.tags,
-            data: eventResult.data,
-          };
-          // process the raw event, don't await
-          this.processor.processGQLEvent(gqlEvent);
-        }
-        // update the cursor
-        fs.writeFileSync(
-          this.cursorFile,
-          // write the last event cursor
-          events[0].cursor,
-        );
-        this.logger.info('Updated cursor', {
-          cursor: events[0].cursor,
-          id: events[0].node.id,
-          processId: this.processId,
-        });
-        return;
-      } catch (error) {
-        if (i === this.retries - 1) throw error; // Re-throw on final attempt
-        // exponential backoff
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(2, i) * 1000),
-        );
-      }
+    if (this.fetching) {
+      this.logger.info('Already fetching events, skipping...');
+      return;
     }
+    this.fetching = true;
+    let cursor;
+    let hasNextPage = true;
+    let lastBlockHeight = await this.getLastBlockHeight();
+    while (hasNextPage) {
+      this.logger.info(`Fetching events from block height ${lastBlockHeight}`, {
+        cursor,
+        hasNextPage,
+        lastBlockHeight,
+        minBlockHeight: lastBlockHeight,
+      });
+      const query = eventsFromProcessGqlQuery({
+        processId: this.processId,
+        cursor: cursor,
+        authorities: this.authorities,
+        minBlockHeight: lastBlockHeight,
+      });
+      const response = await fetch(this.gqlUrl, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
+        body: query,
+      })
+        .then((res) => res.json())
+        .catch((err) => {
+          this.logger.error(
+            `Error fetching events from block height ${lastBlockHeight}`,
+            err,
+          );
+          return { data: { transactions: { edges: [] } } };
+        });
+
+      // parse the nodes to get the id
+      if (response?.data?.transactions?.edges?.length === 0) {
+        this.logger.info(`No events found for block height ${lastBlockHeight}`);
+        break;
+      }
+
+      this.logger.info(
+        `Found ${response.data.transactions.edges.length} events for block height ${lastBlockHeight}. Processing.....`,
+      );
+
+      // now get all the events
+      const events = response.data.transactions.edges || [];
+      const sortedEvents = [...events].sort((a: any, b: any) => {
+        return a.node.tags
+          .find((t: { name: string; value: string }) => t.name === 'Reference')
+          ?.value.localeCompare(
+            b.node.tags.find(
+              (t: { name: string; value: string }) => t.name === 'Reference',
+            )?.value ?? '',
+          );
+      });
+      // sort events by reference
+      for (const event of sortedEvents) {
+        // fetch the transaction from arweave
+        const eventResult = await this.arweave.api.get(event.node.id);
+        const gqlEvent = {
+          id: event.node.id,
+          tags: event.node.tags,
+          data: eventResult.data,
+        };
+        // process the raw event, don't await
+        this.processor.processGQLEvent(gqlEvent);
+      }
+      // update the cursor
+      lastBlockHeight = Math.max(lastBlockHeight, events[0].node.block.height);
+      cursor = events[0].cursor;
+      hasNextPage = response.data.transactions.pageInfo.hasNextPage;
+      this.updateLastBlockHeight(lastBlockHeight + 1);
+    }
+    this.fetching = false;
+    this.logger.info(
+      `Finished fetching events up to block height ${lastBlockHeight}`,
+    );
+  }
+
+  updateLastBlockHeight(blockHeight: number): void {
+    fs.writeFileSync(this.lastBlockHeightFile, blockHeight.toString());
   }
 }
 
@@ -117,10 +155,12 @@ export const eventsFromProcessGqlQuery = ({
   processId,
   cursor,
   authorities,
+  minBlockHeight,
 }: {
   processId: string;
   cursor: string | undefined;
   authorities: string[];
+  minBlockHeight: number;
 }): string => {
   const gqlQuery = JSON.stringify({
     query: `
@@ -139,6 +179,8 @@ export const eventsFromProcessGqlQuery = ({
           ],
           owners: [${authorities.map((a) => `"${a}"`).join(',')}],
           sort: HEIGHT_ASC,
+          first: 100,
+          block: {min: ${minBlockHeight}},
           ${cursor ? `after: "${cursor}"` : ''}
         ) {
           edges {
@@ -149,42 +191,16 @@ export const eventsFromProcessGqlQuery = ({
                 name
                 value
               }
+              block {
+                height
+              }
             }
+          }
+          pageInfo {
+            hasNextPage
           }
         }
       } 
-
-    `,
-  });
-  return gqlQuery;
-};
-
-export const eventsToProcessGqlQuery = ({
-  processId,
-  cursor,
-}: {
-  processId: string;
-  cursor: string;
-}): string => {
-  // write the query
-  const gqlQuery = JSON.stringify({
-    query: `
-      query {
-        transactions(
-          tags: [
-            { name: "Data-Protocol", values: ["ao"] }
-          ],
-          recipients: ["${processId}"],
-          sort: HEIGHT_ASC
-          ${cursor ? `before: "${cursor}"` : ''}
-        ) {
-          edges {
-            node {
-              id
-            }
-          }
-        }
-      }
     `,
   });
   return gqlQuery;
