@@ -125,7 +125,7 @@ export class EventProcessor implements IEventProcessor {
         ?.sendEventEmail({
           to: subscribers.map((subscriber) => subscriber.email),
           subject: getEmailSubjectForEvent(event),
-          body: getEmailBodyForEvent(event, getEmailSubjectForEvent(event)),
+          body: getEmailBodyForEvent(event),
           eventType: event.eventType,
           eventData: event.eventData,
           nonce: event.nonce,
@@ -162,7 +162,7 @@ const getEmailSubjectForEvent = (event: NewEvent) => {
   }
 };
 
-const getEmailBodyForEvent = (event: NewEvent, title: string) => {
+const getEmailBodyForEvent = (event: NewEvent) => {
   switch (event.eventType.toLowerCase()) {
     case 'buy-name-notice':
     case 'buy-record-notice':
