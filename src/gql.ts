@@ -91,28 +91,29 @@ export class GQLEventPoller implements EventPoller {
         },
         method: 'POST',
         body: query,
-      })
-        .then((res) => res.json())
-        .catch((err) => {
-          this.logger.error(
-            `Error fetching events from block height ${lastBlockHeight}`,
-            err,
-          );
-          return { data: { transactions: { edges: [] } } };
-        });
+      });
+      if (!response.ok) {
+        this.logger.error(
+          `Error fetching events from block height ${lastBlockHeight}`,
+          response,
+        );
+        break;
+      }
+
+      const data = await response.json();
 
       // parse the nodes to get the id
-      if (response?.data?.transactions?.edges?.length === 0) {
+      if (data?.data?.transactions?.edges?.length === 0) {
         this.logger.info(`No events found for block height ${lastBlockHeight}`);
         break;
       }
 
       this.logger.info(
-        `Found ${response.data.transactions.edges.length} events for block height ${lastBlockHeight}. Processing.....`,
+        `Found ${data.data.transactions.edges.length} events for block height ${lastBlockHeight}. Processing.....`,
       );
 
       // now get all the events
-      const events = response.data.transactions.edges || [];
+      const events = data.data.transactions.edges || [];
       const sortedEvents = [...events].sort((a: any, b: any) => {
         return a.node.tags
           .find((t: { name: string; value: string }) => t.name === 'Reference')
@@ -137,7 +138,7 @@ export class GQLEventPoller implements EventPoller {
       // update the cursor
       lastBlockHeight = Math.max(lastBlockHeight, events[0].node.block.height);
       cursor = events[0].cursor;
-      hasNextPage = response.data.transactions.pageInfo.hasNextPage;
+      hasNextPage = data.data.transactions.pageInfo.hasNextPage;
       this.updateLastBlockHeight(lastBlockHeight + 1);
     }
     this.fetching = false;
