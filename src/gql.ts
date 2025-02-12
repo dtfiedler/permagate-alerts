@@ -108,12 +108,8 @@ export class GQLEventPoller implements EventPoller {
         break;
       }
 
-      this.logger.info(
-        `Found ${data.data.transactions.edges.length} events for block height ${lastBlockHeight}. Processing.....`,
-      );
-
       // now get all the events
-      const events = data.data.transactions.edges || [];
+      const events = data?.data?.transactions?.edges || [];
       const sortedEvents = [...events].sort((a: any, b: any) => {
         return a.node.tags
           .find((t: { name: string; value: string }) => t.name === 'Reference')
