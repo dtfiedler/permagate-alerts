@@ -111,12 +111,6 @@ export class EventProcessor implements IEventProcessor {
   private async storeAndNotify(event: NewEvent): Promise<void> {
     const subscribers = await this.db.findSubscribersByEvent(event.eventType);
 
-    this.logger.info('Sending email to subscribers', {
-      eventId: event.eventData.id,
-      eventType: event.eventType,
-      subscribers: subscribers.length,
-    });
-
     // confirm the nonce is greater than the last seen
     const latestEvent = await this.db.getLatestEvent();
     if (latestEvent && +event.nonce <= latestEvent.nonce) {
@@ -128,6 +122,13 @@ export class EventProcessor implements IEventProcessor {
     }
     // make sure the event is created
     await this.db.createEvent(event);
+
+    this.logger.info('Sending email to subscribers', {
+      eventId: event.eventData.id,
+      eventType: event.eventType,
+      subscribers: subscribers.length,
+    });
+
     if (subscribers.length > 0) {
       // send email, but don't await
       this.notifier
