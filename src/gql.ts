@@ -141,7 +141,7 @@ export class GQLEventPoller implements EventPoller {
         events?.[0]?.node?.block?.height ?? 0,
       );
       cursor = events?.[0]?.cursor;
-      hasNextPage = data.data.transactions.pageInfo.hasNextPage;
+      hasNextPage = data?.data?.transactions?.pageInfo?.hasNextPage ?? false;
       this.updateLastBlockHeight(lastBlockHeight + 1);
     }
     this.fetching = false;
