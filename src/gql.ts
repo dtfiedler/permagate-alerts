@@ -124,6 +124,10 @@ export class GQLEventPoller implements EventPoller {
 
         this.logger.info(
           `Found ${data?.data?.transactions?.edges?.length} events`,
+          {
+            status: response.status,
+            statusText: response.statusText,
+          },
         );
 
         // now get all the events
