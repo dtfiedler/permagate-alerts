@@ -108,13 +108,17 @@ export class GQLEventPoller implements EventPoller {
         break;
       }
 
+      this.logger.info(
+        `Found ${data?.data?.transactions?.edges?.length} events`,
+      );
+
       // now get all the events
       const events = data?.data?.transactions?.edges || [];
       const sortedEvents = [...events].sort((a: any, b: any) => {
-        return a.node.tags
+        return a?.node?.tags
           .find((t: { name: string; value: string }) => t.name === 'Reference')
           ?.value.localeCompare(
-            b.node.tags.find(
+            b?.node?.tags.find(
               (t: { name: string; value: string }) => t.name === 'Reference',
             )?.value ?? '',
           );
