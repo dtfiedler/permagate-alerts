@@ -7,7 +7,7 @@ import { MailgunEmailProvider } from './email/mailgun.js';
 import { EventProcessor } from './processor.js';
 import Arweave from 'arweave';
 import { GQLEventPoller } from './gql.js';
-import { ARIO_TESTNET_PROCESS_ID } from '@ar.io/sdk';
+import { ARIO_MAINNET_PROCESS_ID, ARIO_TESTNET_PROCESS_ID } from '@ar.io/sdk';
 
 // TODO: replace with composite provider that sends to all EventProviders
 export const notifier = config.mailgunApiKey
@@ -38,7 +38,7 @@ export const processor = new EventProcessor({
 
 export const eventGqlPoller = new GQLEventPoller({
   logger,
-  processId: ARIO_TESTNET_PROCESS_ID,
+  processId: ARIO_MAINNET_PROCESS_ID,
   processor,
   gqlUrl: 'https://arweave.net/graphql',
   arweave: Arweave.init({
