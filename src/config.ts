@@ -36,5 +36,6 @@ export const secretKey = process.env.SECRET_KEY || 'default_secret_key';
 export const debugKnex = process.env.DEBUG_KNEX === 'true';
 
 // AO
-export const cuUrl = process.env.CU_URL || 'https://cu.ar-io.dev';
+export const cuUrl = process.env.CU_URL || 'https://cu.ardrive.io';
 export const gatewayHost = process.env.GATEWAY_HOST || 'arweave.net';
+export const arioProcessId = process.env.ARIO_PROCESS_ID;

@@ -38,7 +38,7 @@ export const processor = new EventProcessor({
 
 export const eventGqlPoller = new GQLEventPoller({
   logger,
-  processId: ARIO_MAINNET_PROCESS_ID,
+  processId: config.arioProcessId || ARIO_MAINNET_PROCESS_ID,
   processor,
   gqlUrl: 'https://arweave.net/graphql',
   arweave: Arweave.init({
@@ -49,7 +49,7 @@ export const eventGqlPoller = new GQLEventPoller({
   authorities: ['fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY'],
 });
 
-// every 15 mins, check GQL for new events
+// every 1 minute, check GQL for new events
 export const eventGqlCron = cron.schedule(
   '*/1 * * * *',
   () => {
