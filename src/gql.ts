@@ -136,8 +136,11 @@ export class GQLEventPoller implements EventPoller {
         this.processor.processGQLEvent(gqlEvent);
       }
       // update the cursor
-      lastBlockHeight = Math.max(lastBlockHeight, events[0].node.block.height);
-      cursor = events[0].cursor;
+      lastBlockHeight = Math.max(
+        lastBlockHeight,
+        events?.[0]?.node?.block?.height ?? 0,
+      );
+      cursor = events?.[0]?.cursor;
       hasNextPage = data.data.transactions.pageInfo.hasNextPage;
       this.updateLastBlockHeight(lastBlockHeight + 1);
     }
