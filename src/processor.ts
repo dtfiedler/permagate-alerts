@@ -188,8 +188,7 @@ const getEmailBodyForEvent = (event: NewEvent) => {
       const leaseDurationYears =
         getLeaseDurationYears(startTimestamp, endTimestamp) || 'Permanent';
       return `<div style=\"padding:5px; text-align: center\"><a href="https://permagate.io/UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk"><img style="height: 200px" src=\"https://permagate.io/YSS-NnRuBLrJ1TvWFPTohK7VGKUlaUgWiG9IN9U-hjY\" /></a><h3 style="text-align: center; text-wrap: balance;   "><b><a href="https://${name}.permagate.io">${name}</a></b> was purchased for <b>${event.eventData.data.purchasePrice / 1_000_000} IO</b>!</h3><br/><div style="text-align: left;"><h4>Details</h4>Owner: <a href=\"https://ao.link/#/entity/ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo\">ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo</a><br/>Type: ${event.eventData.data.type}<br/>Lease Duration: ${leaseDurationYears ? `${leaseDurationYears} years` : 'Permanent'}<br/>Process ID: <a href="https://ao.link/#/entity/${event.eventData.data.processId}">${event.eventData.data.processId}</a></div><br/><br/><a style="text-align: center" href="https://ao.link/#/message/${event.eventData.id}">View on AO</a></div>`;
-
     default:
-      return `<div style=\"padding:5px; text-align: center\"><br/><div style="text-align: left;"><h4>Details</h4><pre>${JSON.stringify(event.eventData.data, null, 2)}</pre></div><br/><br/><a style="text-align: center" href="https://ao.link/#/message/${event.eventData.id}">View on AO</a></div>`;
+      return `<div style=\"padding:5px; text-align: center\"><br/><div style="text-align: left;"><h4>Details</h4><pre>${JSON.stringify(event.eventData.data).slice(0, 15000)}</pre></div><br/><br/><a style="text-align: center" href="https://ao.link/#/message/${event.eventData.id}">View on AO</a></div>`;
   }
 };
