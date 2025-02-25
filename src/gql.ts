@@ -108,9 +108,16 @@ export class GQLEventPoller implements EventPoller {
         const data = await response.json();
 
         // parse the nodes to get the id
-        if (data?.data?.transactions?.edges?.length === 0) {
+        if (
+          data == undefined ||
+          data?.data?.transactions?.edges?.length === 0
+        ) {
           this.logger.info(
             `No events found for block height ${lastBlockHeight}`,
+            {
+              status: response.status,
+              statusText: response.statusText,
+            },
           );
           break;
         }
