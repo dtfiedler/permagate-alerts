@@ -117,6 +117,15 @@ export class EventProcessor implements IEventProcessor {
       subscribers: subscribers.length,
     });
 
+    // confirm the nonce is greater than the last seen
+    const latestEvent = await this.db.getLatestEvent();
+    if (latestEvent && +event.nonce <= latestEvent.nonce) {
+      this.logger.info('Skipping event', {
+        eventId: event.eventData.id,
+        nonce: event.nonce,
+      });
+      return;
+    }
     // make sure the event is created
     await this.db.createEvent(event);
     if (subscribers.length > 0) {
