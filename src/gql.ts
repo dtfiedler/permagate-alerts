@@ -109,7 +109,7 @@ export class GQLEventPoller implements EventPoller {
 
         // parse the nodes to get the id
         if (
-          data == undefined ||
+          data?.data === undefined ||
           data?.data?.transactions?.edges?.length === 0
         ) {
           this.logger.info(
