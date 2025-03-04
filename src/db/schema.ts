@@ -1,17 +1,26 @@
 import { z } from 'zod';
 
+export const subscriberEvents = [
+  'buy-name-notice',
+  'join-network-notice',
+  'leave-network-notice',
+  'updated-demand-factor-notice',
+  'epoch-created-notice',
+  'epoch-distribution-notice',
+  'returned-name-notice',
+  'upgrade-name-notice',
+  'delegate-stake-notice',
+] as const;
+
+export const subscriberEventSchema = z.enum(subscriberEvents);
+
+export type SubscriberEvent = (typeof subscriberEvents)[number];
+
 // Subscriber schema
 const subscriberSchema = z.object({
   id: z.number(),
   email: z.string().email(),
-  events: z.array(
-    z.enum([
-      'buy-record-notice',
-      'name-expiration-notice',
-      'distribution-notice',
-      'save-observations-notice',
-    ]),
-  ),
+  events: z.string().optional(),
   wallet_addresses: z.array(z.string()),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -24,7 +33,6 @@ const newSubscriberSchema = subscriberSchema.omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-  events: true,
   wallet_addresses: true,
 });
 

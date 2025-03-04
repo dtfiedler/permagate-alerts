@@ -13,6 +13,7 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 // Server configuration
 export const port = process.env.PORT ? +process.env.PORT : 3000;
 export const environment: string = process.env.NODE_ENV || 'development';
+export const hostUrl = process.env.HOST_URL || 'http://localhost:3000';
 
 // Auth0 configuration
 export const auth0Domain = process.env.AUTH0_DOMAIN;

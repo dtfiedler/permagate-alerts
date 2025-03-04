@@ -77,6 +77,10 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
     return this.getSubscriber(id);
   }
 
+  async getSubscriberByEmail(email: string): Promise<Subscriber | undefined> {
+    return this.knex<Subscriber>('subscribers').where({ email }).first();
+  }
+
   async updateSubscriber(
     id: number,
     subscriber: Partial<Subscriber>,
