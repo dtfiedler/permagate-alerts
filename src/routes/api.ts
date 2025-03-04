@@ -60,8 +60,7 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
       to: [email],
       text: `You have successfully been subscribed to alerts.permagate.io!
 
-You will receive alerts for the following events:
-${validatedEvents.data.join(', ')}
+You will receive alerts for the following events: ${subscriber?.events?.split(',').join(', ')}
 
 To unsubscribe, click here: ${unsubscribeLink}`,
       subject: 'Subscription successful! 🚀',
