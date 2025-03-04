@@ -21,6 +21,11 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
     const email = req.query.email as string;
     const events = (req.body.events as string[]) || [];
 
+    logger.debug(`Received subscribe request`, {
+      email,
+      events,
+    });
+
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
     }
@@ -33,7 +38,6 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
     }
 
     const eventsSchema = z.array(subscriberEventSchema);
-
     const validatedEvents = eventsSchema.safeParse(events);
 
     if (!validatedEvents.success) {
@@ -41,6 +45,11 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
         error: `Unsupported event type provided ${events.join(', ')}`,
       });
     }
+
+    logger.info(`Subscribing email to events...`, {
+      email: validatedEmail.data,
+      events: validatedEvents.data,
+    });
 
     const subscriberData: NewSubscriber = {
       email: validatedEmail.data,
@@ -50,7 +59,10 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
           : undefined,
     };
     const subscriber = await req.db.createSubscriber(subscriberData);
-    logger.info(`New subscriber added: ${email}`);
+    logger.info(`Successfully subscribed email to events`, {
+      email: validatedEmail.data,
+      events: validatedEvents.data,
+    });
 
     // Function to generate a signed hash
     const unsubscribeLink = generateUnsubscribeLink(email);
