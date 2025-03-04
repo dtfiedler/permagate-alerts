@@ -182,6 +182,19 @@
             `/api/subscribe?email=${encodeURIComponent(email)}`,
             {
               method: 'POST',
+              body: JSON.stringify({
+                email,
+                events: [
+                  'buy-name-notice',
+                  'join-network-notice',
+                  'epoch-distribution-notice',
+                  'epoch-created-notice',
+                  'upgrade-name-notice',
+                  'delegate-stake-notice',
+                  'returned-name-notice',
+                  'leave-network-notice',
+                ],
+              }),
             },
           );
 

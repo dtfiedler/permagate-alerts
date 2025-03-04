@@ -19,9 +19,7 @@ apiRouter.get('/healthcheck', (_, res) => {
 apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
   try {
     const email = req.query.email as string;
-    const events = (req.body.events as string[]) || [];
-
-    console.log(req.body);
+    const events = JSON.parse(req.body).events as string[];
 
     logger.debug(`Received subscribe request`, {
       email,
