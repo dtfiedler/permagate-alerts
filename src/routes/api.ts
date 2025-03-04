@@ -24,6 +24,7 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
     logger.debug(`Received subscribe request`, {
       email,
       events,
+      body: req.body,
     });
 
     if (!email) {
