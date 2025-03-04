@@ -21,6 +21,8 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
     const email = req.query.email as string;
     const events = (req.body.events as string[]) || [];
 
+    console.log(req.body);
+
     logger.debug(`Received subscribe request`, {
       email,
       events,
