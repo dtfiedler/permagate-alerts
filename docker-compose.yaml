@@ -8,6 +8,7 @@ services:
     environment:
       - PORT=${PORT:-3000}
       - NODE_ENV=${NODE_ENV:-development}
+      - HOST_URL=${HOST_URL:-http://localhost:3000}
       - MAILGUN_API_KEY=${MAILGUN_API_KEY:-}
       - MAILGUN_DOMAIN=${MAILGUN_DOMAIN:-}
       - MAILGUN_FROM_EMAIL=${MAILGUN_FROM_EMAIL:-}
