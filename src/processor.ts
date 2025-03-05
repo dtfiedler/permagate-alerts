@@ -203,8 +203,139 @@ const getEmailBodyForEvent = (event: NewEvent) => {
         <p>To unsubscribe from these notifications, <a href="${generateUnsubscribeLink(event.eventData.data.email)}">click here</a>.</p>
       </div>`;
 
-      return `<div style=\"padding:5px; text-align: center\"><a href="https://permagate.io/UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk"><img style="height: 200px" src=\"https://permagate.io/YSS-NnRuBLrJ1TvWFPTohK7VGKUlaUgWiG9IN9U-hjY\" /></a><h3 style="text-align: center; text-wrap: balance;   "><b><a href="https://${name}.permagate.io">${name}</a></b> was purchased for <b>${event.eventData.data.purchasePrice / 1_000_000} IO</b>!</h3><br/><div style="text-align: left;"><h4>Details</h4>Owner: <a href=\"https://ao.link/#/entity/ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo\">ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo</a><br/>Type: ${event.eventData.data.type}<br/>Lease Duration: ${leaseDurationYears ? `${leaseDurationYears} years` : 'Permanent'}<br/>Process ID: <a href="https://ao.link/#/entity/${event.eventData.data.processId}">${event.eventData.data.processId}</a></div><br/><br/><a style="text-align: center" href="https://ao.link/#/message/${event.eventData.id}">View on AO</a> ${unsubscribeText.replace('{{unsubscribeLink}}', '${generateUnsubscribeLink(email)}')} </div>`;
+      return `
+  <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
+    <a href="https://permagate.io/UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk">
+      <img style="height: 200px; max-width: 100%;" src="https://permagate.io/YSS-NnRuBLrJ1TvWFPTohK7VGKUlaUgWiG9IN9U-hjY" alt="Permagate Logo" />
+    </a>
+    
+    <h3 style="text-align: center; word-wrap: break-word;">
+      <b>
+        <a href="https://${name}.permagate.io" style="color: #007bff; text-decoration: none;">${name}</a>
+      </b> 
+      was purchased for <b>${event.eventData.data.purchasePrice / 1_000_000} IO</b>!
+    </h3>
+
+    <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+      <h4 style="margin-bottom: 5px;">Details</h4>
+      <p style="margin: 5px 0;">
+        <strong>Owner:</strong> 
+        <a href="https://ao.link/#/entity/ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo" style="color: #007bff; text-decoration: none;">
+          ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo
+        </a>
+      </p>
+      <p style="margin: 5px 0;"><strong>Type:</strong> ${event.eventData.data.type}</p>
+      <p style="margin: 5px 0;"><strong>Lease Duration:</strong> ${leaseDurationYears ? `${leaseDurationYears} years` : 'Permanent'}</p>
+      <p style="margin: 5px 0;">
+        <strong>Process ID:</strong> 
+        <a href="https://ao.link/#/entity/${event.eventData.data.processId}" style="color: #007bff; text-decoration: none;">
+          ${event.eventData.data.processId}
+        </a>
+      </p>
+    </div>
+
+    <br/>
+
+    <a href="https://ao.link/#/message/${event.eventData.id}" 
+       style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 15px; border-radius: 5px; text-decoration: none;">
+      View on AO
+    </a>
+
+    <br/><br/>
+
+    <p style="font-size: 12px; color: #666;">
+      ${unsubscribeText}
+    </p>
+  </div>
+  `;
+    case 'epoch-distribution-notice':
+      const epochData = event.eventData.data.distributions;
+      const totalEligibleGateways = epochData.totalEligibleGateways || 0;
+      const totalEligibleRewards = epochData.totalEligibleRewards
+        ? epochData.totalEligibleRewards / 1_000_000
+        : 0;
+      const totalEligibleObserverReward = epochData.totalEligibleObserverReward
+        ? epochData.totalEligibleObserverReward / 1_000_000
+        : 0;
+      const totalEligibleGatewayReward = epochData.totalEligibleGatewayReward
+        ? epochData.totalEligibleGatewayReward / 1_000_000
+        : 0;
+      const totalDistributedRewards = epochData.totalDistributedRewards
+        ? epochData.totalDistributedRewards / 1_000_000
+        : 0;
+      const distributedTimestamp = epochData.distributedTimestamp
+        ? new Date(epochData.distributedTimestamp).toLocaleString()
+        : 'N/A';
+
+      // Generate unsubscribe text for this email
+      const unsubscribeLink = event.eventData.data.email
+        ? generateUnsubscribeLink(event.eventData.data.email)
+        : '#';
+      const emailUnsubscribeText = `<div style="margin-top: 20px; font-size: 12px; color: #666; text-align: center;">
+      <p>To unsubscribe from these notifications, <a href="${unsubscribeLink}">click here</a>.</p>
+    </div>`;
+
+      return `
+  <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
+    <a href="https://permagate.io/UyC5P5qKPZaltMmmZAWdakhlDXsBF6qmyrbWYFchRTk">
+      <img style="height: 200px; max-width: 100%;" src="https://permagate.io/YSS-NnRuBLrJ1TvWFPTohK7VGKUlaUgWiG9IN9U-hjY" alt="Permagate Logo" />
+    </a>
+    
+    <h3 style="text-align: center; word-wrap: break-word;">
+      <b>Epoch Distribution Complete</b>
+    </h3>
+
+    <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+      <h4 style="margin-bottom: 5px;">Distribution Details</h4>
+      <p style="margin: 5px 0;"><strong>Total Eligible Gateways:</strong> ${totalEligibleGateways}</p>
+      <p style="margin: 5px 0;"><strong>Total Eligible Rewards:</strong> ${totalEligibleRewards} $ARIO</p>
+      <p style="margin: 5px 0;"><strong>Total Observer Rewards:</strong> ${totalEligibleObserverReward} $ARIO</p>
+      <p style="margin: 5px 0;"><strong>Total Gateway Rewards:</strong> ${totalEligibleGatewayReward} $ARIO</p>
+      <p style="margin: 5px 0;"><strong>Total Distributed Rewards:</strong> ${totalDistributedRewards} $ARIO (${((totalDistributedRewards / totalEligibleRewards) * 100).toFixed(2)}%)</p>
+      <p style="margin: 5px 0;"><strong>Distribution Timestamp:</strong> ${distributedTimestamp}</p>
+      <p style="margin: 5px 0;">
+        <strong>Process ID:</strong> 
+        <a href="https://ao.link/#/entity/${event.eventData.data.processId || event.eventData.target}" style="color: #007bff; text-decoration: none;">
+          ${event.eventData.data.processId || event.eventData.target}
+        </a>
+      </p>
+    </div>
+
+    <br/>
+
+    <a href="https://ao.link/#/message/${event.eventData.id}" 
+       style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 15px; border-radius: 5px; text-decoration: none;">
+      View on AO
+    </a>
+
+    <br/><br/>
+
+    <p style="font-size: 12px; color: #666;">
+      ${emailUnsubscribeText}
+    </p>
+  </div>
+  `;
     default:
-      return `<div style=\"padding:5px; text-align: center\"><br/><div style="text-align: left;"><h4>Details</h4><pre>${JSON.stringify(event.eventData.data).slice(0, 15000)}</pre></div><br/><br/><a style="text-align: center" href="https://ao.link/#/message/${event.eventData.id}">View on AO</a></div>`;
+      return `
+  <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
+    <br/>
+    
+    <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+      <h4 style="margin-bottom: 5px;">Details</h4>
+      <pre style="white-space: pre-wrap; word-wrap: break-word; background: #eef2f7; padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto;">
+        ${JSON.stringify(event.eventData.data, null, 2).slice(0, 15000)}
+      </pre>
+    </div>
+
+    <br/>
+
+    <a href="https://ao.link/#/message/${event.eventData.id}" 
+       style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 15px; border-radius: 5px; text-decoration: none;">
+      View on AO
+    </a>
+
+    <br/>
+  </div>
+`;
   }
 };
