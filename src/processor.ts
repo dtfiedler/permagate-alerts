@@ -2,7 +2,7 @@ import { EmailProvider } from './email/mailgun.js';
 import { GQLEvent, NewEvent, RawEvent } from './db/schema.js';
 import { SqliteDatabase } from './db/sqlite.js';
 import * as winston from 'winston';
-import { generateUnsubscribeLink } from './lib/hash.js';
+
 interface IEventProcessor {
   processGQLEvent(event: GQLEvent): Promise<void>;
   processRawEvent(event: RawEvent): Promise<void>;
