@@ -216,7 +216,6 @@ const getEmailBodyForEvent = (event: NewEvent) => {
       const leaseDurationYears =
         getLeaseDurationYears(startTimestamp, endTimestamp) || 'Permanent';
 
-      console.log(event.eventData);
       return `
   <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
     <h3 style="text-align: center; word-wrap: break-word; color: white;">
