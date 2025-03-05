@@ -63,7 +63,9 @@ export class EventProcessor implements IEventProcessor {
     const nonce = tags.find(
       (tag) => tag.name.startsWith('Reference') || tag.name.startsWith('Ref_'),
     )?.value;
-    const target = tags.find((tag) => tag.name.startsWith('Target'))?.value;
+    const target =
+      tags.find((tag) => tag.name.startsWith('Target'))?.value ||
+      tags.find((tag) => tag.name.startsWith('Pushed-For'))?.value;
     const action = tags
       .find((tag) => tag.name.startsWith('Action'))
       ?.value.toLowerCase();
@@ -214,6 +216,7 @@ const getEmailBodyForEvent = (event: NewEvent) => {
       const leaseDurationYears =
         getLeaseDurationYears(startTimestamp, endTimestamp) || 'Permanent';
 
+      console.log(event.eventData);
       return `
   <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
     <h3 style="text-align: center; word-wrap: break-word; color: white;">
