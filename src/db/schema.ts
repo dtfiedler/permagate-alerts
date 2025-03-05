@@ -41,6 +41,7 @@ export type NewSubscriber = z.infer<typeof newSubscriberSchema>;
 // Alert schema
 const eventSchema = z.object({
   id: z.number(),
+  processId: z.string(),
   eventType: z.string(),
   eventData: z.object({
     tags: z.array(
@@ -53,6 +54,7 @@ const eventSchema = z.object({
     target: z.string(),
     id: z.string(),
   }),
+  blockHeight: z.number().nullable(),
   nonce: z.number(),
   emailsSent: z.boolean(),
   createdAt: z.date(),
@@ -68,6 +70,8 @@ const dbEventSchema = z.object({
   emails_sent: z.boolean().default(false),
   created_at: z.date(),
   processed_at: z.date().nullable(),
+  block_height: z.number().nullable(),
+  process_id: z.string(),
 });
 export type DBEvent = z.infer<typeof dbEventSchema>;
 
@@ -130,6 +134,9 @@ const gqlEventSchema = z.object({
     }),
   ),
   data: z.string(),
+  block: z.object({
+    height: z.number().nullable(),
+  }),
 });
 
 export type GQLEvent = z.infer<typeof gqlEventSchema>;

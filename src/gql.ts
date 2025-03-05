@@ -1,7 +1,7 @@
 import Arweave from 'arweave';
-import fs from 'fs';
 import { EventProcessor } from './processor.js';
 import winston from 'winston';
+import { SqliteDatabase } from './db/sqlite.js';
 
 interface EventPoller {
   fetchAndProcessEvents(): Promise<void>;
@@ -10,12 +10,13 @@ interface EventPoller {
 export class GQLEventPoller implements EventPoller {
   private processId: string;
   private arweave: Arweave;
-  private lastBlockHeightFile: string;
+  private db: SqliteDatabase;
   private processor: EventProcessor;
   private authorities: string[];
   private gqlUrl: string;
   private logger: winston.Logger;
   private fetching = false;
+  private skipToCurrentBlock: boolean;
   constructor({
     processId,
     arweave,
@@ -23,39 +24,47 @@ export class GQLEventPoller implements EventPoller {
     authorities,
     gqlUrl,
     logger,
+    db,
+    skipToCurrentBlock,
   }: {
+    db: SqliteDatabase;
     processId: string;
     arweave: Arweave;
     processor: EventProcessor;
     authorities: string[];
     gqlUrl: string;
     logger: winston.Logger;
+    skipToCurrentBlock: boolean;
   }) {
     this.logger = logger.child({
       processId,
       gqlUrl,
     });
+    this.db = db;
     this.gqlUrl = gqlUrl;
     this.processId = processId;
     this.arweave = arweave;
     this.processor = processor;
     this.authorities = authorities;
-    this.lastBlockHeightFile = `./data/last-block-height-${processId}.tx`;
-    if (!fs.existsSync(this.lastBlockHeightFile)) {
-      fs.writeFileSync(this.lastBlockHeightFile, '0');
-    }
+    this.skipToCurrentBlock = skipToCurrentBlock;
     this.fetching = false;
   }
 
   async getLastBlockHeight(): Promise<number> {
-    const lastBlockHeight = parseInt(
-      fs.readFileSync(this.lastBlockHeightFile, 'utf8').trim(),
-    );
+    const lastBlockHeight = await this.db
+      .getLatestEventByBlockHeight({ processId: this.processId })
+      .then((event) => {
+        return event?.blockHeight ?? 0;
+      });
     const latestBlockHeight = await this.arweave.blocks.getCurrent();
-    if (isNaN(lastBlockHeight)) {
+
+    // if we're skipping to the current block, set it to false once we've started
+    if (this.skipToCurrentBlock) {
+      this.skipToCurrentBlock = false;
       return latestBlockHeight.height;
     }
 
+    // return the minimum of the last block height or the latest block height
     return Math.min(lastBlockHeight, latestBlockHeight.height);
   }
 
@@ -151,6 +160,9 @@ export class GQLEventPoller implements EventPoller {
             id: event.node.id,
             tags: event.node.tags,
             data: eventResult.data,
+            block: {
+              height: +event.node.block.height,
+            },
           };
           // process the raw event, don't await
           this.processor.processGQLEvent(gqlEvent);
@@ -158,9 +170,9 @@ export class GQLEventPoller implements EventPoller {
         // update the cursor
         lastBlockHeight = Math.max(
           lastBlockHeight,
-          events?.[0]?.node?.block?.height ?? 0,
+          events?.[events.length - 1]?.node?.block?.height ?? 0,
         );
-        cursor = events?.[0]?.cursor;
+        cursor = events?.[events.length - 1]?.cursor;
         hasNextPage = data?.data?.transactions?.pageInfo?.hasNextPage ?? false;
       }
     } catch (error) {
@@ -171,10 +183,6 @@ export class GQLEventPoller implements EventPoller {
         `Finished fetching events up to block height ${lastBlockHeight}`,
       );
     }
-  }
-
-  updateLastBlockHeight(blockHeight: number): void {
-    fs.writeFileSync(this.lastBlockHeightFile, blockHeight.toString());
   }
 }
 

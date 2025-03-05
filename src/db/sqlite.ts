@@ -30,7 +30,16 @@ interface SubscriberStore extends BaseStore {
 interface EventStore extends BaseStore {
   getEvent(id: number): Promise<Event | undefined>;
   getAllEvents(limit?: number): Promise<Event[]>;
-  getLatestEvent(): Promise<Event | undefined>;
+  getLatestEventByBlockHeight({
+    processId,
+  }: {
+    processId: string;
+  }): Promise<Event | undefined>;
+  getLatestEventByNonce({
+    processId,
+  }: {
+    processId: string;
+  }): Promise<Event | undefined>;
   createEvent(event: NewEvent): Promise<Event | undefined>;
   updateEvent(id: number, event: Partial<Event>): Promise<Event | undefined>;
   deleteEvent(id: number): Promise<boolean>;
@@ -112,8 +121,10 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
     }
     return {
       id: event.id,
+      processId: event.process_id,
       nonce: event.nonce,
       eventData: JSON.parse(event.event_data),
+      blockHeight: event.block_height,
       emailsSent: event.emails_sent,
       eventType: event.event_type,
       createdAt: event.created_at,
@@ -126,22 +137,52 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
       .select('*')
       .orderBy('nonce', 'desc')
       .limit(limit);
-    return events.map(
-      (event: DBEvent): Event => ({
+    return events.map((event: DBEvent): Event => {
+      const eventData = JSON.parse(event.event_data);
+      return {
         id: event.id,
+        processId: event.process_id,
         nonce: event.nonce,
-        eventData: JSON.parse(event.event_data),
+        eventData: eventData,
+        blockHeight: event.block_height,
         emailsSent: event.emails_sent,
         eventType: event.event_type,
         createdAt: event.created_at,
         processedAt: event.processed_at,
-      }),
-    );
+      };
+    });
   }
 
-  async getLatestEvent(): Promise<Event | undefined> {
-    const events = await this.getAllEvents(1);
-    return events[0];
+  async getLatestEventByBlockHeight({
+    processId,
+  }: {
+    processId: string;
+  }): Promise<Event | undefined> {
+    const event = await this.knex<DBEvent>('events')
+      .whereNotNull('block_height')
+      .where({ process_id: processId })
+      .orderBy('block_height', 'desc')
+      .orderBy('nonce', 'desc')
+      .first();
+    if (!event) {
+      return undefined;
+    }
+    return this.getEvent(event.nonce);
+  }
+
+  async getLatestEventByNonce({
+    processId,
+  }: {
+    processId: string;
+  }): Promise<Event | undefined> {
+    const event = await this.knex<DBEvent>('events')
+      .where({ process_id: processId })
+      .orderBy('nonce', 'desc')
+      .first();
+    if (!event) {
+      return undefined;
+    }
+    return this.getEvent(event.nonce);
   }
 
   async createEvent(event: NewEvent): Promise<Event | undefined> {
@@ -149,6 +190,8 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
       .insert({
         event_type: event.eventType,
         event_data: JSON.stringify(event.eventData),
+        process_id: event.processId,
+        block_height: event.blockHeight,
         nonce: event.nonce,
       })
       .onConflict('nonce')
@@ -192,8 +235,10 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
     return events.map(
       (event: DBEvent): Event => ({
         id: event.id,
+        processId: event.process_id,
         nonce: event.nonce,
         eventData: JSON.parse(event.event_data),
+        blockHeight: event.block_height,
         emailsSent: event.emails_sent,
         eventType: event.event_type,
         createdAt: event.created_at,
