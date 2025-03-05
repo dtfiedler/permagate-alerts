@@ -87,6 +87,13 @@ To unsubscribe, click here: ${unsubscribeLink}`,
   }
 });
 
+// Route to get the total number of subscribers
+// @ts-ignore
+apiRouter.get('/api/subscribers/total', async (req: Request, res: Response) => {
+  const total = await req.db.getTotalSubscribers();
+  return res.status(200).json({ total });
+});
+
 // Route to handle unsubscribe requests
 apiRouter.get(
   '/api/unsubscribe/:hash',
