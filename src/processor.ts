@@ -224,8 +224,8 @@ const getEmailBodyForEvent = (event: NewEvent) => {
     <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">
       <p style="margin: 5px 0;">
         <strong>Owner:</strong> 
-        <a href="https://ao.link/#/entity/ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo" style="color: #007bff; text-decoration: none;">
-          ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo
+        <a href="https://ao.link/#/entity/${event.eventData.target}" style="color: #007bff; text-decoration: none;">
+          ${event.eventData.target}
         </a>
       </p>
       <p style="margin: 5px 0;"><strong>Type:</strong> ${event.eventData.data.type}</p>
