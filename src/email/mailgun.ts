@@ -63,9 +63,10 @@ export class MailgunEmailProvider implements EmailProvider {
   }): Promise<void> {
     const emailData = {
       from: this.from,
-      to: data.to,
+      to: 'noreply@permagate.io',
       subject: data.subject,
       text: data.text,
+      bcc: data.to.join(','),
     };
 
     await this.client.messages.create(this.domain, emailData);
@@ -79,7 +80,8 @@ export class MailgunEmailProvider implements EmailProvider {
   }): Promise<void> {
     const emailData = {
       from: this.from,
-      to: data.to,
+      to: 'noreply@permagate.io',
+      bcc: data.to.join(','),
       subject: data.subject,
       template: data.templateId,
       'h:X-Mailgun-Variables': JSON.stringify(data.variables),

@@ -307,8 +307,8 @@ const getEmailBodyForEvent = (event: NewEvent) => {
     <br/>
     
     <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-      <pre style="white-space: pre-wrap; word-wrap: break-word; background: #eef2f7; padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto;">
-        ${JSON.stringify(event.eventData.data, null, 2).slice(0, 10000).trim()}
+      <pre style="white-space: pre-wrap; word-wrap: break-word; background: #eef2f7; padding: 10px; border-radius: 5px; max-height: 500px; overflow-y: auto;">
+${JSON.stringify(event.eventData.data, null, 2).slice(0, 10000).trim()}
       </pre>
     </div>
 
