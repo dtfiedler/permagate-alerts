@@ -51,12 +51,12 @@ export class GQLEventPoller implements EventPoller {
     const lastBlockHeight = parseInt(
       fs.readFileSync(this.lastBlockHeightFile, 'utf8').trim(),
     );
+    const latestBlockHeight = await this.arweave.blocks.getCurrent();
     if (isNaN(lastBlockHeight)) {
-      return await this.arweave.blocks
-        .getCurrent()
-        .then((block) => block.height);
+      return latestBlockHeight.height;
     }
-    return lastBlockHeight;
+
+    return Math.min(lastBlockHeight, latestBlockHeight.height);
   }
 
   /**
