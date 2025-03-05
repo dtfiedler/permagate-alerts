@@ -77,8 +77,10 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
   }
 
   async getTotalSubscribers(): Promise<number> {
-    const [total] = await this.knex<Subscriber>('subscribers').count('*');
-    return parseInt(total);
+    const result = await this.knex<Subscriber>('subscribers')
+      .count<{ count: string | number | undefined }>('* as count')
+      .first();
+    return Number(result?.count || 0);
   }
 
   async createSubscriber(
