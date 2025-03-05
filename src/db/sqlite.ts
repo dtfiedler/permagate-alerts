@@ -83,6 +83,11 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
       .insert(subscriber)
       .onConflict('email')
       .merge();
+
+    // no id is returned if the subscriber already exists, so we need to get it from the db
+    if (!id) {
+      return this.getSubscriberByEmail(subscriber.email);
+    }
     return this.getSubscriber(id);
   }
 
