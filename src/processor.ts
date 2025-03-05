@@ -175,6 +175,8 @@ const getEmailSubjectForEvent = (event: NewEvent) => {
       const name = event.eventData.data.name;
       const type = event.eventData.data.type;
       return `✅ ${name} has been ${type === 'permabuy' ? 'permabought' : 'leased'}!`;
+    case 'epoch-created-notice':
+      return `🔭 Epoch ${event.eventData.data.epochIndex} has been created!`;
     case 'epoch-distribution-notice':
       return `🔭 Epoch ${event.eventData.data.epochIndex} has been distributed!`;
     case 'join-network-notice':
@@ -306,7 +308,7 @@ const getEmailBodyForEvent = (event: NewEvent) => {
     
     <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">
       <pre style="white-space: pre-wrap; word-wrap: break-word; background: #eef2f7; padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto;">
-        ${JSON.stringify(event.eventData.data, null, 2).slice(0, 15000).trim()}
+        ${JSON.stringify(event.eventData.data, null, 2).slice(0, 10000).trim()}
       </pre>
     </div>
 

@@ -209,6 +209,7 @@ export const eventsFromProcessGqlQuery = ({
             { name: "Data-Protocol", values: ["ao"] },
             { name: "Action", values: [
                 "Epoch-Distribution-Notice",
+                "Epoch-Created-Notice",
                 "Buy-Name-Notice",
                 "Join-Network-Notice",
                 "Leave-Network-Notice"
