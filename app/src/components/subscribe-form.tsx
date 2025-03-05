@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 
-const subscribeEmail = async (email: string): Promise<any> => {
+const subscribeEmail = async ({
+  email,
+  events,
+}: {
+  email: string;
+  events: string[];
+}): Promise<any> => {
   const response = await fetch(
     `http://localhost:3000/api/subscribe?email=${encodeURIComponent(email)}`,
     {
