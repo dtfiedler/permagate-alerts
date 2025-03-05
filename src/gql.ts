@@ -54,7 +54,7 @@ export class GQLEventPoller implements EventPoller {
     const lastBlockHeight = await this.db
       .getLatestEventByBlockHeight({ processId: this.processId })
       .then((event) => {
-        return event?.blockHeight ?? 0;
+        return event?.blockHeight;
       });
     const latestBlockHeight = await this.arweave.blocks.getCurrent();
 
@@ -65,7 +65,10 @@ export class GQLEventPoller implements EventPoller {
     }
 
     // return the minimum of the last block height or the latest block height
-    return Math.min(lastBlockHeight, latestBlockHeight.height);
+    return Math.min(
+      lastBlockHeight || latestBlockHeight.height,
+      latestBlockHeight.height,
+    );
   }
 
   /**
