@@ -15,6 +15,8 @@ export const port = process.env.PORT ? +process.env.PORT : 3000;
 export const environment: string = process.env.NODE_ENV || 'development';
 export const hostUrl = process.env.HOST_URL || 'http://localhost:3000';
 export const skipToCurrentBlock = process.env.SKIP_TO_CURRENT_BLOCK === 'true';
+export const gqlUrl =
+  process.env.GQL_URL || 'https://arweave-search.goldsky.com/graphql';
 
 // Auth0 configuration
 export const auth0Domain = process.env.AUTH0_DOMAIN;

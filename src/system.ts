@@ -40,7 +40,7 @@ export const eventGqlPoller = new GQLEventPoller({
   logger,
   processId: config.arioProcessId || ARIO_MAINNET_PROCESS_ID,
   processor,
-  gqlUrl: 'https://arweave-search.goldsky.com/graphql',
+  gqlUrl: config.gqlUrl,
   skipToCurrentBlock: config.skipToCurrentBlock,
   db: db,
   arweave: Arweave.init({
