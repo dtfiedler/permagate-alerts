@@ -255,13 +255,6 @@ const getEmailBodyForEvent = (event: NewEvent) => {
     case 'join-network-notice':
       return `
   <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
-    <h3 style="text-align: center; word-wrap: break-word; color: white;">
-        <b>
-          ${event.eventData.data.settings.fqdn}
-        </b> 
-      has joined the network!
-    </h3>
-
     <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">
       <p style="margin: 5px 0;"><strong>FQDN:</strong> ${event.eventData.data.settings.fqdn}</p>
       <p style="margin: 5px 0;"><strong>Operator Stake:</strong> ${event.eventData.data.operatorStake ? event.eventData.data.operatorStake / 1_000_000 + ' $ARIO' : 'N/A'}</p>
