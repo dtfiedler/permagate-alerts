@@ -178,7 +178,7 @@ const getEmailSubjectForEvent = (event: NewEvent) => {
       const type = event.eventData.data.type;
       return `✅ ${name} has been ${type === 'permabuy' ? 'permabought' : 'leased'}!`;
     case 'epoch-created-notice':
-      return `🔭 Epoch ${event.eventData.data.epochIndex} has been created!`;
+      return `💰 Epoch ${event.eventData.data.epochIndex} has been created!`;
     case 'epoch-distribution-notice':
       return `🔭 Epoch ${event.eventData.data.epochIndex} has been distributed!`;
     case 'join-network-notice':

@@ -5,7 +5,7 @@ import { Request } from '../types.js';
 import * as config from '../config.js';
 import { z } from 'zod';
 import { NewSubscriber, subscriberEventSchema } from '../db/schema.js';
-import { generateUnsubscribeLink } from '../lib/hash.js';
+import { generateUnsubscribeLink, generateVerifyLink } from '../lib/hash.js';
 
 const apiRouter = Router();
 
@@ -60,25 +60,27 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
           : undefined,
     };
     const subscriber = await req.db.createSubscriber(subscriberData);
-    logger.info(`Successfully subscribed email to events`, {
+    logger.info(`Successfully created new subscriber`, {
       email: validatedEmail.data,
       events: validatedEvents.data,
     });
 
-    // Function to generate a signed hash
-    const unsubscribeLink = generateUnsubscribeLink(email);
+    // if the subscriber is not verified, send verification email
+    if (!subscriber?.verified) {
+      // send verify email
+      const verifyLink = generateVerifyLink(email);
+      req.notifier?.sendRawEmail({
+        to: [email],
+        text: `Please verify your email address by clicking the link below:\n\n${verifyLink}`,
+        subject: '🤖 Verify your email address',
+      });
+    }
 
-    // send intro email in background
-    req.notifier?.sendRawEmail({
-      to: [email],
-      text: `You have successfully been subscribed to alerts.permagate.io!
+    // TODO: send an updated subscriber email with updated events
 
-You will receive alerts for the following events: ${subscriber?.events?.split(',').join(', ')}
-
-To unsubscribe, click here: ${unsubscribeLink}`,
-      subject: 'Subscription successful! 🚀',
+    return res.status(200).json({
+      message: `Subscriber ${subscriber?.verified ? 'updated' : 'created'}`,
     });
-    return res.status(200).json(subscriber);
   } catch (error) {
     logger.error('Error processing subscribe request:', error);
     res
@@ -86,6 +88,81 @@ To unsubscribe, click here: ${unsubscribeLink}`,
       .json({ error: 'An error occurred while processing your request' });
   }
 });
+
+// Route to verify a subscribers email address
+apiRouter.get(
+  '/api/subscribe/verify/:hash',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const { hash } = req.params;
+
+      // parse out the email from the hash
+      const [encodedEmail, givenHmac] = hash.split('.');
+      const email = Buffer.from(encodedEmail, 'base64url').toString('utf8');
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      // verify the hash
+      const expectedHmacForEmail = crypto
+        .createHmac('sha256', config.secretKey)
+        .update(email)
+        .digest('hex');
+
+      const givenHmacBuffer = new Uint8Array(Buffer.from(givenHmac, 'hex'));
+      const expectedHmacBuffer = new Uint8Array(
+        Buffer.from(expectedHmacForEmail, 'hex'),
+      );
+
+      if (!crypto.timingSafeEqual(givenHmacBuffer, expectedHmacBuffer)) {
+        return res.status(400).json({ error: 'Invalid unsubscribe link' });
+      }
+
+      // get the subscriber
+      const subscriber = await req.db.getSubscriberByEmail(email);
+
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      // verify the subscriber
+      if (subscriber.email !== email) {
+        return res.status(400).json({ error: 'Invalid unsubscribe link' });
+      }
+
+      const verified = await req.db.verifySubscriber(subscriber.id);
+
+      // verify the subscriber is verified
+      if (!verified?.verified) {
+        return res.status(400).json({ error: 'Subscriber not verified' });
+      }
+
+      const unsubscribeLink = generateUnsubscribeLink(email);
+      // send intro email in background
+      req.notifier?.sendRawEmail({
+        to: [email],
+        text: `You have successfully been subscribed to subscribe.permagate.io!
+
+You will receive alerts for the following events: ${subscriber?.events?.split(',').join(', ')}
+
+To unsubscribe, click here: ${unsubscribeLink}`,
+        subject: 'Subscription successful! 🚀',
+      });
+      return res.status(200).json({
+        message: 'Subscriber verified',
+      });
+    } catch (error) {
+      logger.error('Error processing subscribe request:', error);
+      res
+        .status(500)
+        .json({ error: 'An error occurred while processing your request' });
+    }
+
+    return res.status(200).json({ message: 'Subscriber verified' });
+  },
+);
 
 // Route to get the total number of subscribers
 // @ts-ignore

@@ -20,6 +20,7 @@ export type SubscriberEvent = (typeof subscriberEvents)[number];
 const subscriberSchema = z.object({
   id: z.number(),
   email: z.string().email(),
+  verified: z.boolean().default(false),
   events: z.string().optional(),
   wallet_addresses: z.array(z.string()),
   createdAt: z.date(),
@@ -31,6 +32,7 @@ export type Subscriber = z.infer<typeof subscriberSchema>;
 // New subscriber schema (for insertion)
 const newSubscriberSchema = subscriberSchema.omit({
   id: true,
+  verified: true,
   createdAt: true,
   updatedAt: true,
   wallet_addresses: true,

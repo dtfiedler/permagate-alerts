@@ -102,6 +102,14 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
     return this.knex<Subscriber>('subscribers').where({ email }).first();
   }
 
+  async verifySubscriber(id: number): Promise<Subscriber | undefined> {
+    const updated = await this.knex<Subscriber>('subscribers')
+      .where({ id })
+      .update({ verified: true })
+      .returning('*');
+    return updated[0];
+  }
+
   async updateSubscriber(
     id: number,
     subscriber: Partial<Subscriber>,
@@ -118,11 +126,9 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
   }
 
   async findSubscribersByEvent(event: string): Promise<Subscriber[]> {
-    return this.knex<Subscriber>('subscribers').where(
-      'events',
-      'LIKE',
-      `%${event}%`,
-    );
+    return this.knex<Subscriber>('subscribers')
+      .where('events', 'LIKE', `%${event}%`)
+      .where({ verified: true });
   }
 
   // Event Store Methods
