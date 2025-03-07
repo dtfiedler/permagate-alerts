@@ -178,9 +178,9 @@ const getEmailSubjectForEvent = (event: NewEvent) => {
       const type = event.eventData.data.type;
       return `✅ ${name} has been ${type === 'permabuy' ? 'permabought' : 'leased'}!`;
     case 'epoch-created-notice':
-      return `💰 Epoch ${event.eventData.data.epochIndex} has been created!`;
+      return `🔭 Epoch ${event.eventData.data.epochIndex} has been created!`;
     case 'epoch-distribution-notice':
-      return `🔭 Epoch ${event.eventData.data.epochIndex} has been distributed!`;
+      return `💰 Epoch ${event.eventData.data.epochIndex} has been distributed!`;
     case 'join-network-notice':
       return `👋 ${event.eventData.data.settings.fqdn} has joined the network!`;
     case 'leave-network-notice':
@@ -252,6 +252,46 @@ const getEmailBodyForEvent = (event: NewEvent) => {
     <br/><br/>
   </div>
   `;
+    case 'join-network-notice':
+      return `
+  <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
+    <h3 style="text-align: center; word-wrap: break-word; color: white;">
+        <b>
+          ${event.eventData.data.settings.fqdn}
+        </b> 
+      has joined the network!
+    </h3>
+
+    <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+      <p style="margin: 5px 0;"><strong>FQDN:</strong> ${event.eventData.data.settings.fqdn}</p>
+      <p style="margin: 5px 0;"><strong>Operator Stake:</strong> ${event.eventData.data.operatorStake ? event.eventData.data.operatorStake / 1_000_000 + ' $ARIO' : 'N/A'}</p>
+      <p style="margin: 5px 0;"><strong>Allows Delegated Staking:</strong> ${event.eventData.data.settings.allowDelegatedStaking ? 'Yes' : 'No'}</p>
+      <p style="margin: 5px 0;"><strong>Minimum Delegated Stake:</strong> ${event.eventData.data.settings.allowDelegatedStaking ? event.eventData.data.settings.minDelegatedStake / 1_000_000 + ' $ARIO' : 'N/A'}</p>
+      <p style="margin: 5px 0;"><strong>Delegate Reward Percentage:</strong> ${event.eventData.data.settings.allowDelegatedStaking ? event.eventData.data.settings.delegateRewardShareRatio.toFixed(2) + '%' : 'N/A'}</p>
+      <p style="margin: 5px 0;">
+        <strong>Gateway Address:</strong> 
+        <a href="https://ao.link/#/entity/${event.eventData.target}" style="color: #007bff; text-decoration: none;">
+          ${event.eventData.target}
+        </a>
+      </p>
+      <p style="margin: 5px 0;">
+        <strong>Observer Address:</strong> 
+        <a href="https://ao.link/#/entity/${event.eventData.data.observerAddress}" style="color: #007bff; text-decoration: none;">
+          ${event.eventData.data.observerAddress}
+        </a>
+      </p>
+    </div>
+
+    <br/>
+
+    <a href="https://ao.link/#/message/${event.eventData.id}" 
+       style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 15px; border-radius: 5px; text-decoration: none;">
+      View on AO
+    </a>  
+
+    <br/><br/>  
+  </div>
+  `;
     case 'epoch-distribution-notice':
       const observationData = event.eventData.data.observations;
       const epochData = event.eventData.data.distributions;
@@ -290,21 +330,18 @@ const getEmailBodyForEvent = (event: NewEvent) => {
   <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
 
     <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px; margin-bottom: 15px;">
-      <h4 style="margin-top: 0;">Rewards</h4>
-      <p style="margin: 5px 0;"><strong>Eligible Gateways:</strong> ${totalEligibleGateways}</p>
+      <h2 style="margin-top: 0;">Network Performance</h2>
+      <p style="margin: 5px 0;"><strong># Observations Submitted:</strong> ${totalObservationsSubmitted}/50 (${((totalObservationsSubmitted / 50) * 100).toFixed(2)}%)</p>
+      <p style="margin: 5px 0;"><strong># Gateways Failed:</strong> ${totalGatewaysFailed} (${((totalGatewaysFailed / totalEligibleGateways) * 100).toFixed(2)}%)</p>
+      <p style="margin: 5px 0;"><strong># Gateways Passed:</strong> ${totalGatewaysPassed} (${((totalGatewaysPassed / totalEligibleGateways) * 100).toFixed(2)}%)</p>
+      <br/>
+      <h2 style="margin-top: 0;">Rewards</h2>
       <p style="margin: 5px 0;"><strong>Eligible Observer Reward:</strong> ${totalEligibleObserverReward.toFixed(2)} $ARIO</p>
       <p style="margin: 5px 0;"><strong>Eligible Gateway Reward:</strong> ${totalEligibleGatewayReward.toFixed(2)} $ARIO</p>
       <p style="margin: 5px 0;"><strong>Total Eligible Rewards:</strong> ${totalEligibleRewards.toFixed(2)} $ARIO</p>
       <p style="margin: 5px 0;"><strong>Total Distributed Rewards:</strong> ${totalDistributedRewards.toFixed(2)} $ARIO (${((totalDistributedRewards / totalEligibleRewards) * 100).toFixed(2)}%)</p>
       <p style="margin: 5px 0;"><strong>Distribution Timestamp:</strong> ${new Date(distributedTimestamp).toLocaleString()}</p>
       </div>
-
-    <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-      <h4 style="margin-top: 0;">Network Performance</h4>
-      <p style="margin: 5px 0;"><strong># Observations Submitted:</strong> ${totalObservationsSubmitted}/50 (${((totalObservationsSubmitted / 50) * 100).toFixed(2)}%)</p>
-      <p style="margin: 5px 0;"><strong># Gateways Failed:</strong> ${totalGatewaysFailed} (${((totalGatewaysFailed / totalEligibleGateways) * 100).toFixed(2)}%)</p>
-      <p style="margin: 5px 0;"><strong># Gateways Passed:</strong> ${totalGatewaysPassed} (${((totalGatewaysPassed / totalEligibleGateways) * 100).toFixed(2)}%)</p>
-    </div>
 
     <br/>
 
