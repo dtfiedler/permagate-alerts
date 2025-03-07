@@ -253,6 +253,7 @@ const getEmailBodyForEvent = (event: NewEvent) => {
   </div>
   `;
     case 'epoch-distribution-notice':
+      const observationData = event.eventData.data.observations;
       const epochData = event.eventData.data.distributions;
       const totalEligibleGateways = epochData.totalEligibleGateways || 0;
       const totalEligibleRewards = epochData.totalEligibleRewards
@@ -267,30 +268,42 @@ const getEmailBodyForEvent = (event: NewEvent) => {
       const totalDistributedRewards = epochData.totalDistributedRewards
         ? epochData.totalDistributedRewards / 1_000_000
         : 0;
+      const totalObservationsSubmitted =
+        Object.keys(observationData.reports || {}).length || 0;
+      const totalGatewaysFailed = Object.entries(
+        observationData.failureSummaries || {},
+      ).reduce((count, [_, reports]) => {
+        return (
+          count +
+          (Array.isArray(reports) &&
+          reports.length > totalObservationsSubmitted * 0.5
+            ? 1
+            : 0)
+        );
+      }, 0);
+      const totalGatewaysPassed = totalEligibleGateways - totalGatewaysFailed;
       const distributedTimestamp = epochData.distributedTimestamp
         ? new Date(epochData.distributedTimestamp).toLocaleString()
         : 'N/A';
 
       return `
   <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
-    
-    <h3 style="text-align: center; word-wrap: break-word;">
-      <b>🔍 Epoch ${event.eventData.data.epochIndex} Distribution 💰</b>
-    </h3>
+
+    <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px; margin-bottom: 15px;">
+      <h4 style="margin-top: 0;">Rewards</h4>
+      <p style="margin: 5px 0;"><strong>Eligible Gateways:</strong> ${totalEligibleGateways}</p>
+      <p style="margin: 5px 0;"><strong>Eligible Observer Reward:</strong> ${totalEligibleObserverReward.toFixed(2)} $ARIO</p>
+      <p style="margin: 5px 0;"><strong>Eligible Gateway Reward:</strong> ${totalEligibleGatewayReward.toFixed(2)} $ARIO</p>
+      <p style="margin: 5px 0;"><strong>Total Eligible Rewards:</strong> ${totalEligibleRewards.toFixed(2)} $ARIO</p>
+      <p style="margin: 5px 0;"><strong>Total Distributed Rewards:</strong> ${totalDistributedRewards.toFixed(2)} $ARIO (${((totalDistributedRewards / totalEligibleRewards) * 100).toFixed(2)}%)</p>
+      <p style="margin: 5px 0;"><strong>Distribution Timestamp:</strong> ${new Date(distributedTimestamp).toLocaleString()}</p>
+      </div>
 
     <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-      <p style="margin: 5px 0;"><strong>Total Eligible Gateways:</strong> ${totalEligibleGateways}</p>
-      <p style="margin: 5px 0;"><strong>Total Eligible Rewards:</strong> ${totalEligibleRewards} $ARIO</p>
-      <p style="margin: 5px 0;"><strong>Total Observer Rewards:</strong> ${totalEligibleObserverReward} $ARIO</p>
-      <p style="margin: 5px 0;"><strong>Total Gateway Rewards:</strong> ${totalEligibleGatewayReward} $ARIO</p>
-      <p style="margin: 5px 0;"><strong>Total Distributed Rewards:</strong> ${totalDistributedRewards} $ARIO (${((totalDistributedRewards / totalEligibleRewards) * 100).toFixed(2)}%)</p>
-      <p style="margin: 5px 0;"><strong>Distribution Timestamp:</strong> ${distributedTimestamp}</p>
-      <p style="margin: 5px 0;">
-        <strong>Process ID:</strong> 
-        <a href="https://ao.link/#/entity/${event.processId}" style="color: #007bff; text-decoration: none;">
-          ${event.processId}
-        </a>
-      </p>
+      <h4 style="margin-top: 0;">Network Performance</h4>
+      <p style="margin: 5px 0;"><strong># Observations Submitted:</strong> ${totalObservationsSubmitted}/50 (${((totalObservationsSubmitted / 50) * 100).toFixed(2)}%)</p>
+      <p style="margin: 5px 0;"><strong># Gateways Failed:</strong> ${totalGatewaysFailed} (${((totalGatewaysFailed / totalEligibleGateways) * 100).toFixed(2)}%)</p>
+      <p style="margin: 5px 0;"><strong># Gateways Passed:</strong> ${totalGatewaysPassed} (${((totalGatewaysPassed / totalEligibleGateways) * 100).toFixed(2)}%)</p>
     </div>
 
     <br/>
