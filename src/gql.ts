@@ -87,6 +87,12 @@ export class GQLEventPoller implements EventPoller {
 
     try {
       while (hasNextPage) {
+        // add timeout to prevent infinite loop
+        const signal = AbortSignal.timeout(10_000);
+        if (signal.aborted) {
+          this.logger.error('Timeout fetching events');
+          break;
+        }
         this.logger.info(
           `Fetching events from block height ${lastBlockHeight}`,
           {
@@ -108,6 +114,7 @@ export class GQLEventPoller implements EventPoller {
           },
           method: 'POST',
           body: query,
+          signal,
         });
         if (!response.ok) {
           this.logger.error(
