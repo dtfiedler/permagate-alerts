@@ -285,6 +285,45 @@ const getEmailBodyForEvent = (event: NewEvent) => {
     <br/><br/>  
   </div>
   `;
+    case 'epoch-created-notice':
+      const epochIndex = event.eventData.data.epochIndex;
+      const epochStartTimestamp = event.eventData.data.startTimestamp;
+      const epochEndTimestamp = event.eventData.data.endTimestamp;
+
+      const totalEligibleGatewaysCreated =
+        event.eventData.data.distributions.totalEligibleGateways;
+      const totalEligibleObserverRewardCreated =
+        event.eventData.data.distributions.totalEligibleObserverReward /
+        1_000_000;
+      const totalEligibleGatewayRewardCreated =
+        event.eventData.data.distributions.totalEligibleGatewayReward /
+        1_000_000;
+
+      const prescribedObservers = event.eventData.data.prescribedObservers;
+      const prescribedNames = event.eventData.data.prescribedNames;
+
+      return `
+  <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
+    <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+      <p style="margin: 5px 0;"><strong>Epoch Index:</strong> ${epochIndex}</p>
+      <p style="margin: 5px 0;"><strong>Start Timestamp:</strong> ${epochStartTimestamp ? new Date(epochStartTimestamp).toLocaleString() : 'N/A'}</p>
+      <p style="margin: 5px 0;"><strong>End Timestamp:</strong> ${epochEndTimestamp ? new Date(epochEndTimestamp).toLocaleString() : 'N/A'}</p>
+      <p style="margin: 5px 0;"><strong>Total Eligible Gateways:</strong> ${totalEligibleGatewaysCreated}</p>
+      <p style="margin: 5px 0;"><strong>Total Eligible Observer Reward:</strong> ${totalEligibleObserverRewardCreated.toFixed(2)} $ARIO</p>
+      <p style="margin: 5px 0;"><strong>Total Eligible Gateway Reward:</strong> ${totalEligibleGatewayRewardCreated.toFixed(2)} $ARIO</p>
+      <p style="margin: 5px 0;"><strong>Prescribed Names:</strong></p>
+      <ul style="margin: 5px 0; padding-left: 20px;">
+        ${prescribedNames.map((name: string) => `<li>${name}</li>`).join('')}
+      </ul>
+      <p style="margin: 5px 0;"><strong>Prescribed Observers:</strong></p>
+      <ul style="margin: 5px 0; padding-left: 20px;">
+        ${Object.keys(prescribedObservers)
+          .map((observer) => `<li>${observer}</li>`)
+          .join('')}
+      </ul>
+    </div>
+  </div>
+  `;
     case 'epoch-distribution-notice':
       const observationData = event.eventData.data.observations;
       const epochData = event.eventData.data.distributions;
