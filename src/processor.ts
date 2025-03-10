@@ -2,6 +2,17 @@ import { EmailProvider } from './email/mailgun.js';
 import { GQLEvent, NewEvent, RawEvent } from './db/schema.js';
 import { SqliteDatabase } from './db/sqlite.js';
 import * as winston from 'winston';
+import { AOProcess, ARIO, ARIO_MAINNET_PROCESS_ID } from '@ar.io/sdk';
+import { connect } from '@permaweb/aoconnect';
+import * as config from './config.js';
+const ario = ARIO.init({
+  process: new AOProcess({
+    processId: config.arioProcessId || ARIO_MAINNET_PROCESS_ID,
+    ao: connect({
+      CU_URL: 'https://cu.ardrive.io',
+    }),
+  }),
+});
 
 interface IEventProcessor {
   processGQLEvent(event: GQLEvent): Promise<void>;
@@ -149,7 +160,7 @@ export class EventProcessor implements IEventProcessor {
         ?.sendEventEmail({
           to: subscribers.map((subscriber) => subscriber.email),
           subject: getEmailSubjectForEvent(event),
-          body: getEmailBodyForEvent(event),
+          body: await getEmailBodyForEvent(event),
           eventType: event.eventType,
           eventData: event.eventData,
           nonce: event.nonce,
@@ -190,7 +201,7 @@ const getEmailSubjectForEvent = (event: NewEvent) => {
   }
 };
 
-const getEmailBodyForEvent = (event: NewEvent) => {
+const getEmailBodyForEvent = async (event: NewEvent) => {
   switch (event.eventType.toLowerCase()) {
     case 'buy-name-notice':
     case 'buy-record-notice':
@@ -299,8 +310,22 @@ const getEmailBodyForEvent = (event: NewEvent) => {
         event.eventData.data.distributions.totalEligibleGatewayReward /
         1_000_000;
 
-      const prescribedObservers = event.eventData.data.prescribedObservers;
+      const prescribedObservers: Record<string, string> =
+        event.eventData.data.prescribedObservers;
+      const prescribedGatewayAddresses = Object.values(prescribedObservers);
       const prescribedNames = event.eventData.data.prescribedNames;
+
+      const prescribedGatewayFqdns: Record<string, string> = {};
+      for (const gatewayAddress of prescribedGatewayAddresses) {
+        const gateway = await ario
+          .getGateway({
+            address: gatewayAddress,
+          })
+          .catch(() => undefined);
+
+        prescribedGatewayFqdns[gatewayAddress] =
+          gateway?.settings?.fqdn || 'N/A';
+      }
 
       return `
   <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
@@ -317,8 +342,11 @@ const getEmailBodyForEvent = (event: NewEvent) => {
       </ul>
       <p style="margin: 5px 0;"><strong>Prescribed Observers:</strong></p>
       <ul style="margin: 5px 0; padding-left: 20px;">
-        ${Object.keys(prescribedObservers)
-          .map((observer) => `<li>${observer}</li>`)
+        ${Object.entries(prescribedGatewayFqdns)
+          .map(
+            ([address, fqdn]) =>
+              `<li style="margin: 5px 0;">${fqdn} (${address.slice(0, 6)}...${address.slice(-4)})</li>`,
+          )
           .join('')}
       </ul>
     </div>
@@ -358,23 +386,48 @@ const getEmailBodyForEvent = (event: NewEvent) => {
         ? new Date(epochData.distributedTimestamp).toLocaleString()
         : 'N/A';
 
+      // get the best and worst streaks
+      const bestStreaks = await ario.getGateways({
+        sortBy: 'stats.passedConsecutiveEpochs',
+        sortOrder: 'desc',
+        limit: 3,
+      });
+      const worstStreaks = await ario.getGateways({
+        sortBy: 'stats.failedConsecutiveEpochs',
+        sortOrder: 'desc',
+        limit: 3,
+      });
+
       return `
   <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
 
     <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px; margin-bottom: 15px;">
-      <h2 style="margin-top: 0;">Network Performance</h2>
-      <p style="margin: 5px 0;"><strong># Observations Submitted:</strong> ${totalObservationsSubmitted}/50 (${((totalObservationsSubmitted / 50) * 100).toFixed(2)}%)</p>
-      <p style="margin: 5px 0;"><strong># Gateways Failed:</strong> ${totalGatewaysFailed} (${((totalGatewaysFailed / totalEligibleGateways) * 100).toFixed(2)}%)</p>
-      <p style="margin: 5px 0;"><strong># Gateways Passed:</strong> ${totalGatewaysPassed} (${((totalGatewaysPassed / totalEligibleGateways) * 100).toFixed(2)}%)</p>
+      <h2 style="margin-top: 0;">🔭 Network Performance</h2>
+      <ul style="margin: 5px 0; padding-left: 20px;">
+        <li style="margin: 5px 0;"><strong># Observations Submitted:</strong> ${totalObservationsSubmitted}/50 (${((totalObservationsSubmitted / 50) * 100).toFixed(2)}%)</li>
+        <li style="margin: 5px 0;"><strong># Gateways Failed:</strong> ${totalGatewaysFailed} (${((totalGatewaysFailed / totalEligibleGateways) * 100).toFixed(2)}%)</li>
+        <li style="margin: 5px 0;"><strong># Gateways Passed:</strong> ${totalGatewaysPassed} (${((totalGatewaysPassed / totalEligibleGateways) * 100).toFixed(2)}%)</li>
+      </ul>
       <br/>
-      <h2 style="margin-top: 0;">Rewards</h2>
-      <p style="margin: 5px 0;"><strong>Eligible Observer Reward:</strong> ${totalEligibleObserverReward.toFixed(2)} $ARIO</p>
-      <p style="margin: 5px 0;"><strong>Eligible Gateway Reward:</strong> ${totalEligibleGatewayReward.toFixed(2)} $ARIO</p>
-      <p style="margin: 5px 0;"><strong>Total Eligible Rewards:</strong> ${totalEligibleRewards.toFixed(2)} $ARIO</p>
-      <p style="margin: 5px 0;"><strong>Total Distributed Rewards:</strong> ${totalDistributedRewards.toFixed(2)} $ARIO (${((totalDistributedRewards / totalEligibleRewards) * 100).toFixed(2)}%)</p>
-      <p style="margin: 5px 0;"><strong>Distribution Timestamp:</strong> ${new Date(distributedTimestamp).toLocaleString()}</p>
-      </div>
-
+      <h2 style="margin-top: 0;">💰 Rewards</h2>
+      <ul style="margin: 5px 0; padding-left: 20px;">
+        <li style="margin: 5px 0;"><strong>Eligible Observer Reward:</strong> ${totalEligibleObserverReward.toFixed(2)} $ARIO</li>
+        <li style="margin: 5px 0;"><strong>Eligible Gateway Reward:</strong> ${totalEligibleGatewayReward.toFixed(2)} $ARIO</li>
+        <li style="margin: 5px 0;"><strong>Total Eligible Rewards:</strong> ${totalEligibleRewards.toFixed(2)} $ARIO</li>
+        <li style="margin: 5px 0;"><strong>Total Distributed Rewards:</strong> ${totalDistributedRewards.toFixed(2)} $ARIO (${((totalDistributedRewards / totalEligibleRewards) * 100).toFixed(2)}%)</li>
+        <li style="margin: 5px 0;"><strong>Distribution Timestamp:</strong> ${new Date(distributedTimestamp).toLocaleString()}</li>
+      </ul>
+      <br/>
+      <h2 style="margin-top: 0;">📈 Best Streaks 🔥</h2>
+      <ul style="margin: 5px 0; padding-left: 20px;">
+        ${bestStreaks.items.map((gateway) => `<li style="margin: 5px 0;">${gateway.settings.fqdn} +${gateway.stats.passedConsecutiveEpochs} epochs</li>`).join('')}
+      </ul>
+      <br/>
+      <h2 style="margin-top: 0;">📉 Worst Streaks 🤢</h2>
+      <ul style="margin: 5px 0; padding-left: 20px;">
+        ${worstStreaks.items.map((gateway) => `<li style="margin: 5px 0;">${gateway.settings.fqdn} -${gateway.stats.failedConsecutiveEpochs} epochs</li>`).join('')}
+      </ul>
+    </div>
     <br/>
 
     <a href="https://ao.link/#/message/${event.eventData.id}" 

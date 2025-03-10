@@ -42,7 +42,7 @@
     "typescript": "^5.0.3"
   },
   "dependencies": {
-    "@ar.io/sdk": "^3.8.1",
+    "@ar.io/sdk": "^3.8.3",
     "arweave": "^1.15.1",
     "auth0": "^4.7.0",
     "better-sqlite3": "^11.3.0",
