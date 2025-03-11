@@ -5,6 +5,7 @@ import * as winston from 'winston';
 import { AOProcess, ARIO, ARIO_MAINNET_PROCESS_ID } from '@ar.io/sdk';
 import { connect } from '@permaweb/aoconnect';
 import * as config from './config.js';
+import { logger } from './logger.js';
 const ario = ARIO.init({
   process: new AOProcess({
     processId: config.arioProcessId || ARIO_MAINNET_PROCESS_ID,
@@ -331,20 +332,65 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           gateway?.settings?.fqdn || 'N/A';
       }
 
+      const newGateways = await ario
+        .getGateways({
+          sortBy: 'startTimestamp',
+          sortOrder: 'desc',
+          limit: 10,
+        })
+        .then((gateways) => {
+          // return any gateway that started after the epoch distributed
+          return gateways.items.filter((gateway) => {
+            return (
+              gateway.startTimestamp < epochStartTimestamp &&
+              gateway.startTimestamp >=
+                epochStartTimestamp - 24 * 60 * 60 * 1000
+            );
+          });
+        })
+        .catch((error: any) => {
+          logger.error('Error getting new gateways', {
+            eventId: event.eventData.id,
+            eventType: event.eventType,
+            message: error.message,
+            stack: error.stack,
+          });
+          return [];
+        });
+      const newGatewaysFqdns = newGateways.map(
+        (gateway) => gateway.settings.fqdn,
+      );
+
       return `
   <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
-    <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-      <p style="margin: 5px 0;"><strong>Epoch Index:</strong> ${epochIndex}</p>
-      <p style="margin: 5px 0;"><strong>Start Timestamp:</strong> ${epochStartTimestamp ? new Date(epochStartTimestamp).toLocaleString() : 'N/A'}</p>
-      <p style="margin: 5px 0;"><strong>End Timestamp:</strong> ${epochEndTimestamp ? new Date(epochEndTimestamp).toLocaleString() : 'N/A'}</p>
-      <p style="margin: 5px 0;"><strong>Total Eligible Gateways:</strong> ${totalEligibleGatewaysCreated}</p>
-      <p style="margin: 5px 0;"><strong>Total Eligible Observer Reward:</strong> ${totalEligibleObserverRewardCreated.toFixed(2)} $ARIO</p>
-      <p style="margin: 5px 0;"><strong>Total Eligible Gateway Reward:</strong> ${totalEligibleGatewayRewardCreated.toFixed(2)} $ARIO</p>
-      <p style="margin: 5px 0;"><strong>Prescribed Names:</strong></p>
+    <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">             
+      <h2 style="margin-top: 0;">🔭 Epoch Details</h2>
+      <ul style="margin: 5px 0; padding-left: 20px;">
+        <li style="margin: 5px 0;"><strong>Epoch Index:</strong> ${epochIndex}</li>
+        <li style="margin: 5px 0;"><strong>Start Timestamp:</strong> ${epochStartTimestamp ? new Date(epochStartTimestamp).toLocaleString() : 'N/A'}</li>
+        <li style="margin: 5px 0;"><strong>End Timestamp:</strong> ${epochEndTimestamp ? new Date(epochEndTimestamp).toLocaleString() : 'N/A'}</li>
+        <li style="margin: 5px 0;"><strong># Eligible Gateways:</strong> ${totalEligibleGatewaysCreated}</li>
+        <li style="margin: 5px 0;"><strong>Observer Reward:</strong> ${totalEligibleObserverRewardCreated.toFixed(2)} $ARIO</li>
+        <li style="margin: 5px 0;"><strong>Gateway Reward:</strong> ${totalEligibleGatewayRewardCreated.toFixed(2)} $ARIO</li>
+      </ul>
+      <br/>
+      ${
+        newGatewaysFqdns && newGatewaysFqdns.length > 0
+          ? `
+      <h2 style="margin-top: 0;">👋 New Gateways</h2>
+      <ul style="margin: 5px 0; padding-left: 20px;">
+      ${newGatewaysFqdns.map((fqdn) => `<li style="margin: 5px 0;">${fqdn}</li>`).join('')}
+      </ul>
+      `
+          : ''
+      }
+      <br/>
+      <h2 style="margin-top: 0;">🔭 Prescribed Names</h2>
       <ul style="margin: 5px 0; padding-left: 20px;">
         ${prescribedNames.map((name: string) => `<li style="margin: 5px 0; text-decoration: none;"><a href="https://${name}.permagate.io" style="color: #007bff; text-decoration: none;">ar://${name}</a></li>`).join('')}
       </ul>
-      <p style="margin: 5px 0;"><strong>Prescribed Observers:</strong></p>
+      <br/>
+      <h2 style="margin-top: 0;">👀 Prescribed Observers</h2>
       <ul style="margin: 5px 0; padding-left: 20px;">
         ${Object.entries(prescribedGatewayFqdns)
           .map(
@@ -400,33 +446,36 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         : 'N/A';
 
       // get the best and worst streaks
-      const bestStreaks = await ario.getGateways({
-        sortBy: 'stats.passedConsecutiveEpochs',
-        sortOrder: 'desc',
-        limit: 3,
-      });
-      const worstStreaks = await ario.getGateways({
-        sortBy: 'stats.failedConsecutiveEpochs',
-        sortOrder: 'desc',
-        limit: 3,
-      });
-
-      const newGateways = await ario
+      const bestStreaks = await ario
         .getGateways({
-          sortBy: 'startTimestamp',
+          sortBy: 'stats.passedConsecutiveEpochs',
           sortOrder: 'desc',
-          limit: 10,
+          limit: 3,
         })
-        .then((gateways) => {
-          // return any gateway that started after the epoch distributed
-          return gateways.items.filter((gateway) => {
-            return gateway.startTimestamp > epochData.distributedTimestamp;
+        .catch((error: any) => {
+          logger.error('Error getting best streaks', {
+            eventId: event.eventData.id,
+            eventType: event.eventType,
+            message: error.message,
+            stack: error.stack,
           });
+          return { items: [] };
         });
-
-      const newGatewaysFqdns = newGateways.map(
-        (gateway) => gateway.settings.fqdn,
-      );
+      const worstStreaks = await ario
+        .getGateways({
+          sortBy: 'stats.failedConsecutiveEpochs',
+          sortOrder: 'desc',
+          limit: 3,
+        })
+        .catch((error: any) => {
+          logger.error('Error getting worst streaks', {
+            eventId: event.eventData.id,
+            eventType: event.eventType,
+            message: error.message,
+            stack: error.stack,
+          });
+          return { items: [] };
+        });
 
       return `
   <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
@@ -442,27 +491,34 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       <br/>
       <h2 style="margin-top: 0;">💰 Rewards</h2>
       <ul style="margin: 5px 0; padding-left: 20px;">
-        <li style="margin: 5px 0;"><strong>Eligible Observer Reward:</strong> ${totalEligibleObserverReward.toFixed(2)} $ARIO</li>
-        <li style="margin: 5px 0;"><strong>Eligible Gateway Reward:</strong> ${totalEligibleGatewayReward.toFixed(2)} $ARIO</li>
+        <li style="margin: 5px 0;"><strong>Observer Reward:</strong> ${totalEligibleObserverReward.toFixed(2)} $ARIO</li>
+        <li style="margin: 5px 0;"><strong>Gateway Reward:</strong> ${totalEligibleGatewayReward.toFixed(2)} $ARIO</li>
         <li style="margin: 5px 0;"><strong>Total Eligible Rewards:</strong> ${totalEligibleRewards.toFixed(2)} $ARIO</li>
         <li style="margin: 5px 0;"><strong>Total Distributed Rewards:</strong> ${totalDistributedRewards.toFixed(2)} $ARIO (${((totalDistributedRewards / totalEligibleRewards) * 100).toFixed(2)}%)</li>
         <li style="margin: 5px 0;"><strong>Distribution Timestamp:</strong> ${new Date(distributedTimestamp).toLocaleString()}</li>
       </ul>
       <br/>
+      ${
+        bestStreaks.items && bestStreaks.items.length > 0
+          ? `
       <h2 style="margin-top: 0;">📈 Best Performers</h2>
       <ul style="margin: 5px 0; padding-left: 20px;">
         ${bestStreaks.items.map((gateway) => `<li style="margin: 5px 0;">${gateway.settings.fqdn} +${gateway.stats.passedConsecutiveEpochs} epochs</li>`).join('')}
       </ul>
-      <br/>
+      `
+          : ''
+      }
+      ${
+        worstStreaks.items && worstStreaks.items.length > 0
+          ? `
       <h2 style="margin-top: 0;">📉 Worst Performers</h2>
       <ul style="margin: 5px 0; padding-left: 20px;">
         ${worstStreaks.items.map((gateway) => `<li style="margin: 5px 0;">${gateway.settings.fqdn} -${gateway.stats.failedConsecutiveEpochs} epochs</li>`).join('')}
-      </ul>
+      </ul> 
       <br/>
-      <h2 style="margin-top: 0;">👋 New Gateways</h2>
-      <ul style="margin: 5px 0; padding-left: 20px;">
-        ${newGatewaysFqdns.map((fqdn) => `<li style="margin: 5px 0;">${fqdn}</li>`).join('')}
-      </ul>
+      `
+          : ''
+      }
     </div>
     <br/>
 
