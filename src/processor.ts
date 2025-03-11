@@ -259,8 +259,10 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
        style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 15px; border-radius: 5px; text-decoration: none;">
       View on AO
     </a>
-
-    <br/><br/>
+    <br/>
+    <br/>
+    <a href="https://subscribe.permagate.io/" style="color: #ffffff; text-decoration: none;">subscribe.permagate.io</a>
+    <br/>
   </div>
   `;
     case 'join-network-notice':
@@ -292,8 +294,10 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
        style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 15px; border-radius: 5px; text-decoration: none;">
       View on AO
     </a>  
-
-    <br/><br/>  
+    <br/>
+    <br/>
+    <a href="https://subscribe.permagate.io/" style="color: #ffffff; text-decoration: none;">subscribe.permagate.io</a>
+    <br/>
   </div>
   `;
     case 'epoch-created-notice':
@@ -338,7 +342,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       <p style="margin: 5px 0;"><strong>Total Eligible Gateway Reward:</strong> ${totalEligibleGatewayRewardCreated.toFixed(2)} $ARIO</p>
       <p style="margin: 5px 0;"><strong>Prescribed Names:</strong></p>
       <ul style="margin: 5px 0; padding-left: 20px;">
-        ${prescribedNames.map((name: string) => `<li>${name}</li>`).join('')}
+        ${prescribedNames.map((name: string) => `<li style="margin: 5px 0; text-decoration: none;"><a href="https://${name}.permagate.io" style="color: #007bff; text-decoration: none;">ar://${name}</a></li>`).join('')}
       </ul>
       <p style="margin: 5px 0;"><strong>Prescribed Observers:</strong></p>
       <ul style="margin: 5px 0; padding-left: 20px;">
@@ -350,6 +354,15 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           .join('')}
       </ul>
     </div>
+    <br/>
+    <a href="https://ao.link/#/message/${event.eventData.id}" 
+       style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 15px; border-radius: 5px; text-decoration: none;">
+      View on AO
+    </a>  
+    <br/>
+    <br/>
+    <a href="https://subscribe.permagate.io/" style="color: #ffffff; text-decoration: none;">subscribe.permagate.io</a>
+    <br/>
   </div>
   `;
     case 'epoch-distribution-notice':
@@ -398,6 +411,23 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         limit: 3,
       });
 
+      const newGateways = await ario
+        .getGateways({
+          sortBy: 'startTimestamp',
+          sortOrder: 'desc',
+          limit: 10,
+        })
+        .then((gateways) => {
+          // return any gateway that started after the epoch distributed
+          return gateways.items.filter((gateway) => {
+            return gateway.startTimestamp > epochData.distributedTimestamp;
+          });
+        });
+
+      const newGatewaysFqdns = newGateways.map(
+        (gateway) => gateway.settings.fqdn,
+      );
+
       return `
   <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
 
@@ -405,6 +435,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       <h2 style="margin-top: 0;">🔭 Network Performance</h2>
       <ul style="margin: 5px 0; padding-left: 20px;">
         <li style="margin: 5px 0;"><strong># Observations Submitted:</strong> ${totalObservationsSubmitted}/50 (${((totalObservationsSubmitted / 50) * 100).toFixed(2)}%)</li>
+        <li style="margin: 5px 0;"><strong># Gateways Eligible:</strong> ${totalEligibleGateways}</li>
         <li style="margin: 5px 0;"><strong># Gateways Failed:</strong> ${totalGatewaysFailed} (${((totalGatewaysFailed / totalEligibleGateways) * 100).toFixed(2)}%)</li>
         <li style="margin: 5px 0;"><strong># Gateways Passed:</strong> ${totalGatewaysPassed} (${((totalGatewaysPassed / totalEligibleGateways) * 100).toFixed(2)}%)</li>
       </ul>
@@ -418,14 +449,19 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         <li style="margin: 5px 0;"><strong>Distribution Timestamp:</strong> ${new Date(distributedTimestamp).toLocaleString()}</li>
       </ul>
       <br/>
-      <h2 style="margin-top: 0;">📈 Best Streaks 🔥</h2>
+      <h2 style="margin-top: 0;">📈 Best Performers</h2>
       <ul style="margin: 5px 0; padding-left: 20px;">
         ${bestStreaks.items.map((gateway) => `<li style="margin: 5px 0;">${gateway.settings.fqdn} +${gateway.stats.passedConsecutiveEpochs} epochs</li>`).join('')}
       </ul>
       <br/>
-      <h2 style="margin-top: 0;">📉 Worst Streaks 🤢</h2>
+      <h2 style="margin-top: 0;">📉 Worst Performers</h2>
       <ul style="margin: 5px 0; padding-left: 20px;">
         ${worstStreaks.items.map((gateway) => `<li style="margin: 5px 0;">${gateway.settings.fqdn} -${gateway.stats.failedConsecutiveEpochs} epochs</li>`).join('')}
+      </ul>
+      <br/>
+      <h2 style="margin-top: 0;">👋 New Gateways</h2>
+      <ul style="margin: 5px 0; padding-left: 20px;">
+        ${newGatewaysFqdns.map((fqdn) => `<li style="margin: 5px 0;">${fqdn}</li>`).join('')}
       </ul>
     </div>
     <br/>
@@ -434,8 +470,10 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
        style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 15px; border-radius: 5px; text-decoration: none;">
       View on AO
     </a>
-
-    <br/><br/>
+    <br/>
+    <br/>
+    <a href="https://subscribe.permagate.io/" style="color: #ffffff; text-decoration: none;">subscribe.permagate.io</a>
+    <br/>
   </div>
   `;
     default:
@@ -455,6 +493,9 @@ ${JSON.stringify(event.eventData.data, null, 2).slice(0, 10000).trim()}
        style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 15px; border-radius: 5px; text-decoration: none;">
       View on AO
     </a>
+    <br/>
+    <br/>
+    <a href="https://subscribe.permagate.io/" style="color: #ffffff; text-decoration: none;">subscribe.permagate.io</a>
     <br/>
   </div>
 `;
