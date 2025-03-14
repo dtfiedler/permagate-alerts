@@ -6,6 +6,7 @@ import * as config from '../config.js';
 import { z } from 'zod';
 import { NewSubscriber, subscriberEventSchema } from '../db/schema.js';
 import { generateUnsubscribeLink, generateVerifyLink } from '../lib/hash.js';
+import { ARIO_MAINNET_PROCESS_ID } from '@ar.io/sdk';
 
 const apiRouter = Router();
 
@@ -19,16 +20,28 @@ apiRouter.get('/healthcheck', (_, res) => {
 apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
   try {
     const email = req.query.email as string;
-    const events = JSON.parse(req.body).events as string[];
+    const { events = [], processId = ARIO_MAINNET_PROCESS_ID } = JSON.parse(
+      req.body,
+    );
 
     logger.debug(`Received subscribe request`, {
       email,
       events,
+      processId,
       body: req.body,
     });
 
+    if (!processId) {
+      return res.status(400).json({ error: 'Process ID must be provided' });
+    }
+
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // validate the processId is in the list of processes
+    if (!(await req.db.getProcessByProcessId(processId))) {
+      return res.status(400).json({ error: 'Invalid process ID' });
     }
 
     const emailSchema = z.string().email();
@@ -50,19 +63,34 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
     logger.info(`Subscribing email to events...`, {
       email: validatedEmail.data,
       events: validatedEvents.data,
+      processId,
     });
 
-    const subscriberData: NewSubscriber = {
-      email: validatedEmail.data,
-      events:
-        validatedEvents.data.length > 0
-          ? validatedEvents.data.join(',')
-          : undefined,
-    };
-    const subscriber = await req.db.createSubscriber(subscriberData);
+    // check if the subscriber already exists
+    let subscriber = await req.db.getSubscriberByEmail(email);
+    if (subscriber) {
+      // update the subscriber for the process
+      await req.db.updateSubscriberForProcess({
+        subscriberId: subscriber.id,
+        processId,
+        events: validatedEvents.data,
+      });
+    } else {
+      // create a new subscriber
+      const subscriberData: NewSubscriber = {
+        email: validatedEmail.data,
+      };
+      subscriber = await req.db.createSubscriberForProcess({
+        subscriber: subscriberData,
+        processId,
+        events: validatedEvents.data,
+      });
+    }
+
     logger.info(`Successfully created new subscriber`, {
       email: validatedEmail.data,
       events: validatedEvents.data,
+      processId,
     });
 
     // if the subscriber is not verified, send verification email
@@ -73,6 +101,45 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
         to: [email],
         text: `Please verify your email address by clicking the link below:\n\n${verifyLink}`,
         subject: '🤖 Verify your email address',
+      });
+    } else {
+      const eventsForSubscriber = await req.db.getSubscribedEventsForSubscriber(
+        {
+          subscriberId: subscriber.id,
+        },
+      );
+
+      const eventSubscriptionsPerProcess = eventsForSubscriber.reduce(
+        (acc, event) => {
+          acc[event.processId] = [
+            ...(acc[event.processId] || []),
+            event.eventType,
+          ];
+          return acc;
+        },
+        {} as Record<string, string[]>,
+      );
+
+      const unsubscribeLink = generateUnsubscribeLink(email);
+      // send intro email in background
+      req.notifier?.sendRawEmail({
+        to: [email],
+        text: `You have successfully updated your subscription to subscribe.permagate.io!
+
+You will receive alerts for the following: 
+
+${Object.entries(eventSubscriptionsPerProcess)
+  .map(
+    ([processId, eventTypes]) =>
+      `Process ID: ${processId}\n${eventTypes.map((eventType) => `- ${eventType}`).join('\n')}`,
+  )
+  .join('\n\n')}
+          
+To unsubscribe, click here: ${unsubscribeLink}`,
+        subject: 'Subscription successful! 🚀',
+      });
+      return res.status(200).json({
+        message: 'Subscriber verified',
       });
     }
 
@@ -139,13 +206,22 @@ apiRouter.get(
         return res.status(400).json({ error: 'Subscriber not verified' });
       }
 
+      // get the events and processs for the subscriber
+      const eventsForSubscriber = await req.db.getSubscribedEventsForSubscriber(
+        {
+          subscriberId: subscriber.id,
+        },
+      );
+
       const unsubscribeLink = generateUnsubscribeLink(email);
       // send intro email in background
       req.notifier?.sendRawEmail({
         to: [email],
         text: `You have successfully been subscribed to subscribe.permagate.io!
 
-You will receive alerts for the following events: ${subscriber?.events?.split(',').join(', ')}
+You will receive alerts for the following: ${eventsForSubscriber
+          .map(({ eventType, processId }) => `${eventType} for ${processId}`)
+          .join(', ')}
 
 To unsubscribe, click here: ${unsubscribeLink}`,
         subject: 'Subscription successful! 🚀',
@@ -213,8 +289,10 @@ apiRouter.get(
 
       logger.info(`Verified hash for email: ${email}`);
 
-      await req.db.updateSubscriber(subscriber.id, {
-        events: '',
+      await req.db.updateSubscriberForProcess({
+        subscriberId: subscriber.id,
+        processId: ARIO_MAINNET_PROCESS_ID, // TODO: make this dynamic
+        events: [], // remove from all events for process
       });
 
       logger.info(`Unsubscribe request processed for email: ${email}`);

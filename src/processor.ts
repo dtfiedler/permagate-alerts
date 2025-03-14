@@ -130,7 +130,10 @@ export class EventProcessor implements IEventProcessor {
   }
 
   private async storeAndNotify(event: NewEvent): Promise<void> {
-    const subscribers = await this.db.findSubscribersByEvent(event.eventType);
+    const subscribers = await this.db.findSubscribersByEvent({
+      processId: event.processId,
+      event: event.eventType,
+    });
 
     // confirm the nonce is greater than the last seen
     const latestEvent = await this.db.getLatestEventByNonce({

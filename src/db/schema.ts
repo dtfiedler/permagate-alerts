@@ -21,8 +21,6 @@ const subscriberSchema = z.object({
   id: z.number(),
   email: z.string().email(),
   verified: z.boolean().default(false),
-  events: z.string().optional(),
-  wallet_addresses: z.array(z.string()),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -35,10 +33,37 @@ const newSubscriberSchema = subscriberSchema.omit({
   verified: true,
   createdAt: true,
   updatedAt: true,
-  wallet_addresses: true,
 });
 
 export type NewSubscriber = z.infer<typeof newSubscriberSchema>;
+
+// Process schema
+const processSchema = z.object({
+  id: z.number(),
+  process_id: z.string(),
+  name: z.string(),
+  created_at: z.date(),
+  updated_at: z.date(),
+});
+
+export type Process = z.infer<typeof processSchema>;
+
+// subscriber to a process schema
+const subscribeToProcessSchema = z.object({
+  id: z.number(),
+  subscriber_id: z.number(),
+  process_id: z.string(),
+  event_type: z.string(),
+  address: z.string().optional(),
+});
+
+export type SubscribeToProcess = z.infer<typeof subscribeToProcessSchema>;
+
+const newSubscribeToProcessSchema = subscribeToProcessSchema.omit({
+  id: true,
+});
+
+export type NewSubscribeToProcess = z.infer<typeof newSubscribeToProcessSchema>;
 
 // Alert schema
 const eventSchema = z.object({

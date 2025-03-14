@@ -7,6 +7,8 @@ import {
   Event,
   NewEvent,
   DBEvent,
+  Process,
+  SubscribeToProcess,
 } from './schema.js';
 
 interface BaseStore {
@@ -17,14 +19,28 @@ interface BaseStore {
 interface SubscriberStore extends BaseStore {
   getSubscriber(id: number): Promise<Subscriber | undefined>;
   getAllSubscribers(): Promise<Subscriber[]>;
-  createSubscriber(subscriber: NewSubscriber): Promise<Subscriber | undefined>;
   updateSubscriber(
     id: number,
     subscriber: Partial<Subscriber>,
   ): Promise<Subscriber | undefined>;
   deleteSubscriber(id: number): Promise<boolean>;
-  findSubscribersByEvent(event: string): Promise<Subscriber[]>;
+  findSubscribersByEvent({
+    processId,
+    event,
+  }: {
+    processId: string;
+    event: string;
+  }): Promise<Subscriber[]>;
   rawQuery(query: string, params?: any[]): Promise<any>;
+  createSubscriberForProcess({
+    subscriber,
+    processId,
+    events,
+  }: {
+    subscriber: NewSubscriber;
+    processId?: string;
+    events?: string[];
+  }): Promise<Subscriber | undefined>;
 }
 
 interface EventStore extends BaseStore {
@@ -83,9 +99,21 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
     return Number(result?.count || 0);
   }
 
-  async createSubscriber(
-    subscriber: NewSubscriber,
-  ): Promise<Subscriber | undefined> {
+  async getProcessByProcessId(processId: string): Promise<Process | undefined> {
+    return this.knex<Process>('processes')
+      .where({ process_id: processId })
+      .first();
+  }
+
+  async createSubscriberForProcess({
+    subscriber,
+    processId,
+    events = [],
+  }: {
+    subscriber: NewSubscriber;
+    processId?: string;
+    events?: string[];
+  }): Promise<Subscriber | undefined> {
     const [id] = await this.knex<Subscriber>('subscribers')
       .insert(subscriber)
       .onConflict('email')
@@ -95,6 +123,15 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
     if (!id) {
       return this.getSubscriberByEmail(subscriber.email);
     }
+
+    if (processId) {
+      await this.updateSubscriberForProcess({
+        subscriberId: id,
+        processId,
+        events,
+      });
+    }
+
     return this.getSubscriber(id);
   }
 
@@ -108,6 +145,71 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
       .update({ verified: true })
       .returning('*');
     return updated[0];
+  }
+
+  async getSubscribedEventsForSubscriber({
+    subscriberId,
+  }: {
+    subscriberId: number;
+  }): Promise<
+    {
+      processId: string;
+      eventType: string;
+    }[]
+  > {
+    const subscribedEvents = await this.knex<SubscribeToProcess>(
+      'subscriber_processes',
+    )
+      .where({
+        subscriber_id: subscriberId,
+      })
+      .select('process_id', 'event_type');
+
+    return subscribedEvents.map((event) => ({
+      processId: event.process_id,
+      eventType: event.event_type,
+    }));
+  }
+
+  async updateSubscriberForProcess({
+    subscriberId,
+    processId,
+    events,
+  }: {
+    subscriberId: number;
+    processId: string;
+    events: string[];
+  }): Promise<boolean> {
+    const existingSubscriptions = await this.knex<SubscribeToProcess>(
+      'subscriber_processes',
+    ).where({
+      subscriber_id: subscriberId,
+      process_id: processId,
+    });
+
+    if (existingSubscriptions.length > 0) {
+      // delete the existing subscriptions
+      await this.knex<SubscribeToProcess>('subscriber_processes')
+        .where({
+          subscriber_id: subscriberId,
+          process_id: processId,
+        })
+        .del();
+    }
+
+    if (events.length === 0) {
+      return true;
+    }
+
+    await this.knex<SubscribeToProcess>('subscriber_processes').insert(
+      events.map((event: string) => ({
+        subscriber_id: subscriberId,
+        process_id: processId,
+        event_type: event,
+      })),
+    );
+
+    return true;
   }
 
   async updateSubscriber(
@@ -125,10 +227,28 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
     return deleted > 0;
   }
 
-  async findSubscribersByEvent(event: string): Promise<Subscriber[]> {
-    return this.knex<Subscriber>('subscribers')
-      .where('events', 'LIKE', `%${event}%`)
-      .where({ verified: true });
+  async findSubscribersByEvent({
+    processId,
+    event,
+  }: {
+    processId: string;
+    event: string;
+  }): Promise<Subscriber[]> {
+    // join on subscribers and filter where verified
+    const subscribersForProcessEvent = await this.knex<Subscriber>(
+      'subscribers',
+    )
+      .where({
+        verified: true,
+      })
+      .whereIn('id', (builder) =>
+        builder
+          .select('subscriber_id')
+          .from('subscriber_processes')
+          .where({ process_id: processId, event_type: event }),
+      );
+
+    return subscribersForProcessEvent;
   }
 
   // Event Store Methods
