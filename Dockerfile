@@ -1,7 +1,7 @@
 ARG NODE_VERSION=20.15.0
 ARG NODE_VERSION_SHORT=20
 
-FROM node:${NODE_VERSION}-bullseye-slim AS builder
+FROM node:${NODE_VERSION}-bookworm-slim AS builder
 
 # Needed for some dev deps
 RUN apt-get update && apt-get install -y git
