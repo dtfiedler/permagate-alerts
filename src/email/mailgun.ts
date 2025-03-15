@@ -1,5 +1,5 @@
 import Mailgun from 'mailgun.js';
-import { IMailgunClient } from 'mailgun.js/Interfaces';
+import { Interfaces } from 'mailgun.js/definitions';
 import FormData from 'form-data';
 import { NewEvent, Event } from '../db/schema.js';
 import { Logger } from 'winston';
@@ -34,7 +34,7 @@ export interface EmailProviderOptions {
 }
 
 export class MailgunEmailProvider implements EmailProvider {
-  private client: IMailgunClient;
+  private client: Interfaces.IMailgunClient;
   private from: string;
   private domain: string;
   private logger: Logger;

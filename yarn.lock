@@ -1170,10 +1170,10 @@ axios@1.7.9:
     form-data "^4.0.0"
     proxy-from-env "^1.1.0"
 
-axios@^1.7.2:
-  version "1.7.3"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-1.7.3.tgz#a1125f2faf702bc8e8f2104ec3a76fab40257d85"
-  integrity sha512-Ar7ND9pU99eJ9GpoGQKhKf58GpUOgnzuaB7ueNQ5BMi0p+LZ5oaEnfF999fAArcTIBwXTCHAmGcHOZJaWPq9Nw==
+axios@^1.7.4:
+  version "1.8.3"
+  resolved "https://registry.yarnpkg.com/axios/-/axios-1.8.3.tgz#9ebccd71c98651d547162a018a1a95a4b4ed4de8"
+  integrity sha512-iP4DebzoNlP/YN2dpwCgb8zoCmhtkajzS48JvwmkSkXvPI3DHc7m+XYL5tGnSlJtR6nImXZmdCuN5aP8dh1d8A==
   dependencies:
     follow-redirects "^1.15.6"
     form-data "^4.0.0"
@@ -2851,12 +2851,12 @@ magic-string@^0.25.0, magic-string@^0.25.2, magic-string@^0.25.7:
   dependencies:
     sourcemap-codec "^1.4.8"
 
-mailgun.js@^10.2.3:
-  version "10.2.3"
-  resolved "https://registry.yarnpkg.com/mailgun.js/-/mailgun.js-10.2.3.tgz#77a0602340383e5340aa6ab1a6c704ab3839e7e3"
-  integrity sha512-7Mcw5IFtzN21i+qFQoWI+aQFDpLYSMUIWvDUXKLlpGFVVGfYVL8GIiveS+LIXpEJTQcF1hoNhOhDwenFqNSKmw==
+mailgun.js@^12.0.0:
+  version "12.0.1"
+  resolved "https://registry.yarnpkg.com/mailgun.js/-/mailgun.js-12.0.1.tgz#8c1e0ba1adcdcb0662d9b0202b044f021e3ed51d"
+  integrity sha512-BGIP8bewBxhmSKj79rAV3860IpvoORHOhza6MS8JGoaQUBi3Giz2P/ixqJmG5QamrFHdl+PDtirCWvjffNz6aw==
   dependencies:
-    axios "^1.7.2"
+    axios "^1.7.4"
     base-64 "^1.0.0"
     url-join "^4.0.1"
 
