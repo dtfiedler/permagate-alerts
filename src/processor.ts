@@ -6,6 +6,9 @@ import { AOProcess, ARIO, ARIO_MAINNET_PROCESS_ID } from '@ar.io/sdk';
 import { connect } from '@permaweb/aoconnect';
 import * as config from './config.js';
 import { logger } from './logger.js';
+import mjml2html from 'mjml';
+import { minify } from 'html-minifier-terser';
+
 const ario = ARIO.init({
   process: new AOProcess({
     processId: config.arioProcessId || ARIO_MAINNET_PROCESS_ID,
@@ -158,18 +161,33 @@ export class EventProcessor implements IEventProcessor {
       subscribers: subscribers.length,
     });
 
+    const mjmlTemplate = await getEmailBodyForEvent(event);
+    // Convert MJML to HTML
+    const htmlOutput = mjml2html(mjmlTemplate, {
+      keepComments: false,
+      beautify: false,
+      minify: false, // we'll minify ourselves in the next step
+    });
+
+    // Minify the HTML to reduce size
+    const html = await minify(htmlOutput.html, {
+      collapseWhitespace: true,
+      removeComments: true,
+      minifyCSS: true,
+      minifyJS: true,
+      minifyURLs: true,
+      removeEmptyElements: true,
+    });
+
+    const subject = getEmailSubjectForEvent(event);
+
     if (subscribers.length > 0) {
       // send email, but don't await
       this.notifier
         ?.sendEventEmail({
           to: subscribers.map((subscriber) => subscriber.email),
-          subject: getEmailSubjectForEvent(event),
-          body: await getEmailBodyForEvent(event),
-          eventType: event.eventType,
-          eventData: event.eventData,
-          nonce: event.nonce,
-          blockHeight: event.blockHeight,
-          processId: event.processId,
+          subject,
+          html,
         })
         .then(() => this.db.markEventAsProcessed(+event.nonce))
         .catch((error) => {
@@ -229,81 +247,323 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           : undefined;
       };
       const leaseDurationYears =
-        getLeaseDurationYears(startTimestamp, endTimestamp) || 'Permanent';
+        getLeaseDurationYears(startTimestamp, endTimestamp) || 0;
 
       return `
-  <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
-    <h3 style="text-align: center; word-wrap: break-word; color: white;">
-      <b>
-        <a href="https://${name}.permagate.io" style="color: #007bff; text-decoration: none;">${name}</a>
-      </b> 
-      was purchased for <b>${event.eventData.data.purchasePrice / 1_000_000} $ARIO</b>!
-    </h3>
+<mjml>
+  <mj-head>
+    <mj-title>Name Purchase Notification</mj-title>
+    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-attributes>
+      <mj-all font-family="Inter, sans-serif" />
+      <mj-text font-size="14px" color="#333" line-height="1.5" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .info-table th {
+        background-color: #fafafa !important;
+        font-weight: 600 !important;
+      }
+      .info-table th,
+      .info-table td {
+        border-bottom: 1px solid #eaeaea !important;
+        text-align: left !important;
+        padding: 8px !important;
+      }
+      ul {
+        margin: 5px 0 !important;
+        padding-left: 20px !important;
+      }
+      li {
+        margin: 5px 0 !important;
+      }
+    </mj-style>
+  </mj-head>
 
-    <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-      <p style="margin: 5px 0;">
-        <strong>Owner:</strong> 
-        <a href="https://ao.link/#/entity/${event.eventData.target}" style="color: #007bff; text-decoration: none;">
-          ${event.eventData.target}
-        </a>
-      </p>
-      <p style="margin: 5px 0;"><strong>Type:</strong> ${event.eventData.data.type}</p>
-      <p style="margin: 5px 0;"><strong>Lease Duration:</strong> ${leaseDurationYears ? `${leaseDurationYears} years` : 'Permanent'}</p>
-      <p style="margin: 5px 0;">
-        <strong>Process ID:</strong> 
-        <a href="https://ao.link/#/entity/${event.processId}" style="color: #007bff; text-decoration: none;">
-          ${event.processId}
-        </a>
-      </p>
-    </div>
+  <mj-body background-color="#0f0f0f">
+    <!-- Top Padding -->
+    <mj-section padding="20px 0">
+      <mj-column></mj-column>
+    </mj-section>
+    
+    <!-- Header Section -->
+    <mj-section background-color="#1c1c1c" padding="30px 20px">
+      <mj-column>
+        <mj-text
+          color="#ffffff"
+          font-size="24px"
+          font-weight="600"
+          align="center"
+          padding-bottom="0"
+        >
+          ${name} has been ${type === 'permabuy' ? 'permabought' : 'leased'}!
+        </mj-text>
+      </mj-column>
+    </mj-section>
 
-    <br/>
+    <!-- White Card Wrapper -->
+    <mj-wrapper
+      background-color="#ffffff"
+      border-radius="8px"
+      padding="20px 0"
+      css-class="card-container"
+    >
+      <!-- Name Details Section -->
+      <mj-section padding="0">
+        <mj-column>
+          <mj-text
+            font-size="18px"
+            font-weight="600"
+            color="#101010"
+            padding="0 20px 10px"
+          >
+            Details
+          </mj-text>
+          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+            <tr>
+              <th width="40%">Name</th>
+              <td width="60%"><a href="https://${name}.permagate.io" style="color: #007bff; text-decoration: none;">${name}</a></td>
+            </tr>
+            <tr>
+              <th width="40%">Purchase Price</th>
+              <td width="60%">${(event.eventData.data.purchasePrice / 1_000_000).toFixed(2).toLocaleString()} $ARIO</td>
+            </tr>
+            <tr>
+              <th width="40%">Owner</th>
+              <td width="60%">
+                <a href="https://ao.link/#/entity/${event.eventData.target}" style="color: #007bff; text-decoration: none;">
+                  ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <th width="40%">Type</th>
+              <td width="60%">${event.eventData.data.type}</td>
+            </tr>
+            <tr>
+              <th width="40%">Lease Duration</th>
+              <td width="60%">${leaseDurationYears ? `${leaseDurationYears} years` : 'Permanent'}</td>
+            </tr>
+            <tr>
+              <th width="40%">Process ID</th>
+              <td width="60%">
+                <a href="https://ao.link/#/entity/${event.processId}" style="color: #007bff; text-decoration: none;">
+                  ${event.processId.slice(0, 6)}...${event.processId.slice(-4)}
+                </a>
+              </td>
+            </tr>
+          </mj-table>
+        </mj-column>
+      </mj-section>
 
-    <a href="https://ao.link/#/message/${event.eventData.id}" 
-       style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 15px; border-radius: 5px; text-decoration: none;">
-      View on AO
-    </a>
-    <br/>
-    <br/>
-    <a href="https://subscribe.permagate.io/" style="color: #ffffff; text-decoration: none;">subscribe.permagate.io</a>
-    <br/>
-  </div>
+      <!-- View on AO Button -->
+      <mj-section padding="10px 0 20px">
+        <mj-column>
+          <mj-button
+            background-color="#007bff"
+            color="#ffffff"
+            border-radius="5px"
+            font-weight="600"
+            href="https://ao.link/#/message/${event.eventData.id}"
+          >
+            View on AO
+          </mj-button>
+        </mj-column>
+      </mj-section>
+
+      <!--[if mso | IE]>
+        </td>
+        </tr>
+        </table>
+      <![endif]-->
+    </mj-wrapper>
+
+    <!-- Footer Section -->
+    <mj-section background-color="#1c1c1c" padding="20px">
+      <mj-column>
+        <mj-text
+          font-size="12px"
+          color="#cccccc"
+          align="center"
+        >
+          <a
+            href="https://subscribe.permagate.io/"
+            style="color: #cccccc; text-decoration: none;"
+          >
+            subscribe.permagate.io
+          </a>
+          <br/>
+          You are receiving this email because you subscribed to subscribe.permagate.io
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    
+    <!-- Bottom Padding -->
+    <mj-section padding="20px 0">
+      <mj-column></mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
   `;
     case 'join-network-notice':
       return `
-  <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
-    <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-      <p style="margin: 5px 0;"><strong>FQDN:</strong> ${event.eventData.data.settings.fqdn}</p>
-      <p style="margin: 5px 0;"><strong>Operator Stake:</strong> ${event.eventData.data.operatorStake ? event.eventData.data.operatorStake / 1_000_000 + ' $ARIO' : 'N/A'}</p>
-      <p style="margin: 5px 0;"><strong>Allows Delegated Staking:</strong> ${event.eventData.data.settings.allowDelegatedStaking ? 'Yes' : 'No'}</p>
-      <p style="margin: 5px 0;"><strong>Minimum Delegated Stake:</strong> ${event.eventData.data.settings.allowDelegatedStaking ? event.eventData.data.settings.minDelegatedStake / 1_000_000 + ' $ARIO' : 'N/A'}</p>
-      <p style="margin: 5px 0;"><strong>Delegate Reward Percentage:</strong> ${event.eventData.data.settings.allowDelegatedStaking ? event.eventData.data.settings.delegateRewardShareRatio.toFixed(2) + '%' : 'N/A'}</p>
-      <p style="margin: 5px 0;">
-        <strong>Gateway Address:</strong> 
-        <a href="https://ao.link/#/entity/${event.eventData.target}" style="color: #007bff; text-decoration: none;">
-          ${event.eventData.target}
-        </a>
-      </p>
-      <p style="margin: 5px 0;">
-        <strong>Observer Address:</strong> 
-        <a href="https://ao.link/#/entity/${event.eventData.data.observerAddress}" style="color: #007bff; text-decoration: none;">
-          ${event.eventData.data.observerAddress}
-        </a>
-      </p>
-    </div>
+<mjml>
+  <mj-head>
+    <mj-title>${event.eventData.data.settings.fqdn} has joined the network!</mj-title>
+    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-attributes>
+      <mj-all font-family="Inter, sans-serif" />
+      <mj-text font-size="14px" color="#333" line-height="1.5" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .info-table th {
+        background-color: #fafafa !important;
+        font-weight: 600 !important;
+      }
+      .info-table th,
+      .info-table td {
+        border-bottom: 1px solid #eaeaea !important;
+        text-align: left !important;
+        padding: 8px !important;
+      }
+      ul {
+        margin: 5px 0 !important;
+        padding-left: 20px !important;
+      }
+      li {
+        margin: 5px 0 !important;
+      }
+    </mj-style>
+  </mj-head>
 
-    <br/>
+  <mj-body background-color="#0f0f0f">
+    <!-- Top Padding -->
+    <mj-section padding="20px 0">
+      <mj-column></mj-column>
+    </mj-section>
+    
+    <!-- Header Section -->
+    <mj-section background-color="#1c1c1c" padding="30px 20px">
+      <mj-column>
+        <mj-text
+          color="#ffffff"
+          font-size="24px"
+          font-weight="600"
+          align="center"
+          padding-bottom="0"
+        >
+          ${event.eventData.data.settings.fqdn} has joined the network!
+        </mj-text>
+      </mj-column>
+    </mj-section>
 
-    <a href="https://ao.link/#/message/${event.eventData.id}" 
-       style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 15px; border-radius: 5px; text-decoration: none;">
-      View on AO
-    </a>  
-    <br/>
-    <br/>
-    <a href="https://subscribe.permagate.io/" style="color: #ffffff; text-decoration: none;">subscribe.permagate.io</a>
-    <br/>
-  </div>
-  `;
+    <!-- White Card Wrapper -->
+    <mj-wrapper
+      background-color="#ffffff"
+      border-radius="8px"
+      padding="20px 0"
+      css-class="card-container"
+    >
+      <!-- Gateway Info Section -->
+      <mj-section padding="0">
+        <mj-column>
+          <mj-text
+            font-size="18px"
+            font-weight="600"
+            color="#101010"
+            padding="0 20px 10px"
+          >
+            Details
+          </mj-text>
+          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+            <tr>
+              <th width="40%">FQDN</th>
+              <td width="60%">${event.eventData.data.settings.fqdn}</td>
+            </tr>
+            <tr>
+              <th width="40%">Operator Stake</th>
+              <td width="60%">${event.eventData.data.operatorStake ? (event.eventData.data.operatorStake / 1_000_000).toFixed(2).toLocaleString() + ' $ARIO' : 'N/A'}</td>
+            </tr>
+            <tr>
+              <th width="40%">Allows Delegated Staking</th>
+              <td width="60%">${event.eventData.data.settings.allowDelegatedStaking ? 'Yes' : 'No'}</td>
+            </tr>
+            <tr>
+              <th width="40%">Minimum Delegated Stake</th>
+              <td width="60%">${event.eventData.data.settings.allowDelegatedStaking ? (event.eventData.data.settings.minDelegatedStake / 1_000_000).toFixed(2).toLocaleString() + ' $ARIO' : 'N/A'}</td>
+            </tr>
+            <tr>
+              <th width="40%">Delegate Reward Percentage</th>
+              <td width="60%">${event.eventData.data.settings.allowDelegatedStaking ? event.eventData.data.settings.delegateRewardShareRatio.toFixed(2).toLocaleString() + '%' : 'N/A'}</td>
+            </tr>
+            <tr>
+              <th width="40%">Gateway Address</th>
+              <td width="60%">
+                <a href="https://ao.link/#/entity/${event.eventData.target}" style="color: #007bff; text-decoration: none;">
+                  ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <th width="40%">Observer Address</th>
+              <td width="60%">
+                <a href="https://ao.link/#/entity/${event.eventData.data.observerAddress}" style="color: #007bff; text-decoration: none;">
+                  ${event.eventData.data.observerAddress.slice(0, 6)}...${event.eventData.data.observerAddress.slice(-4)}
+                </a>
+              </td>
+            </tr>
+          </mj-table>
+        </mj-column>
+      </mj-section>
+
+      <!-- View on AO Button -->
+      <mj-section padding="10px 0 20px">
+        <mj-column>
+          <mj-button
+            background-color="#007bff"
+            color="#ffffff"
+            border-radius="5px"
+            font-weight="600"
+            href="https://ao.link/#/message/${event.eventData.id}"
+          >
+            View on AO
+          </mj-button>
+        </mj-column>
+      </mj-section>
+
+      <!--[if mso | IE]>
+        </td>
+        </tr>
+        </table>
+      <![endif]-->
+    </mj-wrapper>
+
+    <!-- Footer Section -->
+    <mj-section background-color="#1c1c1c" padding="20px">
+      <mj-column>
+        <mj-text
+          font-size="12px"
+          color="#cccccc"
+          align="center"
+        >
+          <a
+            href="https://subscribe.permagate.io/"
+            style="color: #cccccc; text-decoration: none;"
+          >
+            subscribe.permagate.io
+          </a>
+          <br/>
+          You are receiving this email because you subscribed to subscribe.permagate.io
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    
+    <!-- Bottom Padding -->
+    <mj-section padding="20px 0">
+      <mj-column></mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+      `;
     case 'epoch-created-notice':
       const epochIndex = event.eventData.data.epochIndex;
       const epochStartTimestamp = event.eventData.data.startTimestamp;
@@ -365,58 +625,294 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       );
 
       return `
-  <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
-    <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">             
-      <h2 style="margin-top: 0;">🔭 Epoch Details</h2>
-      <ul style="margin: 5px 0; padding-left: 20px;">
-        <li style="margin: 5px 0;"><strong>Epoch Index:</strong> ${epochIndex}</li>
-        <li style="margin: 5px 0;"><strong>Start Timestamp:</strong> ${epochStartTimestamp ? new Date(epochStartTimestamp).toLocaleString() : 'N/A'}</li>
-        <li style="margin: 5px 0;"><strong>End Timestamp:</strong> ${epochEndTimestamp ? new Date(epochEndTimestamp).toLocaleString() : 'N/A'}</li>
-        <li style="margin: 5px 0;"><strong># Eligible Gateways:</strong> ${totalEligibleGatewaysCreated}</li>
-        <li style="margin: 5px 0;"><strong>Observer Reward:</strong> ${totalEligibleObserverRewardCreated.toFixed(2)} $ARIO</li>
-        <li style="margin: 5px 0;"><strong>Gateway Reward:</strong> ${totalEligibleGatewayRewardCreated.toFixed(2)} $ARIO</li>
-      </ul>
-      <br/>
+<mjml>
+  <mj-head>
+    <mj-title>Epoch ${epochIndex} Created</mj-title>
+
+    <!-- Load the Inter font from Google Fonts -->
+    <mj-font
+      name="Inter"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+    />
+
+    <mj-attributes>
+      <!-- Set the default font for all elements to Inter -->
+      <mj-all font-family="Inter, sans-serif" />
+      <mj-text font-size="14px" color="#333" line-height="1.5" />
+    </mj-attributes>
+
+    <mj-style inline="inline">
+      /* Table styling inside MJML */
+      .info-table th {
+        background-color: #fafafa !important;
+        font-weight: 600 !important; /* Slightly bolder for column headers */
+      }
+      .info-table th,
+      .info-table td {
+        border-bottom: 1px solid #eaeaea !important;
+        text-align: left !important;
+        padding: 8px !important;
+      }
+
+      /* Custom UL styling */
+      ul {
+        margin: 0 !important;
+        padding-left: 20px !important;
+      }
+      li {
+        margin-bottom: 5px !important;
+      }
+    </mj-style>
+  </mj-head>
+
+  <!-- Body: Dark background, similar to ar.io's vibe -->
+  <mj-body background-color="#0f0f0f">
+    <!-- Top Padding -->
+    <mj-section padding="20px 0">
+      <mj-column></mj-column>
+    </mj-section>
+
+    <!-- Header Section (Dark) -->
+    <mj-section background-color="#1c1c1c" padding="30px 20px">
+      <mj-column>
+        <mj-text
+          color="#ffffff"
+          font-size="24px"
+          font-weight="600"
+          align="center"
+          padding-bottom="0"
+        >
+          Epoch ${epochIndex} Has Been Created!
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- White Card Wrapper with subtle shadow/rounding -->
+    <mj-wrapper
+      background-color="#ffffff"
+      border-radius="8px"
+      padding="20px 0"
+      css-class="card-container"
+    >
+      <!--[if mso | IE]>
+        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600"
+          style="box-shadow: 0 2px 5px rgba(0,0,0,0.2); border-radius: 8px;">
+          <tr>
+          <td>
+      <![endif]-->
+
+      <!-- Epoch Details -->
+      <mj-section padding="0">
+        <mj-column>
+          <mj-text
+            font-size="18px"
+            font-weight="600"
+            color="#101010"
+            padding="0 20px 10px"
+          >
+            Epoch Details
+          </mj-text>
+          <mj-table css-class="info-table" padding="0 20px 20px">
+            <tr>
+              <th>Epoch Index</th>
+              <td>${epochIndex}</td>
+            </tr>
+            <tr>
+              <th>Start Timestamp</th>
+              <td>${epochStartTimestamp ? new Date(epochStartTimestamp).toLocaleString() : 'N/A'}</td>
+            </tr>
+            <tr>
+              <th>End Timestamp</th>
+              <td>${epochEndTimestamp ? new Date(epochEndTimestamp).toLocaleString() : 'N/A'}</td>
+            </tr>
+            <tr>
+              <th># Eligible Gateways</th>
+              <td>${totalEligibleGatewaysCreated}</td>
+            </tr>
+            <tr>
+              <th>Observer Reward</th>
+              <td>${totalEligibleObserverRewardCreated.toFixed(2).toLocaleString()} $ARIO</td>
+            </tr>
+            <tr>
+              <th>Gateway Reward</th>
+              <td>${totalEligibleGatewayRewardCreated.toFixed(2).toLocaleString()} $ARIO</td>
+            </tr>
+          </mj-table>
+        </mj-column>
+      </mj-section>
+
       ${
         newGatewaysFqdns && newGatewaysFqdns.length > 0
           ? `
-      <h2 style="margin-top: 0;">👋 New Gateways</h2>
-      <ul style="margin: 5px 0; padding-left: 20px;">
-      ${newGatewaysFqdns.map((fqdn) => `<li style="margin: 5px 0;">${fqdn}</li>`).join('')}
-      </ul>
+      <!-- New Gateways Section -->
+      <mj-section padding="0 0 20px">
+        <mj-column>
+          <mj-text
+            font-size="18px"
+            font-weight="600"
+            color="#101010"
+            padding="0 20px 10px"
+          >
+            New Gateways
+          </mj-text>
+          <mj-text padding="0 20px">
+            <ul>
+              ${newGatewaysFqdns.map((fqdn) => `<li>${fqdn}</li>`).join('')}
+            </ul>
+          </mj-text>
+        </mj-column>
+      </mj-section>
       `
           : ''
       }
-      <br/>
-      <h2 style="margin-top: 0;">🔭 Prescribed Names</h2>
-      <ul style="margin: 5px 0; padding-left: 20px;">
-        ${prescribedNames.map((name: string) => `<li style="margin: 5px 0; text-decoration: none;"><a href="https://${name}.permagate.io" style="color: #007bff; text-decoration: none;">ar://${name}</a></li>`).join('')}
-      </ul>
-      <br/>
-      <h2 style="margin-top: 0;">👀 Prescribed Observers</h2>
-      <ul style="margin: 5px 0; padding-left: 20px;">
-        ${Object.entries(prescribedGatewayFqdns)
-          .map(
-            ([address, fqdn]) =>
-              `<li style="margin: 5px 0;">${fqdn} (${address.slice(0, 6)}...${address.slice(-4)})</li>`,
-          )
-          .join('')}
-      </ul>
-    </div>
-    <br/>
-    <a href="https://ao.link/#/message/${event.eventData.id}" 
-       style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 15px; border-radius: 5px; text-decoration: none;">
-      View on AO
-    </a>  
-    <br/>
-    <br/>
-    <a href="https://subscribe.permagate.io/" style="color: #ffffff; text-decoration: none;">subscribe.permagate.io</a>
-    <br/>
-  </div>
-  `;
+
+      <!-- Prescribed Names Section -->
+      <mj-section padding="0 0 20px">
+        <mj-column>
+          <mj-text
+            font-size="18px"
+            font-weight="600"
+            color="#101010"
+            padding="0 20px 10px"
+          >
+            Prescribed Names
+          </mj-text>
+          <mj-text padding="0 20px">
+            <ul>
+              ${prescribedNames
+                .map(
+                  (name: string) =>
+                    `<li><a href="https://${name}.permagate.io" style="color: #007bff; text-decoration: none;">ar://${name}</a></li>`,
+                )
+                .join('')}
+            </ul>
+          </mj-text>
+        </mj-column>
+      </mj-section>
+
+      <!-- Prescribed Observers Section -->
+      <mj-section padding="0">
+        <mj-column>
+          <mj-text
+            font-size="18px"
+            font-weight="600"
+            color="#101010"
+            padding="0 20px 10px"
+          >
+            Prescribed Observers
+          </mj-text>
+        </mj-column>
+      </mj-section>
+
+      <mj-section padding="0 0 20px">
+        <!-- Split observers into columns -->
+        <mj-column width="33%" mobileWidth="100%">
+          <mj-text color="#333333" padding="0 20px">
+            <ul>
+              ${Object.entries(prescribedGatewayFqdns)
+                .slice(
+                  0,
+                  Math.ceil(Object.keys(prescribedGatewayFqdns).length / 3),
+                )
+                .map(
+                  ([address, fqdn]) =>
+                    `<li>${fqdn} (${address.slice(0, 6)}...${address.slice(-4)})</li>`,
+                )
+                .join('')}
+            </ul>
+          </mj-text>
+        </mj-column>
+
+        <!-- Column 2 -->
+        <mj-column width="33%" mobileWidth="100%">
+          <mj-text color="#333333" padding="0 20px">
+            <ul>
+              ${Object.entries(prescribedGatewayFqdns)
+                .slice(
+                  Math.ceil(Object.keys(prescribedGatewayFqdns).length / 3),
+                  Math.ceil(Object.keys(prescribedGatewayFqdns).length / 3) * 2,
+                )
+                .map(
+                  ([address, fqdn]) =>
+                    `<li>${fqdn} (${address.slice(0, 6)}...${address.slice(-4)})</li>`,
+                )
+                .join('')}
+            </ul>
+          </mj-text>
+        </mj-column>
+
+        <!-- Column 3 -->
+        <mj-column width="33%" mobileWidth="100%">
+          <mj-text color="#333333" padding="0 20px">
+            <ul>
+              ${Object.entries(prescribedGatewayFqdns)
+                .slice(
+                  Math.ceil(Object.keys(prescribedGatewayFqdns).length / 3) * 2,
+                )
+                .map(
+                  ([address, fqdn]) =>
+                    `<li>${fqdn} (${address.slice(0, 6)}...${address.slice(-4)})</li>`,
+                )
+                .join('')}
+            </ul>
+          </mj-text>
+        </mj-column>
+      </mj-section>
+
+      <!-- View on AO Button -->
+      <mj-section padding="10px 0 20px">
+        <mj-column>
+          <mj-button
+            background-color="#007bff"
+            color="#ffffff"
+            border-radius="5px"
+            font-weight="600"
+            href="https://ao.link/#/message/${event.eventData.id}"
+          >
+            View on AO
+          </mj-button>
+        </mj-column>
+      </mj-section>
+
+      <!--[if mso | IE]>
+        </td>
+        </tr>
+        </table>
+      <![endif]-->
+    </mj-wrapper>
+
+    <!-- Footer Section -->
+    <mj-section background-color="#1c1c1c" padding="20px">
+      <mj-column>
+        <mj-text
+          font-size="12px"
+          color="#cccccc"
+          align="center"
+        >
+          <a
+            href="https://subscribe.permagate.io/"
+            style="color: #cccccc; text-decoration: none;"
+          >
+            subscribe.permagate.io
+          </a>
+          <br/>
+          You are receiving this email because you subscribed to subscribe.permagate.io
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    
+    <!-- Bottom Padding -->
+    <mj-section padding="20px 0">
+      <mj-column></mj-column>
+    </mj-section>
+
+  </mj-body>
+</mjml>`;
+
     case 'epoch-distribution-notice':
       const observationData = event.eventData.data.observations;
       const epochData = event.eventData.data.distributions;
+      const distributedEpochIndex = event.eventData.data.epochIndex;
       const totalEligibleGateways = epochData.totalEligibleGateways || 0;
       const totalEligibleRewards = epochData.totalEligibleRewards
         ? epochData.totalEligibleRewards / 1_000_000
@@ -479,84 +975,339 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           });
           return { items: [] };
         });
-
       return `
-  <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
+<mjml>
+  <mj-head>
+    <mj-title>Epoch ${distributedEpochIndex} Observation Results</mj-title>
+    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-attributes>
+      <mj-all font-family="Inter, sans-serif" />
+      <mj-text font-size="14px" color="#333" line-height="1.5" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .info-table th {
+        background-color: #fafafa !important;
+        font-weight: 600 !important;
+      }
+      .info-table th,
+      .info-table td {
+        border-bottom: 1px solid #eaeaea !important;
+        text-align: left !important;
+        padding: 8px !important;
+      }
+      ul {
+        margin: 5px 0 !important;
+        padding-left: 20px !important;
+      }
+      li {
+        margin: 5px 0 !important;
+      }
+    </mj-style>
+  </mj-head>
 
-    <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px; margin-bottom: 15px;">
-      <h2 style="margin-top: 0;">🔭 Network Performance</h2>
-      <ul style="margin: 5px 0; padding-left: 20px;">
-        <li style="margin: 5px 0;"><strong># Observations Submitted:</strong> ${totalObservationsSubmitted}/50 (${((totalObservationsSubmitted / 50) * 100).toFixed(2)}%)</li>
-        <li style="margin: 5px 0;"><strong># Gateways Eligible:</strong> ${totalEligibleGateways}</li>
-        <li style="margin: 5px 0;"><strong># Gateways Failed:</strong> ${totalGatewaysFailed} (${((totalGatewaysFailed / totalEligibleGateways) * 100).toFixed(2)}%)</li>
-        <li style="margin: 5px 0;"><strong># Gateways Passed:</strong> ${totalGatewaysPassed} (${((totalGatewaysPassed / totalEligibleGateways) * 100).toFixed(2)}%)</li>
-      </ul>
-      <br/>
-      <h2 style="margin-top: 0;">💰 Rewards</h2>
-      <ul style="margin: 5px 0; padding-left: 20px;">
-        <li style="margin: 5px 0;"><strong>Observer Reward:</strong> ${totalEligibleObserverReward.toFixed(2)} $ARIO</li>
-        <li style="margin: 5px 0;"><strong>Gateway Reward:</strong> ${totalEligibleGatewayReward.toFixed(2)} $ARIO</li>
-        <li style="margin: 5px 0;"><strong>Total Eligible Rewards:</strong> ${totalEligibleRewards.toFixed(2)} $ARIO</li>
-        <li style="margin: 5px 0;"><strong>Total Distributed Rewards:</strong> ${totalDistributedRewards.toFixed(2)} $ARIO (${((totalDistributedRewards / totalEligibleRewards) * 100).toFixed(2)}%)</li>
-        <li style="margin: 5px 0;"><strong>Distribution Timestamp:</strong> ${new Date(distributedTimestamp).toLocaleString()}</li>
-      </ul>
-      <br/>
+  <mj-body background-color="#0f0f0f">
+    <!-- Top Padding -->
+    <mj-section padding="20px 0">
+    <!-- Header Section -->
+    <mj-section background-color="#1c1c1c" padding="30px 20px">
+      <mj-column>
+        <mj-text
+          color="#ffffff"
+          font-size="24px"
+          font-weight="600"
+          align="center"
+          padding-bottom="0"
+        >
+          Epoch ${distributedEpochIndex} Observation Results
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- White Card Wrapper -->
+    <mj-wrapper
+      background-color="#ffffff"
+      border-radius="8px"
+      padding="20px 0"
+      css-class="card-container"
+    >
+      <!-- Network Performance Section -->
+      <mj-section padding="0">
+        <mj-column>
+          <mj-text
+            font-size="18px"
+            font-weight="600"
+            color="#101010"
+            padding="0 20px 10px"
+          >
+            🔭 Network Performance
+          </mj-text>
+          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+            <tr>
+              <th width="40%">Observations Submitted</th>
+              <td width="60%">${totalObservationsSubmitted}/50 (${((totalObservationsSubmitted / 50) * 100).toFixed(2)}%)</td>
+            </tr>
+            <tr>
+              <th width="40%">Gateways Eligible</th>
+              <td width="60%">${totalEligibleGateways}</td>
+            </tr>
+            <tr>
+              <th width="40%">Gateways Failed</th>
+              <td width="60%">${totalGatewaysFailed} (${((totalGatewaysFailed / totalEligibleGateways) * 100).toFixed(2)}%)</td>
+            </tr>
+            <tr>
+              <th width="40%">Gateways Passed</th>
+              <td width="60%">${totalGatewaysPassed} (${((totalGatewaysPassed / totalEligibleGateways) * 100).toFixed(2)}%)</td>
+            </tr>
+          </mj-table>
+        </mj-column>
+      </mj-section>
+
+      <!-- Rewards Section -->
+      <mj-section padding="0">
+        <mj-column>
+          <mj-text
+            font-size="18px"
+            font-weight="600"
+            color="#101010"
+            padding="0 20px 10px"
+          >
+            💰 Rewards
+          </mj-text>
+          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+            <tr>
+              <th width="40%">Observer Reward</th>
+              <td width="60%">${totalEligibleObserverReward.toFixed(2).toLocaleString()} $ARIO</td>
+            </tr>
+            <tr>
+              <th width="40%">Gateway Reward</th>
+              <td width="60%">${totalEligibleGatewayReward.toFixed(2).toLocaleString()} $ARIO</td>
+            </tr>
+            <tr>
+              <th width="40%">Total Eligible Rewards</th>
+              <td width="60%">${totalEligibleRewards.toFixed(2).toLocaleString()} $ARIO</td>
+            </tr>
+            <tr>
+              <th width="40%">Total Distributed Rewards</th>
+              <td width="60%">${totalDistributedRewards.toFixed(2).toLocaleString()} $ARIO (${((totalDistributedRewards / totalEligibleRewards) * 100).toFixed(2)}%)</td>
+            </tr>
+            <tr>
+              <th width="40%">Distribution Timestamp</th>
+              <td width="60%">${distributedTimestamp}</td>
+            </tr>
+          </mj-table>
+        </mj-column>
+      </mj-section>
+
       ${
         bestStreaks.items && bestStreaks.items.length > 0
           ? `
-      <h2 style="margin-top: 0;">📈 Best Performers</h2>
-      <ul style="margin: 5px 0; padding-left: 20px;">
-        ${bestStreaks.items.map((gateway) => `<li style="margin: 5px 0;">${gateway.settings.fqdn} +${gateway.stats.passedConsecutiveEpochs} epochs</li>`).join('')}
-      </ul>
+      <!-- Best Performers Section -->
+      <mj-section padding="0">
+        <mj-column>
+          <mj-text
+            font-size="18px"
+            font-weight="600"
+            color="#101010"
+            padding="0 20px 10px"
+          >
+            📈 Best Performers
+          </mj-text>
+          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+            ${bestStreaks.items
+              .map(
+                (gateway) => `
+            <tr>
+              <th width="40%">${gateway.settings.fqdn}</th>
+              <td width="60%">+${gateway.stats.passedConsecutiveEpochs} epochs</td>
+            </tr>`,
+              )
+              .join('')}
+          </mj-table>
+        </mj-column>
+      </mj-section>
       `
           : ''
       }
+
       ${
         worstStreaks.items && worstStreaks.items.length > 0
           ? `
-      <h2 style="margin-top: 0;">📉 Worst Performers</h2>
-      <ul style="margin: 5px 0; padding-left: 20px;">
-        ${worstStreaks.items.map((gateway) => `<li style="margin: 5px 0;">${gateway.settings.fqdn} -${gateway.stats.failedConsecutiveEpochs} epochs</li>`).join('')}
-      </ul> 
-      <br/>
+      <!-- Worst Performers Section -->
+      <mj-section padding="0">
+        <mj-column>
+          <mj-text
+            font-size="18px"
+            font-weight="600"
+            color="#101010"
+            padding="0 20px 10px"
+          >
+            📉 Worst Performers
+          </mj-text>
+          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+            ${worstStreaks.items
+              .map(
+                (gateway) => `
+            <tr>
+              <th width="40%">${gateway.settings.fqdn}</th>
+              <td width="60%">-${gateway.stats.failedConsecutiveEpochs} epochs</td>
+            </tr>`,
+              )
+              .join('')}
+          </mj-table>
+        </mj-column>
+      </mj-section>
       `
           : ''
       }
-    </div>
-    <br/>
+    </mj-wrapper>
 
-    <a href="https://ao.link/#/message/${event.eventData.id}" 
-       style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 15px; border-radius: 5px; text-decoration: none;">
-      View on AO
-    </a>
-    <br/>
-    <br/>
-    <a href="https://subscribe.permagate.io/" style="color: #ffffff; text-decoration: none;">subscribe.permagate.io</a>
-    <br/>
-  </div>
+    <!-- Footer Section -->
+    <!-- Footer Section -->
+    <mj-section background-color="#1c1c1c" padding="20px">
+      <mj-column>
+        <mj-button
+          background-color="#007bff"
+          color="#ffffff"
+          border-radius="5px"
+          font-weight="600"
+          href="https://ao.link/#/message/${event.eventData.id}"
+        >
+          View on AO
+        </mj-button>
+        <mj-text
+          font-size="12px"
+          color="#cccccc"
+          align="center"
+        >
+          <a
+            href="https://subscribe.permagate.io/"
+            style="color: #cccccc; text-decoration: none;"
+          >
+            subscribe.permagate.io
+          </a>
+          <br/>
+          You are receiving this email because you subscribed to subscribe.permagate.io
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    
+    <!-- Bottom Padding -->
+    <mj-section padding="20px 0">
+      <mj-column></mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
   `;
     default:
       return `
-  <div style="padding: 10px; text-align: center; font-family: Arial, sans-serif; color: #333;">
-    <br/>
-    
-    <div style="text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-      <pre style="white-space: pre-wrap; word-wrap: break-word; background: #eef2f7; padding: 10px; border-radius: 5px; max-height: 500px; overflow-y: auto;">
-${JSON.stringify(event.eventData.data, null, 2).slice(0, 10000).trim()}
-      </pre>
-    </div>
+<mjml>
+  <mj-head>
+    <mj-title>Event Notification</mj-title>
+    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-attributes>
+      <mj-all font-family="Inter, sans-serif" />
+      <mj-text font-size="14px" color="#333" line-height="1.5" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .info-table th {
+        background-color: #fafafa !important;
+        font-weight: 600 !important;
+      }
+      .info-table th,
+      .info-table td {
+        border-bottom: 1px solid #eaeaea !important;
+        text-align: left !important;
+        padding: 8px !important;
+      }
+    </mj-style>
+  </mj-head>
 
-    <br/>
+  <mj-body background-color="#0f0f0f">
+    <!-- Header Section -->
+    <mj-section background-color="#1c1c1c" padding="30px 20px">
+      <mj-column>
+        <mj-text
+          color="#ffffff"
+          font-size="24px"
+          font-weight="600"
+          align="center"
+          padding-bottom="0"
+        >
+          Event Details
+        </mj-text>
+      </mj-column>
+    </mj-section>
 
-    <a href="https://ao.link/#/message/${event.eventData.id}" 
-       style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 10px 15px; border-radius: 5px; text-decoration: none;">
-      View on AO
-    </a>
-    <br/>
-    <br/>
-    <a href="https://subscribe.permagate.io/" style="color: #ffffff; text-decoration: none;">subscribe.permagate.io</a>
-    <br/>
-  </div>
+    <!-- White Card Wrapper -->
+    <mj-wrapper
+      background-color="#ffffff"
+      border-radius="8px"
+      padding="20px 0"
+      css-class="card-container"
+    >
+      <!-- Event Data Section -->
+      <mj-section padding="0">
+        <mj-column>
+          <mj-text
+            font-size="18px"
+            font-weight="600"
+            color="#101010"
+            padding="0 20px 10px"
+          >
+            Details
+          </mj-text>
+          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+            ${Object.entries(event.eventData.data)
+              .filter(
+                ([_, value]) => typeof value !== 'object' || value === null,
+              )
+              .map(
+                ([key, value]) => `
+            <tr>
+              <th width="40%">${key}</th>
+              <td width="60%">${value}</td>
+            </tr>`,
+              )
+              .join('')}
+          </mj-table>
+        </mj-column>
+      </mj-section>
+
+      <!-- View on AO Button -->
+      <mj-section padding="10px 0 20px">
+        <mj-column>
+          <mj-button
+            background-color="#007bff"
+            color="#ffffff"
+            border-radius="5px"
+            font-weight="600"
+            href="https://ao.link/#/message/${event.eventData.id}"
+          >
+            View on AO
+          </mj-button>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <!-- Footer Section -->
+    <mj-section background-color="#1c1c1c" padding="20px">
+      <mj-column>
+        <mj-text
+          font-size="12px"
+          color="#cccccc"
+          align="center"
+        >
+          <a
+            href="https://subscribe.permagate.io/"
+            style="color: #cccccc; text-decoration: none;"
+          >
+            subscribe.permagate.io
+          </a>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
 `;
   }
 };

@@ -1,15 +1,15 @@
 import Mailgun from 'mailgun.js';
 import { Interfaces } from 'mailgun.js/definitions';
 import FormData from 'form-data';
-import { NewEvent, Event } from '../db/schema.js';
+import { Event } from '../db/schema.js';
 import { Logger } from 'winston';
 
 const mailgun = new Mailgun.default(FormData);
 
-export interface EventEmail extends NewEvent {
+export interface EventEmail {
   to: string[];
   subject: string;
-  body: string;
+  html: string;
 }
 
 export interface DigestEmailData {
@@ -111,17 +111,13 @@ export class MailgunEmailProvider implements EmailProvider {
     return this.sendRawEmail({ to, subject, text });
   }
 
-  async sendEventEmail(data: EventEmail): Promise<void> {
-    const { to, body, subject } = data;
-    return this.sendEmailFromTemplate({
-      to,
+  async sendEventEmail({ to, html, subject }: EventEmail): Promise<void> {
+    await this.client.messages.create(this.domain, {
+      from: this.from,
+      to: 'noreply@permagate.io',
       subject,
-      templateId: 'permagate-alert',
-      variables: {
-        title: subject,
-        heading: subject,
-        body,
-      },
+      html,
+      bcc: to.join(','),
     });
   }
 }
