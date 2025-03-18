@@ -9,6 +9,7 @@ import {
   DBEvent,
   Process,
   SubscribeToProcess,
+  ProcessEventSubscription,
 } from './schema.js';
 
 interface BaseStore {
@@ -39,7 +40,7 @@ interface SubscriberStore extends BaseStore {
   }: {
     subscriber: NewSubscriber;
     processId?: string;
-    events?: string[];
+    events?: ProcessEventSubscription[];
   }): Promise<Subscriber | undefined>;
 }
 
@@ -105,6 +106,18 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
       .first();
   }
 
+  async createNewSubscriber({
+    email,
+  }: {
+    email: string;
+  }): Promise<Subscriber | undefined> {
+    const [subscriber] = await this.knex<Subscriber>('subscribers')
+      .insert({ email })
+      .returning('*');
+
+    return subscriber;
+  }
+
   async createSubscriberForProcess({
     subscriber,
     processId,
@@ -112,7 +125,7 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
   }: {
     subscriber: NewSubscriber;
     processId?: string;
-    events?: string[];
+    events?: ProcessEventSubscription[];
   }): Promise<Subscriber | undefined> {
     const [id] = await this.knex<Subscriber>('subscribers')
       .insert(subscriber)
@@ -178,7 +191,7 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
   }: {
     subscriberId: number;
     processId: string;
-    events: string[];
+    events: ProcessEventSubscription[];
   }): Promise<boolean> {
     const existingSubscriptions = await this.knex<SubscribeToProcess>(
       'subscriber_processes',
@@ -202,10 +215,12 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
     }
 
     await this.knex<SubscribeToProcess>('subscriber_processes').insert(
-      events.map((event: string) => ({
+      events.map((event: ProcessEventSubscription) => ({
         subscriber_id: subscriberId,
         process_id: processId,
-        event_type: event,
+        event_type: event.eventType,
+        // TODO: this name is confusing, it's not an address but a comma separated list of addresses
+        address: event.addresses.join(','),
       })),
     );
 
@@ -230,9 +245,11 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
   async findSubscribersByEvent({
     processId,
     event,
+    target,
   }: {
     processId: string;
     event: string;
+    target?: string;
   }): Promise<Subscriber[]> {
     // join on subscribers and filter where verified
     const subscribersForProcessEvent = await this.knex<Subscriber>(
@@ -245,7 +262,17 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
         builder
           .select('subscriber_id')
           .from('subscriber_processes')
-          .where({ process_id: processId, event_type: event }),
+          .where({ process_id: processId, event_type: event })
+          .andWhere(function () {
+            if (target) {
+              this.whereNull('address').orWhereRaw(
+                'address like ?',
+                `%${target}%`,
+              );
+            } else {
+              this.whereNull('address');
+            }
+          }),
       );
 
     return subscribersForProcessEvent;

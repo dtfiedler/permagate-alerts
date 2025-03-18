@@ -12,6 +12,15 @@ export const subscriberEvents = [
   'delegate-stake-notice',
 ] as const;
 
+export const processEventSubscriptionSchema = z.object({
+  eventType: z.string(),
+  addresses: z.array(z.string()),
+});
+
+export type ProcessEventSubscription = z.infer<
+  typeof processEventSubscriptionSchema
+>;
+
 export const subscriberEventSchema = z.enum(subscriberEvents);
 
 export type SubscriberEvent = (typeof subscriberEvents)[number];
@@ -54,7 +63,7 @@ const subscribeToProcessSchema = z.object({
   subscriber_id: z.number(),
   process_id: z.string(),
   event_type: z.string(),
-  address: z.string().optional(),
+  addresses: z.string(),
 });
 
 export type SubscribeToProcess = z.infer<typeof subscribeToProcessSchema>;
@@ -154,6 +163,7 @@ export type RawEvent = z.infer<typeof aoRawEventSchema>;
 
 const gqlEventSchema = z.object({
   id: z.string(),
+  recipient: z.string(),
   tags: z.array(
     z.object({
       name: z.string(),

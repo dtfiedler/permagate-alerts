@@ -170,6 +170,7 @@ export class GQLEventPoller implements EventPoller {
             id: event.node.id,
             tags: event.node.tags,
             data: eventResult.data,
+            recipient: event.node.recipient,
             block: {
               height: +event.node.block.height,
             },
@@ -219,7 +220,9 @@ export const eventsFromProcessGqlQuery = ({
                 "Epoch-Created-Notice",
                 "Buy-Name-Notice",
                 "Join-Network-Notice",
-                "Leave-Network-Notice"
+                "Leave-Network-Notice",
+                "Credit-Notice",
+                "Debit-Notice"
               ]
             }          
           ],
@@ -233,6 +236,7 @@ export const eventsFromProcessGqlQuery = ({
             cursor
             node {
               id
+              recipient
               tags {
                 name
                 value

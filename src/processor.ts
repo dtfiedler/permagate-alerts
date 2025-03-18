@@ -45,7 +45,7 @@ export class EventProcessor implements IEventProcessor {
   }
 
   async processGQLEvent(event: GQLEvent): Promise<void> {
-    const { tags, data, block } = event;
+    const { tags, data, block, recipient } = event;
     const { action, nonce, target, processId } = this.processEventTags(tags);
     if (!action || !nonce || !processId) {
       this.logger.error('No action or nonce or process ID found in event', {
@@ -57,7 +57,7 @@ export class EventProcessor implements IEventProcessor {
       eventType: action,
       eventData: {
         id: event.id,
-        target: target || '',
+        target: recipient || target || '',
         tags: tags,
         data: data,
       },
@@ -136,6 +136,7 @@ export class EventProcessor implements IEventProcessor {
     const subscribers = await this.db.findSubscribersByEvent({
       processId: event.processId,
       event: event.eventType,
+      target: event.eventData.target,
     });
 
     // confirm the nonce is greater than the last seen
@@ -218,6 +219,27 @@ const getEmailSubjectForEvent = (event: NewEvent) => {
       return `👋 ${event.eventData.data.settings.fqdn} has joined the network!`;
     case 'leave-network-notice':
       return `😢 ${event.eventData.data.settings.fqdn} has left the network!`;
+    case 'credit-notice':
+      return `💸 ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)} received ${parseInt(event.eventData.tags.find((tag) => tag.name === 'Quantity')?.value || '0') / 1_000_000} $ARIO from ${event.eventData.tags.find((tag) => tag.name === 'Sender')?.value.slice(0, 6) + '...' + event.eventData.tags.find((tag) => tag.name === 'Sender')?.value.slice(-4)}`;
+    case 'debit-notice':
+      const debitAmount =
+        parseInt(
+          event.eventData.tags.find((tag) => tag.name === 'Quantity')?.value ||
+            '0',
+        ) / 1_000_000;
+      const debitRecipient =
+        event.eventData.tags
+          .find((tag) => tag.name === 'Recipient')
+          ?.value.slice(0, 6) +
+        '...' +
+        event.eventData.tags
+          .find((tag) => tag.name === 'Recipient')
+          ?.value.slice(-4);
+      const sender =
+        event.eventData.target.slice(0, 6) +
+        '...' +
+        event.eventData.target.slice(-4);
+      return `💸 ${sender} sent ${debitAmount} $ARIO to ${debitRecipient}`;
     default:
       return `🚨 New ${event.eventType.replace(/-/g, ' ').toLowerCase()}!`;
   }
@@ -225,6 +247,271 @@ const getEmailSubjectForEvent = (event: NewEvent) => {
 
 const getEmailBodyForEvent = async (event: NewEvent) => {
   switch (event.eventType.toLowerCase()) {
+    case 'credit-notice':
+      const amount =
+        parseInt(
+          event.eventData.tags.find((tag) => tag.name === 'Quantity')?.value ||
+            '0',
+        ) / 1_000_000;
+      const creditNoticeRecipient =
+        event.eventData.target.slice(0, 6) +
+        '...' +
+        event.eventData.target.slice(-4);
+      const creditNoticeSender =
+        event.eventData.tags
+          .find((tag) => tag.name === 'Sender')
+          ?.value.slice(0, 6) +
+        '...' +
+        event.eventData.tags
+          .find((tag) => tag.name === 'Sender')
+          ?.value.slice(-4);
+      return `
+<mjml>
+  <mj-head>
+    <mj-title>Debit Notice</mj-title>
+    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-attributes>
+      <mj-all font-family="Inter, sans-serif" />
+      <mj-text font-size="14px" color="#333" line-height="1.5" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .info-table th {
+        background-color: #fafafa !important;
+        font-weight: 600 !important;
+      }
+      .info-table th,
+      .info-table td {
+        border-bottom: 1px solid #eaeaea !important;
+        text-align: left !important;
+        padding: 6px !important;
+      }
+    </mj-style> 
+  </mj-head>
+  <mj-body background-color="#0f0f0f">
+    <!-- Top Padding -->
+    <mj-section padding="20px 0">
+      <mj-column></mj-column>
+    </mj-section>
+    
+    <!-- Header Section -->
+    <mj-section background-color="#1c1c1c" padding="30px 20px">
+      <mj-column>
+        <mj-text
+          color="#ffffff"
+          font-size="24px"
+          font-weight="600"
+          align="center"
+          padding-bottom="0"
+        >
+          Credit Notice
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    
+    <!-- White Card Wrapper -->
+    <mj-wrapper
+      background-color="#ffffff"
+      border-radius="8px"
+      padding="20px 0"
+      css-class="card-container"
+    >
+      <!-- Credit Details Section -->
+      <mj-section padding="0">
+        <mj-column>
+          <mj-text
+            font-size="18px"
+            font-weight="600"
+            color="#101010"
+            padding="0 20px 10px"
+          >
+            Transaction Details
+          </mj-text>
+          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+            <tr>
+              <th width="40%">Transaction ID</th>
+              <td width="60%"><a href="https://ao.link/#/message/${event.eventData.id}" style="color: #007bff; text-decoration: underline;">${event.eventData.id}</a></td>
+            </tr>
+            <tr>
+              <th width="40%">Sender</th>
+              <td width="60%">${creditNoticeSender}</td>
+            </tr>
+            <tr>
+              <th width="40%">Recipient</th>
+              <td width="60%">${creditNoticeRecipient}</td>
+            </tr> 
+            <tr>
+              <th width="40%">Amount</th>
+              <td width="60%">${amount} $ARIO</td>
+            </tr>
+          </mj-table>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+    
+    <!-- Footer Section -->
+    <mj-section background-color="#1c1c1c" padding="20px">
+      <mj-column>
+        <mj-button
+          background-color="#007bff"
+          color="#ffffff"
+          border-radius="5px"
+          font-weight="600"
+          href="https://ao.link/#/message/${event.eventData.id}"
+        >
+          View on AO
+        </mj-button>
+        <mj-text
+          font-size="12px"
+          color="#cccccc"
+          align="center"
+        >
+
+          <br/>
+          You are receiving this email because you subscribed to subscribe.permagate.io
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    
+    <!-- Bottom Padding -->
+    <mj-section padding="20px 0">
+      <mj-column></mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+  `;
+    case 'debit-notice':
+      const debitAmount =
+        parseInt(
+          event.eventData.tags.find((tag) => tag.name === 'Quantity')?.value ||
+            '0',
+        ) / 1_000_000;
+      const debitNoticeSender =
+        event.eventData.target.slice(0, 6) +
+        '...' +
+        event.eventData.target.slice(-4);
+      const debitNoticeRecipient =
+        event.eventData.tags
+          .find((tag) => tag.name === 'Recipient')
+          ?.value.slice(0, 6) +
+        '...' +
+        event.eventData.tags
+          .find((tag) => tag.name === 'Recipient')
+          ?.value.slice(-4);
+
+      return `
+<mjml>
+  <mj-head>
+    <mj-title>Debit Notice</mj-title>
+    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-attributes>
+      <mj-all font-family="Inter, sans-serif" />
+      <mj-text font-size="14px" color="#333" line-height="1.5" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .info-table th {
+        background-color: #fafafa !important;
+        font-weight: 600 !important;
+      }
+      .info-table th,
+      .info-table td {
+        border-bottom: 1px solid #eaeaea !important;
+        text-align: left !important;
+        padding: 6px !important;
+      }
+    </mj-style>
+  </mj-head>
+
+  <mj-body background-color="#0f0f0f">
+    <!-- Top Padding -->
+    <mj-section padding="20px 0">
+      <mj-column></mj-column>
+    </mj-section>
+
+    <!-- Header Section -->
+    <mj-section background-color="#1c1c1c" padding="30px 20px">
+      <mj-column>
+        <mj-text
+          color="#ffffff"
+          font-size="24px"
+          font-weight="600"
+          align="center"
+          padding-bottom="0"
+        >
+          Debit Notice
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- White Card Wrapper -->
+    <mj-wrapper
+      background-color="#ffffff"
+      border-radius="8px"
+      padding="20px 0"
+      css-class="card-container"
+    >
+      <mj-section padding="0">
+        <mj-column>
+          <mj-text
+            font-size="18px"
+            font-weight="600"
+            color="#101010"
+            padding="0 20px 10px"
+          >
+            Transaction Details
+          </mj-text>
+          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+            <tr>
+              <th width="40%">Transaction ID</th>
+              <td width="60%"><a href="https://ao.link/#/message/${event.eventData.id}" style="color: #007bff; text-decoration: underline;">${event.eventData.id}</a></td>
+            </tr>
+            <tr>
+              <th width="40%">Sender</th>
+              <td width="60%">${debitNoticeSender}</td>
+            </tr>
+            <tr>
+              <th width="40%">Recipient</th>
+              <td width="60%">${debitNoticeRecipient}</td>
+            </tr>
+            <tr>
+              <th width="40%">Amount</th>
+              <td width="60%">${debitAmount} $ARIO</td>
+            </tr>
+          </mj-table>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+    
+    <!-- Footer Section -->
+    <mj-section background-color="#1c1c1c" padding="20px">
+      <mj-column>
+        <mj-button
+          background-color="#007bff"
+          color="#ffffff"
+          border-radius="5px"
+          font-weight="600"
+          href="https://ao.link/#/message/${event.eventData.id}"
+        >
+          View on AO
+        </mj-button>
+        <mj-text
+          font-size="12px"
+          color="#cccccc"
+          align="center"
+        >
+
+          <br/>
+          You are receiving this email because you subscribed to subscribe.permagate.io
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    
+    <!-- Bottom Padding -->
+    <mj-section padding="20px 0">
+      <mj-column></mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+  `;
     case 'buy-name-notice':
     case 'buy-record-notice':
       const name = event.eventData.data.name;
@@ -252,7 +539,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       return `
 <mjml>
   <mj-head>
-    <mj-title>Name Purchase Notification</mj-title>
+    <mj-title>Name Purchase Notice</mj-title>
     <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
     <mj-attributes>
       <mj-all font-family="Inter, sans-serif" />
@@ -267,7 +554,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       .info-table td {
         border-bottom: 1px solid #eaeaea !important;
         text-align: left !important;
-        padding: 8px !important;
+        padding: 6px !important;
       }
       ul {
         margin: 5px 0 !important;
@@ -385,12 +672,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           color="#cccccc"
           align="center"
         >
-          <a
-            href="https://subscribe.permagate.io/"
-            style="color: #cccccc; text-decoration: none;"
-          >
-            subscribe.permagate.io
-          </a>
+
           <br/>
           You are receiving this email because you subscribed to subscribe.permagate.io
         </mj-text>
@@ -423,7 +705,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       .info-table td {
         border-bottom: 1px solid #eaeaea !important;
         text-align: left !important;
-        padding: 8px !important;
+        padding: 6px !important;
       }
       ul {
         margin: 5px 0 !important;
@@ -545,12 +827,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           color="#cccccc"
           align="center"
         >
-          <a
-            href="https://subscribe.permagate.io/"
-            style="color: #cccccc; text-decoration: none;"
-          >
-            subscribe.permagate.io
-          </a>
+
           <br/>
           You are receiving this email because you subscribed to subscribe.permagate.io
         </mj-text>
@@ -651,7 +928,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       .info-table td {
         border-bottom: 1px solid #eaeaea !important;
         text-align: left !important;
-        padding: 8px !important;
+        padding: 6px !important;
       }
 
       /* Custom UL styling */
@@ -889,12 +1166,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           color="#cccccc"
           align="center"
         >
-          <a
-            href="https://subscribe.permagate.io/"
-            style="color: #cccccc; text-decoration: none;"
-          >
-            subscribe.permagate.io
-          </a>
+
           <br/>
           You are receiving this email because you subscribed to subscribe.permagate.io
         </mj-text>
@@ -993,7 +1265,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       .info-table td {
         border-bottom: 1px solid #eaeaea !important;
         text-align: left !important;
-        padding: 8px !important;
+        padding: 6px !important;
       }
       ul {
         margin: 5px 0 !important;
@@ -1179,12 +1451,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           color="#cccccc"
           align="center"
         >
-          <a
-            href="https://subscribe.permagate.io/"
-            style="color: #cccccc; text-decoration: none;"
-          >
-            subscribe.permagate.io
-          </a>
+
           <br/>
           You are receiving this email because you subscribed to subscribe.permagate.io
         </mj-text>
@@ -1217,7 +1484,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       .info-table td {
         border-bottom: 1px solid #eaeaea !important;
         text-align: left !important;
-        padding: 8px !important;
+        padding: 6px !important;
       }
     </mj-style>
   </mj-head>
@@ -1297,12 +1564,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           color="#cccccc"
           align="center"
         >
-          <a
-            href="https://subscribe.permagate.io/"
-            style="color: #cccccc; text-decoration: none;"
-          >
-            subscribe.permagate.io
-          </a>
+
         </mj-text>
       </mj-column>
     </mj-section>

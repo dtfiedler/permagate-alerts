@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { Request } from '../types.js';
 import * as config from '../config.js';
 import { z } from 'zod';
-import { NewSubscriber, subscriberEventSchema } from '../db/schema.js';
+import { processEventSubscriptionSchema } from '../db/schema.js';
 import { generateUnsubscribeLink, generateVerifyLink } from '../lib/hash.js';
 import { ARIO_MAINNET_PROCESS_ID } from '@ar.io/sdk';
 
@@ -20,78 +20,75 @@ apiRouter.get('/healthcheck', (_, res) => {
 apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
   try {
     const email = req.query.email as string;
-    const { events = [], processId = ARIO_MAINNET_PROCESS_ID } = JSON.parse(
-      req.body,
-    );
+    const { processes = {} } = JSON.parse(req.body);
 
     logger.debug(`Received subscribe request`, {
       email,
-      events,
-      processId,
+      processes,
       body: req.body,
     });
 
-    if (!processId) {
-      return res.status(400).json({ error: 'Process ID must be provided' });
-    }
+    const emailSchema = z.string().email();
 
-    if (!email) {
+    if (!email || !emailSchema.safeParse(email).success) {
       return res.status(400).json({ error: 'Email is required' });
     }
 
-    // validate the processId is in the list of processes
-    if (!(await req.db.getProcessByProcessId(processId))) {
-      return res.status(400).json({ error: 'Invalid process ID' });
+    const processIds = Object.keys(processes);
+
+    if (!processIds.length) {
+      return res
+        .status(400)
+        .json({ error: 'At least one process ID must be provided' });
     }
 
-    const emailSchema = z.string().email();
-    const validatedEmail = emailSchema.safeParse(email);
-
-    if (!validatedEmail.success) {
-      return res.status(400).json({ error: 'Invalid email format' });
-    }
-
-    const eventsSchema = z.array(subscriberEventSchema);
-    const validatedEvents = eventsSchema.safeParse(events);
-
-    if (!validatedEvents.success) {
-      return res.status(400).json({
-        error: `Unsupported event type provided ${events.join(', ')}`,
-      });
-    }
-
-    logger.info(`Subscribing email to events...`, {
-      email: validatedEmail.data,
-      events: validatedEvents.data,
-      processId,
-    });
-
-    // check if the subscriber already exists
     let subscriber = await req.db.getSubscriberByEmail(email);
-    if (subscriber) {
+    for (const processId of processIds) {
+      // validate the processId is in the list of processes
+      if (!(await req.db.getProcessByProcessId(processId))) {
+        return res
+          .status(400)
+          .json({ error: `Invalid process ID ${processId}. Not supported.` });
+      }
+
+      const processEventSubscriptions = z.array(processEventSubscriptionSchema);
+      const validatedEvents = processEventSubscriptions.safeParse(
+        processes[processId],
+      );
+
+      if (!validatedEvents.success) {
+        return res.status(400).json({
+          error: `Unsupported event type provided for process ${processId}.`,
+        });
+      }
+
+      subscriber ??= await req.db.createNewSubscriber({
+        email,
+      });
+
+      if (!subscriber) {
+        return res.status(500).json({ error: 'Failed to create subscriber' });
+      }
+
+      logger.info(`Subscribing email to events for process...`, {
+        email,
+        events: validatedEvents.data,
+        processId,
+      });
+
       // update the subscriber for the process
       await req.db.updateSubscriberForProcess({
         subscriberId: subscriber.id,
         processId,
         events: validatedEvents.data,
       });
-    } else {
-      // create a new subscriber
-      const subscriberData: NewSubscriber = {
-        email: validatedEmail.data,
-      };
-      subscriber = await req.db.createSubscriberForProcess({
-        subscriber: subscriberData,
-        processId,
+
+      logger.info(`Successfully subscribed email to events for process...`, {
+        email,
         events: validatedEvents.data,
+        processId,
       });
     }
-
-    logger.info(`Successfully created new subscriber`, {
-      email: validatedEmail.data,
-      events: validatedEvents.data,
-      processId,
-    });
 
     // if the subscriber is not verified, send verification email
     if (!subscriber?.verified) {
@@ -142,8 +139,6 @@ To unsubscribe, click here: ${unsubscribeLink}`,
         message: 'Subscriber verified',
       });
     }
-
-    // TODO: send an updated subscriber email with updated events
 
     return res.status(200).json({
       message: `Subscriber ${subscriber?.verified ? 'updated' : 'created'}`,
@@ -206,7 +201,7 @@ apiRouter.get(
         return res.status(400).json({ error: 'Subscriber not verified' });
       }
 
-      // get the events and processs for the subscriber
+      // get the events and process for the subscriber
       const eventsForSubscriber = await req.db.getSubscribedEventsForSubscriber(
         {
           subscriberId: subscriber.id,
