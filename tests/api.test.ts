@@ -10,6 +10,7 @@ import knexConfig from '../src/db/knexfile.js';
 import { SqliteDatabase } from '../src/db/sqlite.js';
 import fs from 'node:fs';
 import { createLogger } from 'winston';
+import { ARIO_MAINNET_PROCESS_ID } from '@ar.io/sdk';
 
 const cleanDb = async () => {
   if (fs.existsSync(`${process.cwd()}/data/sqlite/core-test.db`)) {
@@ -26,55 +27,6 @@ const createDb = async () => {
   });
 };
 
-const testEvent = {
-  data: {
-    anchor: 'MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwNjY3MzU',
-    data_hash: 'boF42W7nASpb4eqkV15tYqdjX1yN1B8-fwc0vkHJDoc',
-    data_offset: 1258188,
-    data_size: 180,
-    filter:
-      '{"tags":[{"name":"From-Process","value":"agYcCFJtrMG6cqMuZfskIkFTGvUPddICmtQSBIoPdiA"},{"name":"Action","value":"Buy-Record-Notice"}]}',
-    id: 'AZA1Qitr2sOAWxQpejlcNFdOOriNNgCAERo_2R5PGho',
-    index: 210,
-    offset: 1256807,
-    owner:
-      'kePMooMn7uEakQJCE_4DtzcJUPs6x6d-9nG6Pjg84qJqYM9G7-eIg7Enrg-OEqGTjIoreE7tnTB5z66TqQnllSJa8QNDqHbdN1efAs9RknriT62W7Cyqoz_ErjVhc7Wfx02oQm-SpaUSdo1k8orAJ94ADmw_SbCbceCNirStjcNGJ7x1FSj9iNViETvgEmTICYIlyud8C-FU7oLYjEnlAIwUggrP87uEKyp4a1OLDosxGymIZ7F2yue2d1Y0VXl2vhUOvYrvBvAbPUzuOV0x1sajSz33w9uMdZJceOQbxdj3tgWECvzdNTVincyH8wME1-24Wdqki26SEWqvsjTyjpOctT5MC3riEemjv2KXncXf6-vzPGIdl34MbOu5HkmaxBnUrPsm6xPv6JgbthqJCVbvqQ0dFqqHKARU0g5vYpyAXKjjBJvWjKvUHoK_2hSkpLFaf_GHy3ap1MnYELazK5-Rt7yO1Wq6lPfgPRkROOWP0nCZCcDFpyIrA7Wr_BuZ-pzMHquBYV5i3pCWCuFtanTVlVC7EmPSEMIPCBwIVgBeLVMgAoPgwWB3RqD7JvjMcGvDCONflVRf6NoJjXwuzU8ZBp33cqc-XWAVhrAcd0AGt1N0-7riZSmvEWhpjNrc90ODe01gj55dj5LUFvTO0nmHeyVSMsAKmChacU3-C50',
-    owner_address: 'fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY',
-    owner_offset: 1257321,
-    owner_size: 512,
-    parent_id: 'hVNb-8pnSQICTc-tjS82hoCxstcsuNojKmmufPevgcQ',
-    parent_index: -1,
-    root_tx_id: 'hVNb-8pnSQICTc-tjS82hoCxstcsuNojKmmufPevgcQ',
-    signature:
-      'kW4cL--61i5oA1_2ot4R8ZVW2fT45E9c4LwdXDLOksgXKE4j_lC4G6Djnf3uxKseITs28fjWcJ1_d_tnounzK6gjjhzwBI-zmQA-uwbYE77pMuh_nMjZL_PzduDO8u-9_WdEVvLyeDqozeGXhudX6OsxFe9lzADCEA01lcoqzFZho6hmVrRJUMx_B-z-UPEwQOzF5ZHrapVQrPWtCeZkEEIFTl_A3DWSakTFP_l1JuUWjTxF5P4JmeXDb4nxuhZnfAbyx9_sxJ328MQueTLBPTfQh1dutCmWg4IKlLKSpUiGilN9-aLNpo3vbmRRWMwsiI0PicBDthS0SEMNyMjiHO_YbJk24R4y9xDVXeNg0rGbTG8YqjDCID0Ko7gy5maa8z39IN2GzEN2y_RwJqIWPReaTsNht__hlvGLCI1EJPeeIk3heoTYXynEKgb-IzMUAu1o0B6pIxLmEv0j4NnHNHtpJzE6n1HlSDpiAGjet13K8vl2E74FI1lG-wR_aV3e1RYWti5KrBEKLzqPbDzGG_ByzRs_PWy_gTodkqopeVUhWXv00VHum8TMztc8Bl2Dl-yOtmKtaJYBNI14Nbr5wtF-ZreR1y4OgwK9sAApkWBbNgEQMEBnlrC5nQDdbd0YdGSQwjmHGXxmK0Vk_aGeQNXru1CILpoBOunv17y96Gs',
-    signature_offset: 1256809,
-    signature_size: 512,
-    signature_type: 1,
-    size: 1561,
-    tags: [
-      { name: 'UmVmXw', value: 'NjY3MzU' }, // Ref_: 66735
-      { name: 'TmFtZQ', value: 'dGVzdC13ZWJob29rLTEy' }, // test-worker-12
-      { name: 'QWN0aW9u', value: 'QnV5LVJlY29yZC1Ob3RpY2U' }, // Action: Buy-Record-Notice
-      { name: 'RGF0YS1Qcm90b2NvbA', value: 'YW8' }, // Data-Protocol:ao
-      { name: 'VHlwZQ', value: 'TWVzc2FnZQ' }, // Type: Message
-      { name: 'VmFyaWFudA', value: 'YW8uVE4uMQ' }, // ao.TN.1
-      {
-        name: 'RnJvbS1Qcm9jZXNz', // From-Process
-        value: 'YWdZY0NGSnRyTUc2Y3FNdVpmc2tJa0ZUR3ZVUGRkSUNtdFFTQklvUGRpQQ', // agYcCFJtrMG6cqMuZfskIkFTGvUPddICmtQSBIoPdiA
-      },
-      {
-        name: 'RnJvbS1Nb2R1bGU', // From-Module
-        value: 'Y2JuMEtLckJaSDdoZE5rTm9rdVhMdEdyeXJXTS0tUGpTVEJxSXp3OUtraw', // cbn0KLrJBZHdZD7hZNKmNokUxLgRyxYWm-tPjSTBqIxZw9Kkraw
-      },
-      {
-        name: 'UHVzaGVkLUZvcg', // Triggered-By
-        value: 'b1c5d1U1LW9SMHgxbXNPRVJEY0NPQ2U1MkZrV3RSNUFOU2J3dEZGQS1Fcw', // 1c5d1U1-oR8x1msoERCD0cOE52FKWtR5UANSBwtfDFGQ-Es
-      },
-    ],
-    target: 'ZjmB2vEUlHlJ7-rgJkYP09N5IzLPhJyStVrK5u9dDEo',
-  },
-  event: 'ans104-data-item-indexed',
-};
 describe('container', function () {
   let compose: StartedDockerComposeEnvironment;
   let database: SqliteDatabase;
@@ -107,14 +59,13 @@ describe('container', function () {
     assert.equal(response.status, 200);
   });
 
-  it('should store a subscriber', async function () {
+  it('should store a subscriber with default process subscriptions', async function () {
     const response = await fetch(
       'http://localhost:3000/api/subscribe?email=test@example.com',
       {
         method: 'POST',
         body: JSON.stringify({
           email: 'test@example.com',
-          // TODO: add events
         }),
       },
     );
@@ -123,59 +74,64 @@ describe('container', function () {
     assert.equal(subscribers.length, 1);
   });
 
-  it('should add a new event to the database when posted to /ar-io/webhook', async function () {
-    const response = await fetch('http://localhost:3000/ar-io/webhook', {
+  it('should return 400 if no email is provided', async function () {
+    const response = await fetch('http://localhost:3000/api/subscribe', {
       method: 'POST',
-      body: JSON.stringify(testEvent),
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      body: JSON.stringify({}),
     });
-    assert.equal(response.status, 200);
-    // let it process
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    const events = await database.getAllEvents();
-    assert.equal(events.length, 1);
+    assert.equal(response.status, 400);
   });
 
-  it('should return 200 if the event is already processed, but not add it to the database', async function () {
-    const response = await fetch('http://localhost:3000/ar-io/webhook', {
-      method: 'POST',
-      body: JSON.stringify(testEvent),
-      headers: {
-        'Content-Type': 'application/json',
+  it('should return 400 if no processes are provided', async function () {
+    const response = await fetch(
+      'http://localhost:3000/api/subscribe?email=test@example.com',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email: 'test@example.com', processes: {} }),
       },
-    });
-    assert.equal(response.status, 200);
-    // let it process
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    const events = await database.getAllEvents();
-    assert.equal(events.length, 1);
+    );
+    assert.equal(response.status, 400);
   });
 
-  it('should not add an event that is older than the last event in the database', async function () {
-    // update the ref tag to be older
-    const olderTestEvent = {
-      ...testEvent,
-      data: {
-        ...testEvent.data,
-        tags: [
-          ...testEvent.data.tags,
-          { name: 'UmVmXw', value: 'NjY3MzQ' }, // 66734
-        ],
+  it('should return 200 and store the subscriber with the provided processes', async function () {
+    const response = await fetch(
+      'http://localhost:3000/api/subscribe?email=test@example.com',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          email: 'test@example.com',
+          processes: {
+            [ARIO_MAINNET_PROCESS_ID]: [
+              {
+                eventType: 'buy-name-notice',
+                addresses: [],
+              },
+            ],
+          },
+        }),
       },
-    };
-    const response = await fetch('http://localhost:3000/ar-io/webhook', {
-      method: 'POST',
-      body: JSON.stringify(olderTestEvent),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    );
     assert.equal(response.status, 200);
-    // let it process
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    const events = await database.getAllEvents();
-    assert.equal(events.length, 1);
+  });
+
+  it('should return 400 if an invalid process is provided', async function () {
+    const response = await fetch(
+      'http://localhost:3000/api/subscribe?email=test@example.com',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          email: 'test@example.com',
+          processes: { invalid: [] },
+        }),
+      },
+    );
+    assert.equal(response.status, 400);
+  });
+
+  it('should return the total number of subscribers', async function () {
+    const response = await fetch('http://localhost:3000/api/subscribers/total');
+    assert.equal(response.status, 200);
+    const subscribers = await response.json();
+    assert.equal(subscribers.total, 1);
   });
 });

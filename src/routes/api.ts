@@ -4,11 +4,23 @@ import crypto from 'crypto';
 import { Request } from '../types.js';
 import * as config from '../config.js';
 import { z } from 'zod';
-import { processEventSubscriptionSchema } from '../db/schema.js';
+import {
+  processEventSubscriptionSchema,
+  subscriberEvents,
+} from '../db/schema.js';
 import { generateUnsubscribeLink, generateVerifyLink } from '../lib/hash.js';
 import { ARIO_MAINNET_PROCESS_ID } from '@ar.io/sdk';
 
 const apiRouter = Router();
+
+const DEFAULT_PROCESS_SUBSCRIPTIONS = {
+  [ARIO_MAINNET_PROCESS_ID]: [
+    ...subscriberEvents.map((event) => ({
+      eventType: event,
+      addresses: [],
+    })),
+  ],
+};
 
 // Healthcheck
 apiRouter.get('/healthcheck', (_, res) => {
@@ -20,7 +32,7 @@ apiRouter.get('/healthcheck', (_, res) => {
 apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
   try {
     const email = req.query.email as string;
-    const { processes = {} } = JSON.parse(req.body);
+    const { processes = DEFAULT_PROCESS_SUBSCRIPTIONS } = JSON.parse(req.body);
 
     logger.debug(`Received subscribe request`, {
       email,
@@ -58,7 +70,7 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
 
       if (!validatedEvents.success) {
         return res.status(400).json({
-          error: `Unsupported event type provided for process ${processId}.`,
+          error: `Unsupported event type provided for process ${processId}. ${validatedEvents.error.message}`,
         });
       }
 

@@ -21,6 +21,7 @@
     "migrate:app:rollback": "yarn build && node --import ./register.mjs --env-file=.env knex migrate:rollback --knexfile ./dist/db/knexfile.js --env development",
     "docs": "markdown-toc-gen insert README.md",
     "test": "yarn test:e2e",
+    "test:unit": "node --import=./register.mjs --test src/**/**.test.ts",
     "test:e2e": "node --import=./register.mjs --test --test-concurrency 1 --test-reporter=spec --test-reporter-destination=stdout tests/*.test.ts"
   },
   "devDependencies": {
