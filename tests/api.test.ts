@@ -10,6 +10,7 @@ import knexConfig from '../src/db/knexfile.js';
 import { SqliteDatabase } from '../src/db/sqlite.js';
 import fs from 'node:fs';
 import { createLogger } from 'winston';
+import { generateUnsubscribeLink } from '../src/lib/hash.js';
 import { ARIO_MAINNET_PROCESS_ID } from '@ar.io/sdk';
 
 const cleanDb = async () => {
@@ -43,6 +44,7 @@ describe('container', function () {
         MAILGUN_DOMAIN: '',
         MAILGUN_FROM_EMAIL: '',
         DEBUG_KNEX: 'false',
+        SECRET_KEY: 'test',
       })
       .withWaitStrategy('alerts-1', Wait.forHealthCheck())
       .withBuild()
@@ -133,5 +135,33 @@ describe('container', function () {
     assert.equal(response.status, 200);
     const subscribers = await response.json();
     assert.equal(subscribers.total, 1);
+  });
+
+  it('should return true if a subscriber exists', async function () {
+    const response = await fetch(
+      'http://localhost:3000/api/subscriber/check?email=test@example.com',
+    );
+    assert.equal(response.status, 200);
+    const subscriber = await response.json();
+    assert.equal(subscriber.exists, true);
+  });
+
+  it('should return false if a subscriber does not exist', async function () {
+    const response = await fetch(
+      'http://localhost:3000/api/subscriber/check?email=nonexistent@example.com',
+    );
+    assert.equal(response.status, 200);
+    const subscriber = await response.json();
+    assert.equal(subscriber.exists, false);
+  });
+
+  it('should allow an existing subscriber unsubscribe from a process if they provide the correct email and hash', async function () {
+    const unsubscribeLink = generateUnsubscribeLink('test@example.com');
+    const unsubscribeResponse = await fetch(unsubscribeLink);
+    assert.equal(unsubscribeResponse.status, 200);
+    const subscribers = await database.getSubscribedEventsForSubscriber({
+      subscriberId: 1,
+    });
+    assert.equal(subscribers.length, 0);
   });
 });

@@ -22,3 +22,13 @@ export const generateVerifyLink = (email: string) => {
   const verifyHash = `${encodedEmail}.${hash}`;
   return `${config.hostUrl}/api/subscribe/verify/${verifyHash}`;
 };
+
+export const generateManageLink = (email: string) => {
+  const hash = crypto
+    .createHmac('sha256', `${config.secretKey}-manage`)
+    .update(email)
+    .digest('hex');
+  const encodedEmail = Buffer.from(email).toString('base64url');
+  const manageHash = `${encodedEmail}.${hash}`;
+  return `${config.hostUrl}/api/subscribe/manage/${manageHash}`;
+};
