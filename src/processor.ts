@@ -219,6 +219,8 @@ const getEmailSubjectForEvent = (event: NewEvent) => {
       return `👋 ${event.eventData.data.settings.fqdn} has joined the network!`;
     case 'leave-network-notice':
       return `😢 ${event.eventData.data.settings.fqdn} has left the network!`;
+    case 'update-gateway-settings-notice':
+      return `🔄 ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)} (${event.eventData.data.settings.fqdn}) has updated their gateway!`;
     case 'credit-notice':
       return `💸 ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)} received ${parseInt(event.eventData.tags.find((tag) => tag.name === 'Quantity')?.value || '0') / 1_000_000} $ARIO from ${event.eventData.tags.find((tag) => tag.name === 'Sender')?.value.slice(0, 6) + '...' + event.eventData.tags.find((tag) => tag.name === 'Sender')?.value.slice(-4)}`;
     case 'debit-notice':
@@ -841,6 +843,127 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
   </mj-body>
 </mjml>
       `;
+    case 'update-gateway-settings-notice':
+      return `
+<mjml>
+  <mj-head>
+    <mj-title>Gateway Settings Update</mj-title>
+    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-attributes>
+      <mj-all font-family="Inter, sans-serif" />
+      <mj-text font-size="14px" color="#333" line-height="1.5" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .info-table th {
+        background-color: #fafafa !important;
+        font-weight: 600 !important;
+      }
+      .info-table th,
+      .info-table td {
+        border-bottom: 1px solid #eaeaea !important;
+        text-align: left !important;
+        padding: 6px !important;
+      }
+    </mj-style> 
+  </mj-head>
+  <mj-body background-color="#0f0f0f">
+    <!-- Header Section -->
+    <mj-section background-color="#1c1c1c" padding="20px">
+      <mj-column>
+        <mj-text
+          color="#ffffff"
+          font-size="24px"
+          font-weight="600"
+          align="center"
+          padding-bottom="0"
+        >
+          ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)} has updated their gateway (${event.eventData.data.settings.fqdn})
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    
+    <!-- White Card Wrapper -->
+    <mj-wrapper
+      background-color="#ffffff"
+      border-radius="8px"
+      padding="20px 0"
+      css-class="card-container"
+    >
+      <!-- Gateway Details Section -->
+      <mj-section padding="0">
+        <mj-column>
+          <mj-text
+            font-size="18px"
+            font-weight="600"
+            color="#101010"
+            padding="0 20px 10px"
+          >
+            Gateway Details
+          </mj-text>
+          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+            <tr>
+              <th width="40%">FQDN</th>
+              <td width="60%">${event.eventData.data.settings.fqdn}</td>
+            </tr>
+            <tr>
+              <th width="40%">Observer Address</th>
+              <td width="60%">${event.eventData.data.observerAddress.slice(0, 6)}...${event.eventData.data.observerAddress.slice(-4)}</td>
+            </tr>
+            <tr>
+              <th width="40%">Operator Stake</th>
+              <td width="60%">${event.eventData.data.operatorStake ? (event.eventData.data.operatorStake / 1_000_000).toFixed(2).toLocaleString() + ' $ARIO' : 'N/A'}</td>
+            </tr>
+            <tr>
+              <th width="40%">Auto Stake Enabled</th>
+              <td width="60%">${event.eventData.data.settings.autoStake ? 'Yes' : 'No'}</td>
+            </tr>
+            <tr>
+              <th width="40%">Allows Delegated Staking</th>
+              <td width="60%">${event.eventData.data.settings.allowDelegatedStaking ? 'Yes' : 'No'}</td>
+            </tr>
+            <tr>
+              <th width="40%">Minimum Delegated Stake</th>
+              <td width="60%">${event.eventData.data.settings.minDelegatedStake ? (event.eventData.data.settings.minDelegatedStake / 1_000_000).toFixed(2).toLocaleString() + ' $ARIO' : 'N/A'}</td>
+            </tr>
+            <tr>
+              <th width="40%">Delegate Reward Percentage</th>
+              <td width="60%">${event.eventData.data.settings.delegateRewardShareRatio.toFixed(2).toLocaleString() + '%'}</td>
+            </tr>
+          </mj-table>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+    
+    <!-- Footer Section -->
+    <mj-section background-color="#1c1c1c" padding="20px">
+      <mj-column>
+        <mj-button
+          background-color="#007bff"
+          color="#ffffff"
+          border-radius="5px"
+          font-weight="600"
+          href="https://ao.link/#/message/${event.eventData.id}"
+        >
+          View on AO
+        </mj-button>
+        <mj-text
+          font-size="12px"
+          color="#cccccc"
+          align="center"
+        >
+          <br/>
+          You are receiving this email because you subscribed to subscribe.permagate.io
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    
+    <!-- Bottom Padding -->
+    <mj-section padding="20px 0">
+      <mj-column></mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+  `;
     case 'epoch-created-notice':
       const epochIndex = event.eventData.data.epochIndex;
       const epochStartTimestamp = event.eventData.data.startTimestamp;

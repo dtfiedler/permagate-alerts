@@ -221,8 +221,7 @@ export const eventsFromProcessGqlQuery = ({
                 "Buy-Name-Notice",
                 "Join-Network-Notice",
                 "Leave-Network-Notice",
-                "Credit-Notice",
-                "Debit-Notice"
+                "Update-Gateway-Settings-Notice",
               ]
             }          
           ],
