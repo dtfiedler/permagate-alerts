@@ -35,6 +35,8 @@ export const adminApiKey = process.env.ADMIN_API_KEY;
 export const adminNotificationEmailAddress =
   process.env.ADMIN_NOTIFICATION_EMAIL_ADDRESS || 'support@racetrainer.ai';
 export const secretKey = process.env.SECRET_KEY || 'default_secret_key';
+export const frontendUrl =
+  process.env.FRONTEND_URL || 'https://subscribe.permagate.io';
 
 // Database
 export const debugKnex = process.env.DEBUG_KNEX === 'true';

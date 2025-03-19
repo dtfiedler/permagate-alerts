@@ -1,6 +1,5 @@
 import { Router, Response } from 'express';
 import { logger } from '../logger.js';
-import crypto from 'crypto';
 import { Request } from '../types.js';
 import * as config from '../config.js';
 import { z } from 'zod';
@@ -12,6 +11,7 @@ import {
   generateManageLink,
   generateUnsubscribeLink,
   generateVerifyLink,
+  verifyHash,
 } from '../lib/hash.js';
 import { ARIO_MAINNET_PROCESS_ID } from '@ar.io/sdk';
 
@@ -229,6 +229,107 @@ apiRouter.post(
   },
 );
 
+apiRouter.get(
+  '/api/subscribers/manage/:token',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+
+      if (!token) {
+        return res.status(400).json({ error: 'Token is required' });
+      }
+
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash) {
+        return res.status(400).json({ error: 'Invalid management token' });
+      }
+
+      if (!decodedEmail) {
+        return res.status(400).json({ error: 'Invalid token format' });
+      }
+
+      // Redirect to the management interface with the token as a query parameter
+      return res.redirect(
+        `${config.frontendUrl}/manage?email=${encodeURIComponent(decodedEmail)}&token=${token}`,
+      );
+    } catch (error) {
+      logger.error('Error processing management link:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while processing your request' });
+    }
+  },
+);
+
+// Route to get subscriber's subscriptions
+apiRouter.get(
+  '/api/subscribers/subscriptions',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash) {
+        return res.status(400).json({ error: 'Invalid management token' });
+      }
+
+      if (decodedEmail !== email) {
+        return res.status(400).json({ error: 'Invalid management token' });
+      }
+
+      // Get subscriber data
+      const subscriber = await req.db.getSubscriberByEmail(email);
+
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      // Get subscriber's subscriptions
+      const subscriptions = await req.db.getSubscribedEventsForSubscriber({
+        subscriberId: subscriber.id,
+      });
+
+      // reduce by processId
+      const subscriptionsByProcessId = subscriptions.reduce(
+        (acc, subscription) => {
+          acc[subscription.processId] = [
+            ...(acc[subscription.processId] || []),
+            {
+              eventType: subscription.eventType,
+              addresses: subscription.addresses,
+            },
+          ];
+          return acc;
+        },
+        {} as Record<string, { eventType: string; addresses: string[] }[]>,
+      );
+      return res.status(200).json(subscriptionsByProcessId);
+    } catch (error) {
+      logger.error('Error fetching subscriber subscriptions:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while processing your request' });
+    }
+  },
+);
+
 // Route to verify a subscribers email address
 apiRouter.get(
   '/api/subscribe/verify/:hash',
@@ -237,39 +338,17 @@ apiRouter.get(
     try {
       const { hash } = req.params;
 
-      // parse out the email from the hash
-      const [encodedEmail, givenHmac] = hash.split('.');
-      const email = Buffer.from(encodedEmail, 'base64url').toString('utf8');
+      const { valid: validHash, decodedEmail } = verifyHash(hash);
 
-      if (!email) {
-        return res.status(400).json({ error: 'Email is required' });
-      }
-
-      // verify the hash
-      const expectedHmacForEmail = crypto
-        .createHmac('sha256', config.secretKey)
-        .update(email)
-        .digest('hex');
-
-      const givenHmacBuffer = new Uint8Array(Buffer.from(givenHmac, 'hex'));
-      const expectedHmacBuffer = new Uint8Array(
-        Buffer.from(expectedHmacForEmail, 'hex'),
-      );
-
-      if (!crypto.timingSafeEqual(givenHmacBuffer, expectedHmacBuffer)) {
+      if (!validHash) {
         return res.status(400).json({ error: 'Invalid unsubscribe link' });
       }
 
       // get the subscriber
-      const subscriber = await req.db.getSubscriberByEmail(email);
+      const subscriber = await req.db.getSubscriberByEmail(decodedEmail);
 
       if (!subscriber) {
         return res.status(404).json({ error: 'Subscriber not found' });
-      }
-
-      // verify the subscriber
-      if (subscriber.email !== email) {
-        return res.status(400).json({ error: 'Invalid unsubscribe link' });
       }
 
       const verified = await req.db.verifySubscriber(subscriber.id);
@@ -286,10 +365,10 @@ apiRouter.get(
         },
       );
 
-      const unsubscribeLink = generateUnsubscribeLink(email);
+      const unsubscribeLink = generateUnsubscribeLink(decodedEmail);
       // send intro email in background
       req.notifier?.sendRawEmail({
-        to: [email],
+        to: [decodedEmail],
         text: `You have successfully been subscribed to subscribe.permagate.io!
 
 You will receive alerts for the following: ${eventsForSubscriber
@@ -332,35 +411,21 @@ apiRouter.get(
         return res.status(400).json({ error: 'Hash is required' });
       }
 
-      const [encodedEmail, givenHmac] = hash.split('.');
-      const email = Buffer.from(encodedEmail, 'base64url').toString('utf8');
+      const { valid: validHash, decodedEmail } = verifyHash(hash);
 
-      logger.info(`Unsubscribing email: ${email}`);
+      if (!validHash) {
+        return res.status(400).json({ error: 'Invalid unsubscribe link' });
+      }
 
-      const subscriber = await req.db.getSubscriberByEmail(email);
+      logger.info(`Unsubscribing email: ${decodedEmail}`);
+
+      const subscriber = await req.db.getSubscriberByEmail(decodedEmail);
 
       if (!subscriber) {
         return res.status(404).json({ error: 'Subscriber not found' });
       }
 
-      // Verify the hash
-      const expectedHmacForEmail = crypto
-        .createHmac('sha256', config.secretKey)
-        .update(email)
-        .digest('hex');
-
-      // Convert Buffers to Uint8Array
-      const givenHmacBuffer = new Uint8Array(Buffer.from(givenHmac, 'hex'));
-      const expectedHmacBuffer = new Uint8Array(
-        Buffer.from(expectedHmacForEmail, 'hex'),
-      );
-
-      if (!crypto.timingSafeEqual(givenHmacBuffer, expectedHmacBuffer)) {
-        logger.error(`Invalid unsubscribe link for email: ${email}`);
-        return res.status(400).json({ error: 'Invalid unsubscribe link' });
-      }
-
-      logger.info(`Verified hash for email: ${email}`);
+      logger.info(`Verified hash for email: ${decodedEmail}`);
 
       await req.db.updateSubscriberForProcess({
         subscriberId: subscriber.id,
@@ -368,7 +433,7 @@ apiRouter.get(
         events: [], // remove from all events for process
       });
 
-      logger.info(`Unsubscribe request processed for email: ${email}`);
+      logger.info(`Unsubscribe request processed for email: ${decodedEmail}`);
       res.status(200).json({ message: 'Successfully unsubscribed' });
     } catch (error) {
       logger.error('Error processing unsubscribe request:', error);

@@ -10,8 +10,8 @@ import knexConfig from '../src/db/knexfile.js';
 import { SqliteDatabase } from '../src/db/sqlite.js';
 import fs from 'node:fs';
 import { createLogger } from 'winston';
-import { generateUnsubscribeLink } from '../src/lib/hash.js';
 import { ARIO_MAINNET_PROCESS_ID } from '@ar.io/sdk';
+import crypto from 'node:crypto';
 
 const cleanDb = async () => {
   if (fs.existsSync(`${process.cwd()}/data/sqlite/core-test.db`)) {
@@ -139,7 +139,7 @@ describe('container', function () {
 
   it('should return true if a subscriber exists', async function () {
     const response = await fetch(
-      'http://localhost:3000/api/subscriber/check?email=test@example.com',
+      'http://localhost:3000/api/subscribers/check?email=test@example.com',
     );
     assert.equal(response.status, 200);
     const subscriber = await response.json();
@@ -148,16 +148,47 @@ describe('container', function () {
 
   it('should return false if a subscriber does not exist', async function () {
     const response = await fetch(
-      'http://localhost:3000/api/subscriber/check?email=nonexistent@example.com',
+      'http://localhost:3000/api/subscribers/check?email=nonexistent@example.com',
     );
     assert.equal(response.status, 200);
     const subscriber = await response.json();
     assert.equal(subscriber.exists, false);
   });
 
+  it("should return the subscriber's subscriptions", async function () {
+    const authToken = Buffer.from('test@example.com').toString('base64url');
+    const authHash = crypto
+      .createHmac('sha256', 'test')
+      .update('test@example.com')
+      .digest('hex');
+    const response = await fetch(
+      'http://localhost:3000/api/subscribers/subscriptions',
+      {
+        headers: {
+          'x-user-email': 'test@example.com',
+          Authorization: `Bearer ${authToken}.${authHash}`,
+        },
+      },
+    );
+    assert.equal(response.status, 200);
+    const subscriptions = await response.json();
+    assert.equal(subscriptions[ARIO_MAINNET_PROCESS_ID].length, 1);
+    assert.equal(
+      subscriptions[ARIO_MAINNET_PROCESS_ID][0].eventType,
+      'buy-name-notice',
+    );
+    assert.equal(subscriptions[ARIO_MAINNET_PROCESS_ID][0].addresses.length, 0);
+  });
+
   it('should allow an existing subscriber unsubscribe from a process if they provide the correct email and hash', async function () {
-    const unsubscribeLink = generateUnsubscribeLink('test@example.com');
-    const unsubscribeResponse = await fetch(unsubscribeLink);
+    const authToken = Buffer.from('test@example.com').toString('base64url');
+    const authHash = crypto
+      .createHmac('sha256', 'test')
+      .update('test@example.com')
+      .digest('hex');
+    const unsubscribeResponse = await fetch(
+      `http://localhost:3000/api/unsubscribe/${authToken}.${authHash}`,
+    );
     assert.equal(unsubscribeResponse.status, 200);
     const subscribers = await database.getSubscribedEventsForSubscriber({
       subscriberId: 1,

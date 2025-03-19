@@ -168,6 +168,7 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
     {
       processId: string;
       eventType: string;
+      addresses: string[];
     }[]
   > {
     const subscribedEvents = await this.knex<SubscribeToProcess>(
@@ -176,11 +177,12 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
       .where({
         subscriber_id: subscriberId,
       })
-      .select('process_id', 'event_type');
+      .select('process_id', 'event_type', 'address');
 
     return subscribedEvents.map((event) => ({
       processId: event.process_id,
       eventType: event.event_type,
+      addresses: event.address ? event.address.split(',') : [],
     }));
   }
 
