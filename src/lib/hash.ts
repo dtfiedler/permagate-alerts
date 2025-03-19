@@ -12,7 +12,7 @@ export const generateVerifyLink = (email: string) => {
 };
 
 export const generateManageLink = (email: string) => {
-  return `${config.hostUrl}/api/subscribe/manage/${generateHashForEmail(email)}`;
+  return `${config.hostUrl}/api/subscribers/manage/${generateHashForEmail(email)}`;
 };
 
 export const generateHashForEmail = (email: string) => {
