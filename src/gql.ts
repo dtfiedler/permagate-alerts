@@ -119,7 +119,10 @@ export class GQLEventPoller implements EventPoller {
         if (!response.ok) {
           this.logger.error(
             `Error fetching events from block height ${lastBlockHeight}`,
-            response,
+            {
+              status: response.status,
+              statusText: response.statusText,
+            },
           );
           break;
         }
@@ -213,44 +216,43 @@ export const eventsFromProcessGqlQuery = ({
     query {
       transactions(
         tags: [
-            { name: "From-Process", values: ["${processId}"] },
-            { name: "Data-Protocol", values: ["ao"] },
-            { name: "Action", values: [
-                "Epoch-Distribution-Notice",
-                "Epoch-Created-Notice",
-                "Buy-Name-Notice",
-                "Join-Network-Notice",
-                "Leave-Network-Notice",
-                "Update-Gateway-Settings-Notice",
-              ]
-            }          
-          ],
-          owners: [${authorities.map((a) => `"${a}"`).join(',')}],
-          sort: HEIGHT_ASC,
-          first: 100,
-          block: {min: ${minBlockHeight}},
-          ${cursor ? `after: "${cursor}"` : ''}
-        ) {
-          edges {
-            cursor
-            node {
-              id
-              recipient
-              tags {
-                name
-                value
-              }
-              block {
-                height
-              }
+          { name: "From-Process", values: ["${processId}"] },
+          { name: "Data-Protocol", values: ["ao"] },
+          { name: "Action", values: [
+              "Epoch-Distribution-Notice",
+              "Epoch-Created-Notice",
+              "Buy-Name-Notice",
+              "Join-Network-Notice",
+              "Leave-Network-Notice",
+              "Update-Gateway-Settings-Notice"
+            ]
+          }
+        ],
+        owners: [${authorities.map((a) => `"${a}"`).join(',')}],
+        sort: HEIGHT_ASC,
+        first: 100,
+        block: { min: ${minBlockHeight} }${cursor ? `, after: "${cursor}"` : ''}
+      ) {
+        edges {
+          cursor
+          node {
+            id
+            recipient
+            tags {
+              name
+              value
+            }
+            block {
+              height
             }
           }
-          pageInfo {
-            hasNextPage
-          }
         }
-      } 
-    `,
+        pageInfo {
+          hasNextPage
+        }
+      }
+    }
+  `,
   });
   return gqlQuery;
 };
