@@ -169,7 +169,7 @@ To unsubscribe, click here: ${unsubscribeLink}`,
 
 // Route to check if a subscriber exists
 // @ts-ignore
-apiRouter.get('/api/subscriber/check', async (req: Request, res: Response) => {
+apiRouter.get('/api/subscribers/check', async (req: Request, res: Response) => {
   try {
     const { email } = req.query;
 
@@ -191,40 +191,43 @@ apiRouter.get('/api/subscriber/check', async (req: Request, res: Response) => {
 });
 
 // Route to manage a subscribers subscription
-// @ts-ignore
-apiRouter.get('/api/subscriber/manage', async (req: Request, res: Response) => {
-  try {
-    const { email } = req.query;
+apiRouter.post(
+  '/api/subscribers/manage',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const { email } = req.query;
 
-    if (!email || typeof email !== 'string') {
-      return res.status(400).json({ error: 'Email is required' });
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      // generate a link that allows the user to manage their subscription at subscribe.permagate.io
+      const manageLink = generateManageLink(email);
+      // send a raw email to the user with the manage link
+      req.notifier?.sendRawEmail({
+        to: [email],
+        text: `Please manage your subscription by clicking the link below:\n\n${manageLink}`,
+        subject: 'Update your subscription',
+      });
+
+      return res.status(200).json({
+        message: 'Manage link sent',
+      });
+    } catch (error) {
+      logger.error('Error checking subscriber existence:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while processing your request' });
     }
-
-    const subscriber = await req.db.getSubscriberByEmail(email);
-
-    if (!subscriber) {
-      return res.status(404).json({ error: 'Subscriber not found' });
-    }
-
-    // generate a link that allows the user to manage their subscription at subscribe.permagate.io
-    const manageLink = generateManageLink(email);
-    // send a raw email to the user with the manage link
-    req.notifier?.sendRawEmail({
-      to: [email],
-      text: `Please manage your subscription by clicking the link below:\n\n${manageLink}`,
-      subject: 'Update your subscription',
-    });
-
-    return res.status(200).json({
-      message: 'Manage link sent',
-    });
-  } catch (error) {
-    logger.error('Error checking subscriber existence:', error);
-    return res
-      .status(500)
-      .json({ error: 'An error occurred while processing your request' });
-  }
-});
+  },
+);
 
 // Route to verify a subscribers email address
 apiRouter.get(
