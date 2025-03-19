@@ -330,6 +330,131 @@ apiRouter.get(
   },
 );
 
+// Route to update a subscriber's subscriptions
+apiRouter.post(
+  '/api/subscribers/update',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const { email, processes } = JSON.parse(req.body);
+      const authHeader = req.headers.authorization;
+
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Authorization header required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash) {
+        return res.status(400).json({ error: 'Invalid authorization token' });
+      }
+
+      if (decodedEmail !== email) {
+        return res.status(400).json({ error: 'Invalid authorization token' });
+      }
+
+      // Get subscriber data
+      const subscriber = await req.db.getSubscriberByEmail(email);
+
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      const processIds = Object.keys(processes);
+
+      if (!processIds.length) {
+        return res
+          .status(400)
+          .json({ error: 'At least one process ID must be provided' });
+      }
+
+      for (const processId of processIds) {
+        // validate the processId is in the list of processes
+        if (!(await req.db.getProcessByProcessId(processId))) {
+          return res
+            .status(400)
+            .json({ error: `Invalid process ID ${processId}. Not supported.` });
+        }
+
+        const processEventSubscriptions = z.array(
+          processEventSubscriptionSchema,
+        );
+        const validatedEvents = processEventSubscriptions.safeParse(
+          processes[processId],
+        );
+
+        if (!validatedEvents.success) {
+          return res.status(400).json({
+            error: `Unsupported event type provided for process ${processId}. ${validatedEvents.error.message}`,
+          });
+        }
+
+        logger.info(
+          `Updating subscription for email to events for process...`,
+          {
+            email,
+            events: validatedEvents.data,
+            processId,
+          },
+        );
+
+        // update the subscriber for the process
+        await req.db.updateSubscriberForProcess({
+          subscriberId: subscriber.id,
+          processId,
+          events: validatedEvents.data,
+        });
+
+        logger.info(
+          `Successfully updated subscription for email to events for process...`,
+          {
+            email,
+            events: validatedEvents.data,
+            processId,
+          },
+        );
+      }
+
+      // Get updated subscriptions
+      const updatedSubscriptions =
+        await req.db.getSubscribedEventsForSubscriber({
+          subscriberId: subscriber.id,
+        });
+
+      // reduce by processId for response
+      const subscriptionsByProcessId = updatedSubscriptions.reduce(
+        (acc, subscription) => {
+          acc[subscription.processId] = [
+            ...(acc[subscription.processId] || []),
+            {
+              eventType: subscription.eventType,
+              addresses: subscription.addresses,
+            },
+          ];
+          return acc;
+        },
+        {} as Record<string, { eventType: string; addresses: string[] }[]>,
+      );
+
+      return res.status(200).json({
+        message: 'Subscriptions updated successfully',
+        subscriptions: subscriptionsByProcessId,
+      });
+    } catch (error) {
+      logger.error('Error updating subscriber subscriptions:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while processing your request' });
+    }
+  },
+);
+
 // Route to verify a subscribers email address
 apiRouter.get(
   '/api/subscribe/verify/:hash',

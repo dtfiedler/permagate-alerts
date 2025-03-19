@@ -180,6 +180,40 @@ describe('container', function () {
     assert.equal(subscriptions[ARIO_MAINNET_PROCESS_ID][0].addresses.length, 0);
   });
 
+  it('should allow an existing subscriber to update their subscriptions', async function () {
+    const authToken = Buffer.from('test@example.com').toString('base64url');
+    const authHash = crypto
+      .createHmac('sha256', 'test')
+      .update('test@example.com')
+      .digest('hex');
+    const response = await fetch(
+      'http://localhost:3000/api/subscribers/update',
+      {
+        method: 'POST',
+        headers: {
+          'x-user-email': 'test@example.com',
+          Authorization: `Bearer ${authToken}.${authHash}`,
+        },
+        body: JSON.stringify({
+          email: 'test@example.com',
+          processes: {
+            [ARIO_MAINNET_PROCESS_ID]: [
+              { eventType: 'join-network-notice', addresses: [] },
+            ],
+          },
+        }),
+      },
+    );
+    assert.equal(response.status, 200);
+    const { subscriptions } = await response.json();
+    assert.equal(subscriptions[ARIO_MAINNET_PROCESS_ID].length, 1);
+    assert.equal(
+      subscriptions[ARIO_MAINNET_PROCESS_ID][0].eventType,
+      'join-network-notice',
+    );
+    assert.equal(subscriptions[ARIO_MAINNET_PROCESS_ID][0].addresses.length, 0);
+  });
+
   it('should allow an existing subscriber unsubscribe from a process if they provide the correct email and hash', async function () {
     const authToken = Buffer.from('test@example.com').toString('base64url');
     const authHash = crypto
