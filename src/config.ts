@@ -29,6 +29,7 @@ export const auth0ClientSecret = process.env.AUTH0_CLIENT_SECRET;
 export const mailgunApiKey = process.env.MAILGUN_API_KEY;
 export const mailgunFromEmail = process.env.MAILGUN_FROM_EMAIL;
 export const mailgunDomain = process.env.MAILGUN_DOMAIN;
+export const disableEmails = process.env.DISABLE_EMAILS === 'true';
 
 // Admin
 export const adminApiKey = process.env.ADMIN_API_KEY;

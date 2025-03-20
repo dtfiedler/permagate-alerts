@@ -2,6 +2,7 @@ import Arweave from 'arweave';
 import { EventProcessor } from './processor.js';
 import winston from 'winston';
 import { SqliteDatabase } from './db/sqlite.js';
+import { ao } from './lib/ao.js';
 
 interface EventPoller {
   fetchAndProcessEvents(): Promise<void>;
@@ -198,6 +199,111 @@ export class GQLEventPoller implements EventPoller {
       );
     }
   }
+
+  async fetchAndProcessTriggers(): Promise<void> {
+    const lastBlockHeight = await this.getLastBlockHeight();
+    let cursor;
+    let hasNextPage = true;
+    let fetching = false;
+    try {
+      while (hasNextPage) {
+        if (fetching) {
+          this.logger.info('Already fetching triggers, skipping...');
+          return;
+        }
+        fetching = true;
+        const query = triggersForProcessGqlQuery({
+          processId: this.processId,
+          minBlockHeight: lastBlockHeight,
+          cursor: cursor,
+        });
+        this.logger.info('Fetching triggers for block height', {
+          cursor,
+          hasNextPage,
+          lastBlockHeight,
+          minBlockHeight: lastBlockHeight,
+        });
+        const response = await fetch(this.gqlUrl, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          method: 'POST',
+          body: query,
+        });
+        if (!response.ok) {
+          this.logger.error('Error fetching triggers', {
+            status: response.status,
+            statusText: response.statusText,
+          });
+          break;
+        }
+        const data = await response.json();
+        if (
+          data?.data === undefined ||
+          data?.data?.transactions?.edges?.length === 0
+        ) {
+          this.logger.info(
+            `No events found for block height ${lastBlockHeight}`,
+            {
+              status: response.status,
+              statusText: response.statusText,
+            },
+          );
+          break;
+        }
+        const events = data?.data?.transactions?.edges || [];
+
+        this.logger.info(`Found ${events.length} triggers`, {
+          status: response.status,
+          statusText: response.statusText,
+        });
+
+        const sortedEvents = [...events].sort((a: any, b: any) => {
+          return a?.node?.tags
+            .find(
+              (t: { name: string; value: string }) => t.name === 'Reference',
+            )
+            ?.value.localeCompare(
+              b?.node?.tags.find(
+                (t: { name: string; value: string }) => t.name === 'Reference',
+              )?.value ?? '',
+            );
+        });
+
+        for (const event of sortedEvents) {
+          const messageResult = await ao.result({
+            message: event.node.id,
+            process: this.processId,
+          });
+          for (const message of messageResult.Messages) {
+            const data = JSON.parse(message.Data);
+            const target = message.Target;
+            const tags = message.Tags;
+            const gqlEvent = {
+              id: event.node.id, // TODO: this is not the correct id as it results from the message getting cranked, but use for now
+              data: data,
+              tags: [...tags, { name: 'From-Process', value: this.processId }],
+              recipient: target,
+              block: {
+                // TODO: this is not the correct block height as it results from the message getting cranked, but use for now
+                height: +event.node.block.height,
+              },
+            };
+            this.processor.processGQLEvent(gqlEvent);
+          }
+        }
+        cursor = events?.[events.length - 1]?.cursor;
+        hasNextPage = data?.data?.transactions?.pageInfo?.hasNextPage ?? false;
+      }
+    } catch (error) {
+      this.logger.error('Error fetching events', error);
+    } finally {
+      this.fetching = false;
+      this.logger.info(
+        `Finished fetching events up to block height ${lastBlockHeight}`,
+      );
+    }
+  }
 }
 
 export const eventsFromProcessGqlQuery = ({
@@ -244,6 +350,57 @@ export const eventsFromProcessGqlQuery = ({
             }
             block {
               height
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+        }
+      }
+    }
+  `,
+  });
+  return gqlQuery;
+};
+
+export const triggersForProcessGqlQuery = ({
+  processId,
+  minBlockHeight,
+  cursor,
+}: {
+  processId: string;
+  minBlockHeight: number;
+  cursor: string | undefined;
+}): string => {
+  const gqlQuery = JSON.stringify({
+    query: `
+    query {
+      transactions(
+        tags: [
+          { name: "Action", values: [
+              "Buy-Name",
+              "Tick",
+              "Update-Gateway-Settings",
+              "Join-Network",
+              "Leave-Network"
+            ]
+          }
+        ],
+        sort: HEIGHT_ASC,
+        first: 100,
+        recipients: ["${processId}"],
+        block: { min: ${minBlockHeight} }${cursor ? `, after: "${cursor}"` : ''}
+      ) {
+        edges {
+          cursor
+          node {
+            id
+            block {
+              height
+            }
+            tags {
+              name
+              value
             }
           }
         }

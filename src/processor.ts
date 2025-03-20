@@ -2,21 +2,11 @@ import { EmailProvider } from './email/mailgun.js';
 import { GQLEvent, NewEvent, RawEvent } from './db/schema.js';
 import { SqliteDatabase } from './db/sqlite.js';
 import * as winston from 'winston';
-import { AOProcess, ARIO, ARIO_MAINNET_PROCESS_ID } from '@ar.io/sdk';
-import { connect } from '@permaweb/aoconnect';
-import * as config from './config.js';
 import { logger } from './logger.js';
 import mjml2html from 'mjml';
 import { minify } from 'html-minifier-terser';
-
-const ario = ARIO.init({
-  process: new AOProcess({
-    processId: config.arioProcessId || ARIO_MAINNET_PROCESS_ID,
-    ao: connect({
-      CU_URL: 'https://cu.ardrive.io',
-    }),
-  }),
-});
+import { ario } from './lib/ao.js';
+import * as config from './config.js';
 
 interface IEventProcessor {
   processGQLEvent(event: GQLEvent): Promise<void>;
@@ -161,6 +151,18 @@ export class EventProcessor implements IEventProcessor {
       eventType: event.eventType,
       subscribers: subscribers.length,
     });
+
+    if (config.disableEmails) {
+      this.logger.info(
+        'Skipping email as emails are disabled. Message will be marked as processed.',
+        {
+          eventId: event.eventData.id,
+          eventType: event.eventType,
+        },
+      );
+      this.db.markEventAsProcessed(+event.nonce);
+      return;
+    }
 
     const mjmlTemplate = await getEmailBodyForEvent(event);
     // Convert MJML to HTML

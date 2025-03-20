@@ -54,8 +54,9 @@ export const eventGqlPoller = new GQLEventPoller({
 // every 1 minute, check GQL for new events
 export const eventGqlCron = cron.schedule(
   '*/1 * * * *',
-  () => {
-    eventGqlPoller.fetchAndProcessEvents();
+  async () => {
+    await eventGqlPoller.fetchAndProcessEvents();
+    await eventGqlPoller.fetchAndProcessTriggers();
   },
   {
     runOnInit: true,

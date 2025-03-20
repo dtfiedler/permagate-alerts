@@ -46,6 +46,7 @@
   },
   "dependencies": {
     "@ar.io/sdk": "^3.8.3",
+    "@permaweb/aoconnect": "^0.0.77",
     "arweave": "^1.15.1",
     "auth0": "^4.7.0",
     "better-sqlite3": "^11.3.0",

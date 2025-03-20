@@ -254,28 +254,28 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
     target?: string;
   }): Promise<Subscriber[]> {
     // join on subscribers and filter where verified
-    const subscribersForProcessEvent = await this.knex<Subscriber>(
-      'subscribers',
-    )
+    const query = this.knex<Subscriber>('subscribers')
+      .join(
+        'subscriber_processes',
+        'subscribers.id',
+        '=',
+        'subscriber_processes.subscriber_id',
+      )
       .where({
-        verified: true,
-      })
-      .whereIn('id', (builder) =>
-        builder
-          .select('subscriber_id')
-          .from('subscriber_processes')
-          .where({ process_id: processId, event_type: event })
-          .andWhere(function () {
-            if (target) {
-              this.whereNull('address').orWhereRaw(
-                'address like ?',
-                `%${target}%`,
-              );
-            } else {
-              this.whereNull('address');
-            }
-          }),
-      );
+        'subscribers.verified': 1,
+        'subscriber_processes.process_id': processId,
+        'subscriber_processes.event_type': event,
+      });
+
+    if (target) {
+      query.andWhere(function () {
+        this.whereNull('subscriber_processes.address')
+          .orWhere('subscriber_processes.address', '')
+          .orWhere('subscriber_processes.address', 'like', `%${target}%`);
+      });
+    }
+
+    const subscribersForProcessEvent = await query.select('subscribers.*');
 
     return subscribersForProcessEvent;
   }
