@@ -914,6 +914,14 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
             </tr>
             <tr>
               <th>Gateway Address</th>
+              <td>
+                <a href="https://ao.link/#/address/${event.eventData.target}" style="color: #007bff; text-decoration: none;">
+                  ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <th>Gateway Address</th>
               <td>${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}</td>
             </tr>
             <tr>
