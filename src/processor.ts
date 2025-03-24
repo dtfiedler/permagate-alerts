@@ -845,6 +845,179 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
   </mj-body>
 </mjml>
       `;
+    case 'leave-network-notice':
+      return `
+<mjml>
+  <mj-head>
+    <mj-title>Gateway Left Network</mj-title>
+    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-attributes>
+      <mj-all font-family="Inter, sans-serif" />
+      <mj-text font-size="14px" color="#333" line-height="1.5" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .info-table th {
+        background-color: #fafafa !important;
+        font-weight: 600 !important;
+      }
+      .info-table th,
+      .info-table td {
+        border-bottom: 1px solid #eaeaea !important;
+        text-align: left !important;
+        padding: 6px !important;
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#0f0f0f">
+    <!-- Top Padding -->
+    <mj-section padding="20px 0">
+      <mj-column></mj-column>
+    </mj-section>
+    
+    <!-- Header Section -->
+    <mj-section background-color="#1c1c1c" padding="30px 20px">
+      <mj-column>
+        <mj-text
+          color="#ffffff"
+          font-size="24px"
+          font-weight="600"
+          align="center"
+          padding-bottom="0"
+        >
+          ${event.eventData.data.settings.fqdn} has left the network
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- White Card Wrapper -->
+    <mj-wrapper
+      background-color="#ffffff"
+      border-radius="8px"
+      padding="20px 0"
+      css-class="card-container"
+    >
+      <!-- Gateway Details Section -->
+      <mj-section padding="0">
+        <mj-column>
+          <mj-text
+            font-size="18px"
+            font-weight="600"
+            color="#101010"
+            padding="0 20px 10px"
+          >
+            Gateway Details
+          </mj-text>
+          <mj-table css-class="info-table" padding="0 20px 20px">
+            <tr>
+              <th>Gateway FQDN</th>
+              <td>${event.eventData.data.settings.fqdn}</td>
+            </tr>
+            <tr>
+              <th>Gateway Address</th>
+              <td>${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}</td>
+            </tr>
+            <tr>
+              <th># Delegates</th>
+              <td>${Object.keys(event.eventData.data.delegates).length}</td>
+            </tr>
+            <tr>
+              <th>Total Vaulted Delegate Stakes</th>
+              <td>${
+                Object.values(
+                  event.eventData.data?.delegates as Record<
+                    string,
+                    {
+                      vaults: Record<
+                        string,
+                        { startTimestamp: number; balance: number }
+                      >;
+                    }
+                  >,
+                )
+                  .reduce(
+                    (
+                      acc: number,
+                      delegate: {
+                        vaults: Record<
+                          string,
+                          { startTimestamp: number; balance: number }
+                        >;
+                      },
+                    ) =>
+                      acc +
+                      Object.values(delegate.vaults).reduce(
+                        (acc, vault) => acc + vault.balance / 1_000_000,
+                        0,
+                      ),
+                    0,
+                  )
+                  .toFixed(2) + ' $ARIO'
+              }</td>
+            <tr>
+              <th>Total Vaulted Operator Stake</th>
+              <td>${
+                Object.values(
+                  event.eventData.data?.vaults as Record<
+                    string,
+                    { startTimestamp: number; balance: number }
+                  >,
+                )
+                  .reduce(
+                    (
+                      acc: number,
+                      vault: { startTimestamp: number; balance: number },
+                    ) => acc + vault.balance / 1_000_000,
+                    0,
+                  )
+                  .toFixed(2)
+                  .toLocaleString() + ' $ARIO'
+              }</td>
+            </tr>
+            <tr>
+              <th>Stakes returned at</th>
+              <td>${new Date(event.eventData.data.endTimestamp).toLocaleString()}</td>
+            </tr>
+          </mj-table>
+        </mj-column>
+      </mj-section>
+
+      <!-- View on AO Button -->
+      <mj-section padding="10px 0 20px">
+        <mj-column>
+          <mj-button
+            background-color="#007bff"
+            color="#ffffff"
+            border-radius="5px"
+            font-weight="600"
+            href="https://ao.link/#/message/${event.eventData.id}"
+          >
+            View on AO
+          </mj-button>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <!-- Footer Section -->
+    <mj-section background-color="#1c1c1c" padding="20px">
+      <mj-column>
+        <mj-text
+          font-size="12px"
+          color="#cccccc"
+          align="center"
+        >
+          <br/>
+          You are receiving this email because you subscribed to subscribe.permagate.io
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    
+    <!-- Bottom Padding -->
+    <mj-section padding="20px 0">
+      <mj-column></mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+      `;
     case 'update-gateway-settings-notice':
       return `
 <mjml>
