@@ -921,10 +921,6 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
               </td>
             </tr>
             <tr>
-              <th>Gateway Address</th>
-              <td>${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}</td>
-            </tr>
-            <tr>
               <th># Delegates</th>
               <td>${Object.keys(event.eventData.data.delegates).length}</td>
             </tr>
