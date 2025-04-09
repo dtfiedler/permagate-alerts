@@ -3,6 +3,7 @@ import { EventProcessor } from './processor.js';
 import winston from 'winston';
 import { SqliteDatabase } from './db/sqlite.js';
 import { ao } from './lib/ao.js';
+import { GQLEvent, NewEvent } from './db/schema.js';
 
 interface EventPoller {
   fetchAndProcessEvents(): Promise<void>;
@@ -275,6 +276,16 @@ export class GQLEventPoller implements EventPoller {
             message: event.node.id,
             process: this.processId,
           });
+          if (
+            messageResult.Messages === undefined ||
+            messageResult.Messages?.length === 0
+          ) {
+            this.logger.info('No messages found for event', {
+              eventId: event.node.id,
+              messageResult,
+            });
+            continue;
+          }
           for (const message of messageResult.Messages) {
             const data = JSON.parse(message.Data);
             const target = message.Target;
@@ -290,6 +301,8 @@ export class GQLEventPoller implements EventPoller {
               },
             };
             this.processor.processGQLEvent(gqlEvent);
+            // kick of search for subscribers from the event data tags
+            this.findSubscribersFromEventDataTags(gqlEvent, this.gqlUrl);
           }
         }
         cursor = events?.[events.length - 1]?.cursor;
@@ -304,6 +317,51 @@ export class GQLEventPoller implements EventPoller {
       );
     }
   }
+
+  // there may also be subscribers from the event data tags
+  findSubscribersFromEventDataTags = async (
+    event: GQLEvent,
+    gqlUrl: string,
+  ) => {
+    // if it is a save-observations-notice, find the related message that includes the failed-gateway addresses
+    // get the reports from the target
+    const [messageTags] = await fetchMessageTagsForTxId([event.id], gqlUrl);
+    const failedGatewayAddressesString = messageTags.tags.find(
+      (t) => t.name === 'Failed-Gateways',
+    )?.value;
+    if (failedGatewayAddressesString) {
+      const failedGatewayAddresses = failedGatewayAddressesString.split(',');
+      // make a new event for each failed gateway address
+      for (let i = 0; i < failedGatewayAddresses.length; i++) {
+        const failedGatewayAddress = failedGatewayAddresses[i];
+        const newEvent = {
+          data: event.data,
+          id: event.id,
+          recipient: failedGatewayAddress,
+          tags: [
+            { name: 'Action', value: 'Failed-Observation-Notice' },
+            { name: 'From-Process', value: this.processId },
+            {
+              name: 'Reference',
+              value: `${event.tags.find((t) => t.name === 'Reference')?.value}.${i}`,
+            },
+            {
+              name: 'Target',
+              value: failedGatewayAddress,
+            },
+            {
+              name: 'From',
+              value: event.recipient,
+            },
+          ],
+          block: {
+            height: event.block.height,
+          },
+        };
+        this.processor.processGQLEvent(newEvent);
+      }
+    }
+  };
 }
 
 export const eventsFromProcessGqlQuery = ({
@@ -382,7 +440,8 @@ export const triggersForProcessGqlQuery = ({
               "Tick",
               "Update-Gateway-Settings",
               "Join-Network",
-              "Leave-Network"
+              "Leave-Network",
+              "Save-Observations"
             ]
           }
         ],
@@ -412,4 +471,113 @@ export const triggersForProcessGqlQuery = ({
   `,
   });
   return gqlQuery;
+};
+
+export const messagesForTxIdGqlQuery = ({ id }: { id: string }): string => {
+  const gqlQuery = JSON.stringify({
+    query: `
+    query {
+      transactions(
+        tags: [
+          { name: "Pushed-For", values: ["${id}"]},
+          { name: "Data-Protocol", values: ["ao"] }
+        ]
+        sort: HEIGHT_ASC,
+        first: 100,
+      ) {
+        edges {
+          cursor
+          node {
+            id
+            tags {
+              name
+              value
+            }
+            block {
+              height
+              timestamp
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+        }
+      }
+    }
+  `,
+  });
+  return gqlQuery;
+};
+
+export const fetchAndProcessLinkedMessages = async (
+  event: NewEvent,
+  gqlUrl: string,
+): Promise<
+  {
+    id: string;
+    tags: { name: string; value: string }[];
+    block: { height: number; timestamp: number };
+  }[]
+> => {
+  const id = event.eventData.id;
+  const query = messagesForTxIdGqlQuery({ id });
+  const response = await fetch(gqlUrl, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    method: 'POST',
+    body: query,
+  });
+  const data = await response.json();
+  const messages = data?.data?.transactions?.edges || [];
+  return messages.map((message: any) => ({
+    id: message.node.id,
+    tags: message.node.tags,
+    block: message.node.block,
+  }));
+};
+
+export const fetchMessageTagsForTxId = async (
+  ids: string[],
+  gqlUrl: string,
+): Promise<{ id: string; tags: { name: string; value: string }[] }[]> => {
+  const query = JSON.stringify({
+    query: `
+    query {
+      transactions(
+        ids: [${ids.map((id) => `"${id}"`).join(',')}]
+      ) {
+        edges {
+          cursor
+          node {
+            id
+            tags {
+              name
+              value
+            }
+            block {
+              height
+              timestamp
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+        }
+      }
+    }`,
+  });
+  const response = await fetch(gqlUrl, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    method: 'POST',
+    body: query,
+  });
+  const data = await response.json();
+  const headers = data?.data?.transactions?.edges || [];
+  return headers.map((header: any) => ({
+    id: header.node.id,
+    tags: header.node.tags,
+  }));
 };

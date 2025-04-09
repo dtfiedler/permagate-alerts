@@ -89,6 +89,7 @@ const eventSchema = z.object({
     ),
     data: z.any(),
     target: z.string(),
+    from: z.string().nullable(),
     id: z.string(),
   }),
   blockHeight: z.number().nullable(),

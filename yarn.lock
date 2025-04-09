@@ -2,15 +2,15 @@
 # yarn lockfile v1
 
 
-"@ar.io/sdk@^3.8.3":
-  version "3.8.3"
-  resolved "https://registry.yarnpkg.com/@ar.io/sdk/-/sdk-3.8.3.tgz#44ce36bebe8c5f86c4571625c1d3941e7d9cf9b1"
-  integrity sha512-qLNtmvTjwcJpP+Y9xmBMUQpab42yV/hRtxhCbJyiBKpifeAIvol2BQDxP7KligDEBsx+dgmj33cJGD+LKnqX7w==
+"@ar.io/sdk@^3.9.1":
+  version "3.9.1"
+  resolved "https://registry.yarnpkg.com/@ar.io/sdk/-/sdk-3.9.1.tgz#070aa4d491cff23e3e168697de91d1ef1c8c54b6"
+  integrity sha512-e4g2I7rRorOlT9/5kI1LzVKSE2agzI6iPDdrf6w5lx1MUwUFxdifCnFLmoaobQaQ1cBHoW7WtB5vOIWGHhHMuw==
   dependencies:
     "@dha-team/arbundles" "^1.0.1"
     "@permaweb/aoconnect" "^0.0.57"
     arweave "1.15.5"
-    axios "1.7.9"
+    axios "1.8.4"
     axios-retry "^4.3.0"
     commander "^12.1.0"
     eventemitter3 "^5.0.1"
@@ -1271,10 +1271,10 @@ axios-retry@^4.3.0:
   dependencies:
     is-retry-allowed "^2.2.0"
 
-axios@1.7.9:
-  version "1.7.9"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-1.7.9.tgz#d7d071380c132a24accda1b2cfc1535b79ec650a"
-  integrity sha512-LhLcE7Hbiryz8oMDdDptSrWowmB4Bl6RCt6sIJKpRB4XtVf0iEgewX3au/pJqm+Py1kCASkb/FFKjxQaLtxJvw==
+axios@1.8.4, axios@^1.7.9:
+  version "1.8.4"
+  resolved "https://registry.yarnpkg.com/axios/-/axios-1.8.4.tgz#78990bb4bc63d2cae072952d374835950a82f447"
+  integrity sha512-eBSYY4Y68NNlHbHBMdeDmKNtDgXWhQsJcGqzO3iLUM0GraQFSS9cVgPX5I9b3lbdFKyYoAEGAZF1DwhTaljNAw==
   dependencies:
     follow-redirects "^1.15.6"
     form-data "^4.0.0"
@@ -1284,15 +1284,6 @@ axios@^1.7.4:
   version "1.8.3"
   resolved "https://registry.yarnpkg.com/axios/-/axios-1.8.3.tgz#9ebccd71c98651d547162a018a1a95a4b4ed4de8"
   integrity sha512-iP4DebzoNlP/YN2dpwCgb8zoCmhtkajzS48JvwmkSkXvPI3DHc7m+XYL5tGnSlJtR6nImXZmdCuN5aP8dh1d8A==
-  dependencies:
-    follow-redirects "^1.15.6"
-    form-data "^4.0.0"
-    proxy-from-env "^1.1.0"
-
-axios@^1.7.9:
-  version "1.8.4"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-1.8.4.tgz#78990bb4bc63d2cae072952d374835950a82f447"
-  integrity sha512-eBSYY4Y68NNlHbHBMdeDmKNtDgXWhQsJcGqzO3iLUM0GraQFSS9cVgPX5I9b3lbdFKyYoAEGAZF1DwhTaljNAw==
   dependencies:
     follow-redirects "^1.15.6"
     form-data "^4.0.0"
