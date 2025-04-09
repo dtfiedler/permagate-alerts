@@ -36,7 +36,8 @@ export class EventProcessor implements IEventProcessor {
 
   async processGQLEvent(event: GQLEvent): Promise<void> {
     const { tags, data, block, recipient } = event;
-    const { action, nonce, target, processId } = this.processEventTags(tags);
+    const { action, nonce, target, processId, from } =
+      this.processEventTags(tags);
     if (!action || !nonce || !processId) {
       this.logger.error('No action or nonce or process ID found in event', {
         event,
@@ -48,6 +49,7 @@ export class EventProcessor implements IEventProcessor {
       eventData: {
         id: event.id,
         target: recipient || target || '',
+        from: from || '',
         tags: tags,
         data: data,
       },
@@ -64,6 +66,7 @@ export class EventProcessor implements IEventProcessor {
     action: string | undefined;
     target: string | undefined;
     processId: string | undefined;
+    from: string | undefined;
   } {
     const nonce = tags.find(
       (tag) => tag.name.startsWith('Reference') || tag.name.startsWith('Ref_'),
@@ -75,18 +78,20 @@ export class EventProcessor implements IEventProcessor {
       .find((tag) => tag.name.startsWith('Action'))
       ?.value.toLowerCase();
     const processId = tags.find((tag) => tag.name === 'From-Process')?.value;
+    const from = tags.find((tag) => tag.name === 'From')?.value;
     return {
       tags,
       nonce,
       action,
       target,
       processId,
+      from,
     };
   }
 
   async processRawEvent(event: RawEvent): Promise<void> {
     for (const message of event.Messages) {
-      const { action, nonce, target, tags } = this.processEventTags(
+      const { action, nonce, target, tags, from } = this.processEventTags(
         message.Tags,
       );
       if (!action || !nonce) {
@@ -111,6 +116,7 @@ export class EventProcessor implements IEventProcessor {
         eventData: {
           id: event.Id,
           target: target || '',
+          from: from || '',
           tags: tags,
           data: messageData,
         },
@@ -164,27 +170,25 @@ export class EventProcessor implements IEventProcessor {
       return;
     }
 
-    const mjmlTemplate = await getEmailBodyForEvent(event);
-    // Convert MJML to HTML
-    const htmlOutput = mjml2html(mjmlTemplate, {
-      keepComments: false,
-      beautify: false,
-      minify: false, // we'll minify ourselves in the next step
-    });
-
-    // Minify the HTML to reduce size
-    const html = await minify(htmlOutput.html, {
-      collapseWhitespace: true,
-      removeComments: true,
-      minifyCSS: true,
-      minifyJS: true,
-      minifyURLs: true,
-      removeEmptyElements: true,
-    });
-
-    const subject = getEmailSubjectForEvent(event);
-
     if (subscribers.length > 0) {
+      const mjmlTemplate = await getEmailBodyForEvent(event);
+      // Convert MJML to HTML
+      const htmlOutput = mjml2html(mjmlTemplate, {
+        keepComments: false,
+        beautify: false,
+        minify: false, // we'll minify ourselves in the next step
+      });
+
+      // Minify the HTML to reduce size
+      const html = await minify(htmlOutput.html, {
+        collapseWhitespace: true,
+        removeComments: true,
+        minifyCSS: true,
+        minifyJS: true,
+        minifyURLs: true,
+        removeEmptyElements: true,
+      });
+      const subject = await getEmailSubjectForEvent(event);
       // send email, but don't await
       this.notifier
         ?.sendEventEmail({
@@ -206,13 +210,18 @@ export class EventProcessor implements IEventProcessor {
   }
 }
 
-const getEmailSubjectForEvent = (event: NewEvent) => {
+const getEmailSubjectForEvent = async (event: NewEvent) => {
   switch (event.eventType) {
     case 'buy-name-notice':
     case 'buy-record-notice':
       const name = event.eventData.data.name;
       const type = event.eventData.data.type;
       return `✅ ${name} has been ${type === 'permabuy' ? 'permabought' : 'leased'}!`;
+    case 'failed-observation-notice':
+      const gatewayDetails = await ario.getGateway({
+        address: event.eventData.target,
+      });
+      return `❌ ${event.eventData.from?.slice(0, 6)}...${event.eventData.from?.slice(-4)} marked ${gatewayDetails.settings.fqdn || event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)} as failed!`;
     case 'epoch-created-notice':
       return `🔭 Epoch ${event.eventData.data.epochIndex} has been created!`;
     case 'epoch-distribution-notice':
@@ -251,6 +260,143 @@ const getEmailSubjectForEvent = (event: NewEvent) => {
 
 const getEmailBodyForEvent = async (event: NewEvent) => {
   switch (event.eventType.toLowerCase()) {
+    case 'failed-observation-notice':
+      const observations = await ario.getObservations();
+      const failureSummaries =
+        observations.failureSummaries[event.eventData.target] || [];
+      const totalObservations = Object.keys(observations.reports || {}).length;
+      const failurePercentage =
+        (failureSummaries.length / totalObservations) * 100;
+      const status = failurePercentage > 50 ? 'FAILING' : 'PASSING';
+      const prescribedObserversFailForEpoch = await ario
+        .getPrescribedObservers()
+        .catch(() => ({}));
+      const totalPrescribedObservers = Object.keys(
+        prescribedObserversFailForEpoch || {},
+      ).length;
+      const gatewayDetails = await ario.getGateway({
+        address: event.eventData.target,
+      });
+      return `
+<mjml>
+  <mj-head>
+    <mj-title>Failed Observation Notice</mj-title>
+    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-attributes>
+      <mj-all font-family="Inter, sans-serif" />
+      <mj-text font-size="14px" color="#333" line-height="1.5" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .info-table th {
+        background-color: #fafafa !important;
+        font-weight: 600 !important;
+      }
+      .info-table th,
+      .info-table td {
+        border-bottom: 1px solid #eaeaea !important;
+        text-align: left !important;
+        padding: 6px !important;
+      }
+    </mj-style> 
+  </mj-head>
+  <mj-body background-color="#0f0f0f">
+    <!-- Top Padding -->
+    <mj-section padding="20px 0">
+      <mj-column></mj-column>
+    </mj-section>
+
+    <!-- Header Section -->
+    <mj-section background-color="#1c1c1c" padding="30px 20px">
+      <mj-column>
+        <mj-text
+          color="#ffffff"
+          font-size="24px"
+          font-weight="600"
+          align="center"
+          padding-bottom="0"
+        >
+            ${event.eventData.from} has failed ${gatewayDetails.settings.fqdn}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- White Card Wrapper -->
+    <mj-wrapper
+      background-color="#ffffff"
+      border-radius="8px"
+      padding="20px 0"
+      css-class="card-container"
+    >
+      <mj-section padding="0">
+        <mj-column>
+          <mj-text
+            font-size="18px"
+            font-weight="600"
+            color="#101010"
+            padding="0 20px 10px"
+          >
+            Details
+          </mj-text>
+          <mj-table css-class="info-table" padding="0 20px 20px">
+            <tr>
+              <th width="40%"># Observations (submitted/prescribed)</th>
+              <td width="60%">${totalObservations}/${totalPrescribedObservers}</td>
+            </tr>
+            <tr>
+              <th width="40%"># Failures</th>
+              <td width="60%">${observations.failureSummaries[event.eventData.target].length}/${totalObservations}</td>
+            </tr>
+            <tr>
+              <th width="40%">Status</th>
+              <td width="60%" style="color:${status === 'FAILING' ? '#ff4444' : '#44ff44'};">${status}</td>
+            </tr>
+            <tr>
+              <th width="40%">Reported by</th>
+              <td width="60%">${event.eventData.from?.slice(0, 6)}...${event.eventData.from?.slice(-4)}</td>
+            </tr>
+            <tr>
+              <th width="40%">Report</th>
+              <td width="60%">
+                <a href="https://arweave.net/${observations.reports[event.eventData.target]}" style="color: #007bff; text-decoration: none;">
+                  ${observations.reports[event.eventData.target]}
+                </a>
+              </td>
+            </tr>
+          </mj-table>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+    <!-- Footer Section -->
+    <mj-section background-color="#1c1c1c" padding="20px">
+      <mj-column>
+        <mj-button
+          background-color="#007bff"
+          color="#ffffff"
+          border-radius="5px"
+          font-weight="600"
+          href="https://ao.link/#/message/${event.eventData.id}"
+        >
+          View on AO
+        </mj-button>
+        <mj-text
+          font-size="12px"
+          color="#cccccc"
+          align="center"
+        >
+
+          <br/>
+          You are receiving this email because you subscribed to subscribe.permagate.io
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    
+    <!-- Bottom Padding -->
+    <mj-section padding="20px 0">
+      <mj-column></mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+  `;
     case 'credit-notice':
       const amount =
         parseInt(
