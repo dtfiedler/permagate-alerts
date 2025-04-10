@@ -546,6 +546,7 @@ export const fetchMessageTagsForTxId = async (
     query {
       transactions(
         ids: [${ids.map((id) => `"${id}"`).join(',')}]
+        sort: HEIGHT_ASC,
       ) {
         edges {
           cursor
