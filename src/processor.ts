@@ -136,16 +136,12 @@ export class EventProcessor implements IEventProcessor {
     });
 
     // confirm the nonce is greater than the last seen
-    const latestEvent = await this.db.getLatestEventByNonce({
-      processId: event.processId,
-    });
-    if (latestEvent && +event.nonce <= latestEvent.nonce) {
-      this.logger.info('Skipping event', {
+    const existingEvent = await this.db.getEvent(event.nonce);
+    if (existingEvent) {
+      this.logger.info('Skipping event that already exists', {
         eventId: event.eventData.id,
         nonce: event.nonce,
-        blockHeight: event.blockHeight,
-        latestEventNonce: latestEvent.nonce,
-        latestEventBlockHeight: latestEvent.blockHeight,
+        eventType: event.eventType,
       });
       return;
     }
