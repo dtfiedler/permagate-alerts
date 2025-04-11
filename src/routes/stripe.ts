@@ -15,21 +15,16 @@ stripeRouter.post(
   '/api/stripe/webhook',
   // @ts-ignore
   async (req: Request, res: Response) => {
-    logger.info('Received Stripe webhook', {
+    logger.debug('Received Stripe webhook', {
       body: req.body,
-      headers: req.headers,
-      // @ts-ignore
-      rawBody: req.rawBody,
     });
-    const sig = req.headers['stripe-signature'];
 
     let event: Stripe.Event;
 
     try {
       event = stripe.webhooks.constructEvent(
-        // @ts-ignore
         req.rawBody,
-        sig!,
+        req.headers['stripe-signature'] as string,
         config.stripeWebhookSecret!,
       );
     } catch (error: any) {
