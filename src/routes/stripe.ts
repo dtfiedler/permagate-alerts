@@ -26,10 +26,7 @@ stripeRouter.post(
 
     try {
       event = stripe.webhooks.constructEvent(
-        await getRawBody(req, {
-          length: req.headers['content-length'],
-          encoding: 'utf8',
-        }),
+        await getRawBody(req),
         sig!,
         config.stripeWebhookSecret!,
       );
