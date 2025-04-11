@@ -4,7 +4,7 @@ import { Router, Response } from 'express';
 import { Request } from '../types.js';
 import * as config from '../config.js';
 
-export const stripeRouter = Router();
+const stripeRouter = Router();
 
 const stripe = new Stripe(config.stripeSecretKey!, {
   apiVersion: '2025-03-31.basil',
@@ -174,3 +174,5 @@ stripeRouter.get(
     }
   },
 );
+
+export { stripeRouter };
