@@ -32,59 +32,59 @@ stripeRouter.post(
       return res.status(400).send(`Webhook Error: ${error.message}`);
     }
 
-    if (event.type === 'customer.subscription.created') {
-      const subscription = event.data.object as Stripe.Subscription;
-      const customer = await stripe.customers.retrieve(
-        subscription.customer as string,
-      );
-      if (customer.deleted) {
-        logger.error('Customer is deleted', { customer });
-        return res.status(400).json({ error: 'Customer is deleted' });
-      }
-      const customerEmail = customer.email;
+    switch (event.type) {
+      // charge.succeeded
+      case 'charge.succeeded':
+        const charge = event.data.object as Stripe.Charge;
+        const customer = await stripe.customers.retrieve(
+          charge.customer as string,
+        );
+        if (customer.deleted) {
+          logger.error('Customer is deleted', { customer });
+          return res.status(400).json({ error: 'Customer is deleted' });
+        }
+        const customerEmail = customer.email;
 
-      if (!customerEmail) {
-        logger.error('No customer email found in subscription', {
-          subscription,
-        });
-        return res.status(400).json({ error: 'No customer email provided' });
-      }
-
-      try {
-        // Check if subscriber exists
-        let subscriber = await req.db.getSubscriberByEmail(customerEmail);
-
-        if (subscriber) {
-          // Update existing subscriber to premium
-          await req.db.updateSubscriber(subscriber.id, {
-            id: subscriber.id,
-            premium: true,
-          });
-
-          logger.info('Updated existing subscriber to premium', {
-            email: customerEmail,
-          });
-        } else {
-          await req.db.createNewSubscriber({
-            email: customerEmail,
-            premium: true,
-          });
-
-          logger.info('Created new premium subscriber', {
-            email: customerEmail,
-          });
+        if (!customerEmail) {
+          logger.error('No customer email found in charge', { charge });
+          return res.status(400).json({ error: 'No customer email provided' });
         }
 
-        return res.json({ received: true });
-      } catch (error) {
-        logger.error('Error processing subscription webhook', {
-          error,
-          customerEmail,
-        });
-        return res.status(500).json({
-          error: 'Error processing subscription',
-        });
-      }
+        try {
+          // Check if subscriber exists
+          let subscriber = await req.db.getSubscriberByEmail(customerEmail);
+
+          if (subscriber) {
+            // Update existing subscriber to premium
+            await req.db.updateSubscriber(subscriber.id, {
+              id: subscriber.id,
+              premium: true,
+            });
+
+            logger.info('Updated existing subscriber to premium', {
+              email: customerEmail,
+            });
+          } else {
+            await req.db.createNewSubscriber({
+              email: customerEmail,
+              premium: true,
+            });
+
+            logger.info('Created new premium subscriber', {
+              email: customerEmail,
+            });
+          }
+
+          return res.json({ received: true });
+        } catch (error) {
+          logger.error('Error processing subscription webhook', {
+            error,
+            customerEmail,
+          });
+          return res.status(500).json({
+            error: 'Error processing subscription',
+          });
+        }
     }
 
     // Return 200 for other event types
