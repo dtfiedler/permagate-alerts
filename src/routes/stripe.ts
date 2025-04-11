@@ -25,7 +25,7 @@ stripeRouter.post(
 
     try {
       event = stripe.webhooks.constructEvent(
-        req.body,
+        JSON.stringify(req.body),
         sig!,
         config.stripeWebhookSecret!,
       );
