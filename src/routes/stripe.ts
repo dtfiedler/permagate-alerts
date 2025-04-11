@@ -85,6 +85,9 @@ stripeRouter.post(
             error: 'Error processing subscription',
           });
         }
+      default:
+        logger.info('Received unknown event', { event });
+        break;
     }
 
     // Return 200 for other event types
