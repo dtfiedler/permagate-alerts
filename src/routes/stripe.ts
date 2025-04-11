@@ -3,6 +3,7 @@ import { logger } from '../logger.js';
 import { Router, Response } from 'express';
 import { Request } from '../types.js';
 import * as config from '../config.js';
+import getRawBody from 'raw-body';
 
 const stripeRouter = Router();
 
@@ -25,7 +26,10 @@ stripeRouter.post(
 
     try {
       event = stripe.webhooks.constructEvent(
-        JSON.stringify(req.body),
+        await getRawBody(req, {
+          length: req.headers['content-length'],
+          encoding: 'utf8',
+        }),
         sig!,
         config.stripeWebhookSecret!,
       );
