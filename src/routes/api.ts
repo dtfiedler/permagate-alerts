@@ -92,6 +92,7 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
         email,
         events: validatedEvents.data,
         processId,
+        premium,
       });
 
       // update the subscriber for the process
@@ -105,6 +106,7 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
         email,
         events: validatedEvents.data,
         processId,
+        premium,
       });
     }
 
