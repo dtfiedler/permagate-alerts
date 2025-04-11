@@ -32,6 +32,7 @@ const subscriberSchema = z.object({
   verified: z.boolean().default(false),
   createdAt: z.date(),
   updatedAt: z.date(),
+  premium: z.boolean().default(false),
 });
 
 export type Subscriber = z.infer<typeof subscriberSchema>;

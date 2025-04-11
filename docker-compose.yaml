@@ -17,5 +17,7 @@ services:
       - DISABLE_EMAILS=${DISABLE_EMAILS:-false}
       - FRONTEND_URL=${FRONTEND_URL:-https://subscribe.permagate.io}
       - SECRET_KEY=${SECRET_KEY:-}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
     volumes:
       - ./data:/usr/src/app/data

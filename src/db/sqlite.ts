@@ -108,11 +108,12 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
 
   async createNewSubscriber({
     email,
-  }: {
-    email: string;
-  }): Promise<Subscriber | undefined> {
+    ...params
+  }: { email: string } & Partial<NewSubscriber>): Promise<
+    Subscriber | undefined
+  > {
     const [subscriber] = await this.knex<Subscriber>('subscribers')
-      .insert({ email })
+      .insert({ email, ...params })
       .returning('*');
 
     return subscriber;
