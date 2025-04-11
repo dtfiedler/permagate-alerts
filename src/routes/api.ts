@@ -36,7 +36,8 @@ apiRouter.get('/healthcheck', (_, res) => {
 apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
   try {
     const email = req.query.email as string;
-    const { processes = DEFAULT_PROCESS_SUBSCRIPTIONS } = JSON.parse(req.body);
+    const { processes = DEFAULT_PROCESS_SUBSCRIPTIONS, premium = false } =
+      JSON.parse(req.body);
 
     logger.debug(`Received subscribe request`, {
       email,
@@ -80,6 +81,7 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
 
       subscriber ??= await req.db.createNewSubscriber({
         email,
+        premium,
       });
 
       if (!subscriber) {
@@ -336,7 +338,7 @@ apiRouter.post(
   // @ts-ignore
   async (req: Request, res: Response) => {
     try {
-      const { email, processes } = JSON.parse(req.body);
+      const { email, processes, premium } = JSON.parse(req.body);
       const authHeader = req.headers.authorization;
 
       if (!email || typeof email !== 'string') {
@@ -372,6 +374,13 @@ apiRouter.post(
         return res
           .status(400)
           .json({ error: 'At least one process ID must be provided' });
+      }
+
+      if (premium && !subscriber.premium) {
+        // TODO: verify in stripe they are premium
+        await req.db.updateSubscriber(subscriber.id, {
+          premium,
+        });
       }
 
       for (const processId of processIds) {
