@@ -17,7 +17,7 @@ stripeRouter.post(
   async (req: Request, res: Response) => {
     const sig = req.headers['stripe-signature'];
 
-    let event;
+    let event: Stripe.Event;
 
     try {
       event = stripe.webhooks.constructEvent(
@@ -85,6 +85,53 @@ stripeRouter.post(
             error: 'Error processing subscription',
           });
         }
+      case 'customer.subscription.created':
+        const subscription = event.data.object as Stripe.Subscription;
+        const subscriptionCustomer = await stripe.customers.retrieve(
+          subscription.customer as string,
+        );
+        if (subscriptionCustomer.deleted) {
+          logger.error('Customer is deleted', { subscriptionCustomer });
+          return res.status(400).json({ error: 'Customer is deleted' });
+        }
+        const subscriptionCustomerEmail = subscriptionCustomer.email;
+
+        if (!subscriptionCustomerEmail) {
+          logger.error('No customer email found in subscription', {
+            subscription,
+          });
+          return res.status(400).json({ error: 'No customer email provided' });
+        }
+
+        try {
+          // Check if subscriber exists
+          let subscriber = await req.db.getSubscriberByEmail(
+            subscriptionCustomerEmail,
+          );
+
+          if (subscriber) {
+            // Update existing subscriber to premium
+            await req.db.updateSubscriber(subscriber.id, {
+              id: subscriber.id,
+              premium: true,
+            });
+
+            logger.info('Updated existing subscriber to premium', {
+              email: subscriptionCustomerEmail,
+            });
+          } else {
+            await req.db.createNewSubscriber({
+              email: subscriptionCustomerEmail,
+              premium: true,
+            });
+          }
+        } catch (error) {
+          logger.error('Error processing subscription webhook', {
+            error,
+            subscriptionCustomerEmail,
+          });
+        }
+        break;
       default:
         logger.info('Received unknown event', { event });
         break;
