@@ -43,6 +43,8 @@ describe('container', function () {
         MAILGUN_API_KEY: '',
         MAILGUN_DOMAIN: '',
         MAILGUN_FROM_EMAIL: '',
+        STRIPE_SECRET_KEY: 'test_key',
+        STRIPE_WEBHOOK_SECRET: 'test_key',
         DEBUG_KNEX: 'false',
         SECRET_KEY: 'test',
       })

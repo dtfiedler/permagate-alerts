@@ -46,3 +46,7 @@ export const debugKnex = process.env.DEBUG_KNEX === 'true';
 export const cuUrl = process.env.CU_URL || 'https://cu.ardrive.io';
 export const gatewayHost = process.env.GATEWAY_HOST || 'arweave.net';
 export const arioProcessId = process.env.ARIO_PROCESS_ID;
+
+// Stripe
+export const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+export const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
