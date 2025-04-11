@@ -15,6 +15,10 @@ stripeRouter.post(
   '/api/stripe/webhook',
   // @ts-ignore
   async (req: Request, res: Response) => {
+    logger.info('Received Stripe webhook', {
+      body: req.body,
+      headers: req.headers,
+    });
     const sig = req.headers['stripe-signature'];
 
     let event: Stripe.Event;
