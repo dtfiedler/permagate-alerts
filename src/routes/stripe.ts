@@ -175,4 +175,40 @@ stripeRouter.get(
   },
 );
 
+stripeRouter.post(
+  '/api/stripe/create-payment-intent',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    const { email, priceId } = req.body;
+
+    try {
+      // Create a customer first
+      const customer = await stripe.customers.create({
+        email: email,
+        metadata: {
+          priceId: priceId,
+        },
+      });
+
+      // Create the payment intent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: 999, // $9.99 in cents
+        currency: 'usd',
+        customer: customer.id,
+        automatic_payment_methods: {
+          enabled: true,
+        },
+        metadata: {
+          email: email,
+          priceId: priceId,
+        },
+      });
+
+      res.json({ clientSecret: paymentIntent.client_secret });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
+
 export { stripeRouter };
