@@ -18,6 +18,8 @@ stripeRouter.post(
     logger.info('Received Stripe webhook', {
       body: req.body,
       headers: req.headers,
+      // @ts-ignore
+      rawBody: req.rawBody,
     });
     const sig = req.headers['stripe-signature'];
 

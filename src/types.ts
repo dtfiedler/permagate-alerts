@@ -9,4 +9,5 @@ export interface Request extends ExpressRequest {
   notifier?: EmailProvider;
   processor: EventProcessor;
   logger: winston.Logger;
+  rawBody?: string;
 }
