@@ -214,4 +214,78 @@ stripeRouter.post(
   },
 );
 
+stripeRouter.post(
+  '/api/stripe/subscription/create',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    const { email, priceId } = req.body;
+
+    try {
+      // Create a customer
+      const customer = await stripe.customers.create({
+        email: email,
+      });
+
+      // Create a subscription checkout session
+      const session = await stripe.subscriptions.create({
+        customer: customer.id,
+        items: [{ price: priceId }],
+        metadata: {
+          email: email,
+        },
+        trial_period_days: 7, // 7 day trial
+      });
+
+      res.json({ sessionId: session.id });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
+
+stripeRouter.get(
+  '/api/stripe/subscription/verify',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    const { session_id } = req.query as { session_id: string };
+
+    if (!session_id) {
+      return res.status(400).json({ error: 'Session ID is required' });
+    }
+
+    try {
+      const session = await stripe.checkout.sessions.retrieve(session_id);
+
+      if (!session) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      if (session.payment_status !== 'paid') {
+        return res.status(400).json({ error: 'Payment not completed' });
+      }
+
+      const subscription = await stripe.subscriptions.retrieve(
+        session.subscription as string,
+      );
+
+      if (!subscription) {
+        return res.status(404).json({ error: 'Subscription not found' });
+      }
+
+      res.json({
+        status: subscription.status,
+        trialEnd: subscription.trial_end,
+        startDate: subscription.start_date,
+        customerId: subscription.customer,
+      });
+    } catch (error: any) {
+      logger.error('Error verifying subscription', {
+        error: error.message,
+        sessionId: session_id,
+      });
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
+
 export { stripeRouter };
