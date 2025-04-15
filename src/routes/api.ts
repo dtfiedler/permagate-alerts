@@ -36,8 +36,7 @@ apiRouter.get('/healthcheck', (_, res) => {
 apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
   try {
     const email = req.query.email as string;
-    const { processes = DEFAULT_PROCESS_SUBSCRIPTIONS, premium = false } =
-      JSON.parse(req.body);
+    const { processes = DEFAULT_PROCESS_SUBSCRIPTIONS } = JSON.parse(req.body);
 
     logger.debug(`Received subscribe request`, {
       email,
@@ -81,7 +80,6 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
 
       subscriber ??= await req.db.createNewSubscriber({
         email,
-        premium,
       });
 
       if (!subscriber) {
@@ -92,7 +90,6 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
         email,
         events: validatedEvents.data,
         processId,
-        premium,
       });
 
       // update the subscriber for the process
@@ -106,7 +103,6 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
         email,
         events: validatedEvents.data,
         processId,
-        premium,
       });
     }
 
@@ -185,6 +181,7 @@ apiRouter.get('/api/subscribers/check', async (req: Request, res: Response) => {
 
     return res.status(200).json({
       exists: !!subscriber,
+      premium: subscriber?.premium,
     });
   } catch (error) {
     logger.error('Error checking subscriber existence:', error);
