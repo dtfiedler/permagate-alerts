@@ -321,11 +321,25 @@ stripeRouter.get(
         return res.status(404).json({ error: 'Subscription not found' });
       }
 
+      // Check if subscriber exists
+      const subscriber = await req.db.getSubscriberByEmail(
+        session.customer_email as string,
+      );
+
+      if (subscriber && !subscriber.premium) {
+        // Update existing subscriber to premium
+        await req.db.updateSubscriber(subscriber.id, {
+          id: subscriber.id,
+          premium: true,
+        });
+      }
+
       res.json({
         status: subscription.status,
         trialEnd: subscription.trial_end,
         startDate: subscription.start_date,
         customerId: subscription.customer,
+        premium: subscriber?.premium,
       });
     } catch (error: any) {
       logger.error('Error verifying subscription', {
