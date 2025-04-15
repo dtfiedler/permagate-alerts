@@ -181,7 +181,7 @@ apiRouter.get('/api/subscribers/check', async (req: Request, res: Response) => {
 
     return res.status(200).json({
       exists: !!subscriber,
-      premium: subscriber?.premium,
+      premium: !!subscriber?.premium,
     });
   } catch (error) {
     logger.error('Error checking subscriber existence:', error);
