@@ -11,6 +11,7 @@ services:
       - HOST_URL=${HOST_URL:-http://localhost:3000}
       - SKIP_TO_CURRENT_BLOCK=${SKIP_TO_CURRENT_BLOCK:-true}
       - GQL_URL=${GQL_URL:-https://arweave-search.goldsky.com/graphql}
+      - LOG_LEVEL=${LOG_LEVEL:-}
       - MAILGUN_API_KEY=${MAILGUN_API_KEY:-}
       - MAILGUN_DOMAIN=${MAILGUN_DOMAIN:-}
       - MAILGUN_FROM_EMAIL=${MAILGUN_FROM_EMAIL:-}
