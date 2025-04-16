@@ -1526,9 +1526,13 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           limit: 3,
         })
         // filter out leaving gateways
-        .then((gateways) =>
-          gateways.items.filter((gateway) => gateway.status === 'joined'),
-        )
+        .then((gateways) => {
+          return {
+            items: gateways.items.filter(
+              (gateway) => gateway.status === 'joined',
+            ),
+          };
+        })
         .catch((error: any) => {
           logger.error('Error getting best streaks', {
             eventId: event.eventData.id,
@@ -1545,9 +1549,13 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           limit: 3,
         })
         // filter out leaving gateways
-        .then((gateways) =>
-          gateways.items.filter((gateway) => gateway.status === 'joined'),
-        )
+        .then((gateways) => {
+          return {
+            items: gateways.items.filter(
+              (gateway) => gateway.status === 'joined',
+            ),
+          };
+        })
         .catch((error: any) => {
           logger.error('Error getting worst streaks', {
             eventId: event.eventData.id,
