@@ -18,6 +18,7 @@ stripeRouter.post(
   async (req: Request, res: Response) => {
     logger.debug('Received Stripe webhook', {
       body: req.body,
+      rawBody: req.rawBody,
     });
 
     let event: Stripe.Event;
