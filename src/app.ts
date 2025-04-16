@@ -9,7 +9,7 @@ const app = express();
 const port = process.env.PORT || 3000; // define port with environment variable or default to 3000
 
 // attach database and logger to all requests
-app.use((req: Request, _res: Response, next: NextFunction) => {
+app.use(async (req: Request, _res: Response, next: NextFunction) => {
   // @ts-ignore
   req.db = system.db;
   // @ts-ignore
@@ -20,25 +20,13 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
   req.processor = system.processor;
   // @ts-ignore
   req.arweave = system.arweave;
-  next();
-});
-
-app.use(async (req: Request, _res: Response, next: NextFunction) => {
-  if (req.path === '/api/stripe/webhook') {
-    // @ts-ignore
-    req.rawBody = await getRawBody(req);
-  }
+  // @ts-ignore
+  req.rawBody = await getRawBody(req);
   next();
 });
 
 // Middleware
-app.use((req, res, next) => {
-  if (req.path === '/api/stripe/webhook') {
-    next();
-  } else {
-    express.json()(req, res, next);
-  }
-});
+app.use(express.json());
 app.use(express.text());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
