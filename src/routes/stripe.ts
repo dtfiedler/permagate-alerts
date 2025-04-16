@@ -18,14 +18,13 @@ stripeRouter.post(
   async (req: Request, res: Response) => {
     logger.info('Received Stripe webhook', {
       body: req.body,
-      rawBody: req.rawBody,
     });
 
     let event: Stripe.Event;
 
     try {
       event = stripe.webhooks.constructEvent(
-        req.rawBody,
+        req.body,
         req.headers['stripe-signature'] as string,
         config.stripeWebhookSecret!,
       );
