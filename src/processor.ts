@@ -298,15 +298,14 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       }
     </mj-style>
   </mj-head>
-  <mj-body background-color="#1f2937">
-    <mj-wrapper>
+  <mj-body background-color="#f5f5f5">
+    <mj-wrapper padding="30px">
       <mj-section>
         <mj-column>
           <mj-text
             font-size="24px"
             font-weight="600"
             align="center"
-            color="#ffffff"
           >
             ${event.eventData.from} has failed ${gatewayDetails?.settings.fqdn}
           </mj-text>
@@ -354,23 +353,22 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
               </td>
             </tr>
           </mj-table>
-        </mj-column>
-      </mj-section>
-
-      <mj-section>
-        <mj-column width="60%">
           <mj-button
             background-color="#007bff"
-            color="#ffffff"
             border-radius="5px"
             font-weight="600"
             href="https://ao.link/#/message/${event.eventData.id}"
           >
             View on AO
           </mj-button>
+        </mj-column>
+      </mj-section>
+
+      <mj-section>
+        <mj-column width="60%">
           <mj-text
             font-size="12px"
-            color="#cccccc"
+            color="#afafaf"
             align="center"
           >
             <br/>
@@ -425,15 +423,14 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       }
     </mj-style>
   </mj-head>
-  <mj-body background-color="#1f2937">
-    <mj-wrapper>
+  <mj-body background-color="#f5f5f5">
+    <mj-wrapper padding="30px">
       <mj-section>
         <mj-column>
           <mj-text
             font-size="24px"
             font-weight="600"
             align="center"
-            color="#ffffff"
           >
             Credit Notice
           </mj-text>
@@ -473,23 +470,22 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
               <td width="60%">${amount} $ARIO</td>
             </tr>
           </mj-table>
-        </mj-column>
-      </mj-section>
-
-      <mj-section>
-        <mj-column width="60%">
           <mj-button
             background-color="#007bff"
-            color="#ffffff"
             border-radius="5px"
             font-weight="600"
             href="https://ao.link/#/message/${event.eventData.id}"
           >
             View on AO
           </mj-button>
+        </mj-column>
+      </mj-section>
+
+      <mj-section>
+        <mj-column width="60%">
           <mj-text
             font-size="12px"
-            color="#cccccc"
+            color="#afafaf"
             align="center"
           >
             <br/>
@@ -545,15 +541,14 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       }
     </mj-style>
   </mj-head>
-  <mj-body background-color="#1f2937">
-    <mj-wrapper>
+  <mj-body background-color="#f5f5f5">
+    <mj-wrapper padding="30px">
       <mj-section>
         <mj-column>
           <mj-text
             font-size="24px"
             font-weight="600"
             align="center"
-            color="#ffffff"
           >
             Debit Notice
           </mj-text>
@@ -593,23 +588,22 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
               <td width="60%">${debitAmount} $ARIO</td>
             </tr>
           </mj-table>
-        </mj-column>
-      </mj-section>
-
-      <mj-section>
-        <mj-column width="60%">
           <mj-button
             background-color="#007bff"
-            color="#ffffff"
             border-radius="5px"
             font-weight="600"
             href="https://ao.link/#/message/${event.eventData.id}"
           >
             View on AO
           </mj-button>
+        </mj-column>
+      </mj-section>
+
+      <mj-section>
+        <mj-column width="60%">
           <mj-text
             font-size="12px"
-            color="#cccccc"
+            color="#afafaf"
             align="center"
           >
             <br/>
@@ -670,15 +664,14 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       }
     </mj-style>
   </mj-head>
-  <mj-body background-color="#1f2937">
-    <mj-wrapper>
+  <mj-body background-color="#f5f5f5">
+    <mj-wrapper padding="30px">
       <mj-section>
         <mj-column>
           <mj-text
             font-size="24px"
             font-weight="600"
             align="center"
-            color="#ffffff"
           >
             ${name} has been ${type === 'permabuy' ? 'permabought' : 'leased'}!
           </mj-text>
@@ -734,23 +727,22 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
               </td>
             </tr>
           </mj-table>
-        </mj-column>
-      </mj-section>
-
-      <mj-section>
-        <mj-column width="60%">
           <mj-button
             background-color="#007bff"
-            color="#ffffff"
             border-radius="5px"
             font-weight="600"
             href="https://ao.link/#/message/${event.eventData.id}"
           >
             View on AO
           </mj-button>
+        </mj-column>
+      </mj-section>
+
+      <mj-section>
+        <mj-column width="60%">
           <mj-text
             font-size="12px"
-            color="#cccccc"
+            color="#afafaf"
             align="center"
           >
             <br/>
@@ -788,15 +780,14 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       }
     </mj-style>
   </mj-head>
-  <mj-body background-color="#1f2937">
-    <mj-wrapper>
+  <mj-body background-color="#f5f5f5">
+    <mj-wrapper padding="30px">
       <mj-section>
         <mj-column>
           <mj-text
             font-size="24px"
             font-weight="600"
             align="center"
-            color="#ffffff"
           >
             ${event.eventData.data.settings.fqdn} has joined the network!
           </mj-text>
@@ -856,23 +847,22 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
               </td>
             </tr>
           </mj-table>
-        </mj-column>
-      </mj-section>
-
-      <mj-section>
-        <mj-column width="60%">
           <mj-button
             background-color="#007bff"
-            color="#ffffff"
             border-radius="5px"
             font-weight="600"
             href="https://ao.link/#/message/${event.eventData.id}"
           >
             View on AO
           </mj-button>
+        </mj-column>
+      </mj-section>
+
+      <mj-section>
+        <mj-column width="60%">
           <mj-text
             font-size="12px"
-            color="#cccccc"
+            color="#afafaf"
             align="center"
           >
             <br/>
@@ -910,15 +900,14 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       }
     </mj-style>
   </mj-head>
-  <mj-body background-color="#1f2937">
-    <mj-wrapper>
+  <mj-body background-color="#f5f5f5">
+    <mj-wrapper padding="30px">
       <mj-section>
         <mj-column>
           <mj-text
             font-size="24px"
             font-weight="600"
             align="center"
-            color="#ffffff"
           >
             ${event.eventData.data.settings.fqdn} has left the network
           </mj-text>
@@ -1015,23 +1004,22 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
               <td>${new Date(event.eventData.data.endTimestamp).toLocaleString()}</td>
             </tr>
           </mj-table>
-        </mj-column>
-      </mj-section>
-
-      <mj-section>
-        <mj-column width="60%">
           <mj-button
             background-color="#007bff"
-            color="#ffffff"
             border-radius="5px"
             font-weight="600"
             href="https://ao.link/#/message/${event.eventData.id}"
           >
             View on AO
           </mj-button>
+        </mj-column>
+      </mj-section>
+
+      <mj-section>
+        <mj-column width="60%">
           <mj-text
             font-size="12px"
-            color="#cccccc"
+            color="#afafaf"
             align="center"
           >
             <br/>
@@ -1069,15 +1057,14 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       }
     </mj-style>
   </mj-head>
-  <mj-body background-color="#1f2937">
-    <mj-wrapper>
+  <mj-body background-color="#f5f5f5">
+    <mj-wrapper padding="30px">
       <mj-section>
         <mj-column>
           <mj-text
             font-size="24px"
             font-weight="600"
             align="center"
-            color="#ffffff"
           >
             ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)} has updated their gateway (${event.eventData.data.settings.fqdn})
           </mj-text>
@@ -1129,23 +1116,22 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
               <td width="60%">${event.eventData.data.settings.delegateRewardShareRatio.toFixed(2).toLocaleString() + '%'}</td>
             </tr>
           </mj-table>
-        </mj-column>
-      </mj-section>
-
-      <mj-section>
-        <mj-column width="60%">
           <mj-button
             background-color="#007bff"
-            color="#ffffff"
             border-radius="5px"
             font-weight="600"
             href="https://ao.link/#/message/${event.eventData.id}"
           >
             View on AO
           </mj-button>
+        </mj-column>
+      </mj-section>
+
+      <mj-section>
+        <mj-column width="60%">
           <mj-text
             font-size="12px"
-            color="#cccccc"
+            color="#afafaf"
             align="center"
           >
             <br/>
@@ -1242,15 +1228,14 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       }
     </mj-style>
   </mj-head>
-  <mj-body background-color="#1f2937">
-    <mj-wrapper>
+  <mj-body background-color="#f5f5f5">
+    <mj-wrapper padding="30px">
       <mj-section>
         <mj-column>
           <mj-text
             font-size="24px"
             font-weight="600"
             align="center"
-            color="#ffffff"
           >
             Epoch ${epochIndex} Has Been Created!
           </mj-text>
@@ -1298,20 +1283,6 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
               <td width="60%">${totalEligibleGatewayRewardCreated.toFixed(2).toLocaleString()} $ARIO</td>
             </tr>
           </mj-table>
-        </mj-column>
-      </mj-section>
-
-      ${
-        newGatewaysFqdns && newGatewaysFqdns.length > 0
-          ? `
-      <mj-section
-        background-color="white"
-        border-radius="8px"
-        padding="10px"
-        css-class="shadow-box"
-        width="100%"
-      >
-        <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
@@ -1324,20 +1295,6 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
               ${newGatewaysFqdns.map((fqdn) => `<li>${fqdn}</li>`).join('')}
             </ul>
           </mj-text>
-        </mj-column>
-      </mj-section>
-      `
-          : ''
-      }
-
-      <mj-section
-        background-color="white"
-        border-radius="8px"
-        padding="10px"
-        css-class="shadow-box"
-        width="100%"
-      >
-        <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
@@ -1355,17 +1312,6 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
                 .join('')}
             </ul>
           </mj-text>
-        </mj-column>
-      </mj-section>
-
-      <mj-section
-        background-color="white"
-        border-radius="8px"
-        padding="10px"
-        css-class="shadow-box"
-        width="100%"
-      >
-        <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
@@ -1373,24 +1319,9 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           >
             Prescribed Observers
           </mj-text>
-        </mj-column>
-      </mj-section>
-
-      <mj-section
-        background-color="white"
-        border-radius="8px"
-        padding="10px"
-        css-class="shadow-box"
-        width="100%"
-      >
-        <mj-column width="33%">
           <mj-text color="#333333">
             <ul>
               ${Object.entries(prescribedGatewayFqdns)
-                .slice(
-                  0,
-                  Math.ceil(Object.keys(prescribedGatewayFqdns).length / 3),
-                )
                 .map(
                   ([address, fqdn]) =>
                     `<li>${fqdn} (${address.slice(0, 6)}...${address.slice(-4)})</li>`,
@@ -1398,56 +1329,22 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
                 .join('')}
             </ul>
           </mj-text>
-        </mj-column>
-
-        <mj-column width="33%">
-          <mj-text color="#333333">
-            <ul>
-              ${Object.entries(prescribedGatewayFqdns)
-                .slice(
-                  Math.ceil(Object.keys(prescribedGatewayFqdns).length / 3),
-                  Math.ceil(Object.keys(prescribedGatewayFqdns).length / 3) * 2,
-                )
-                .map(
-                  ([address, fqdn]) =>
-                    `<li>${fqdn} (${address.slice(0, 6)}...${address.slice(-4)})</li>`,
-                )
-                .join('')}
-            </ul>
-          </mj-text>
-        </mj-column>
-
-        <mj-column width="33%">
-          <mj-text color="#333333">
-            <ul>
-              ${Object.entries(prescribedGatewayFqdns)
-                .slice(
-                  Math.ceil(Object.keys(prescribedGatewayFqdns).length / 3) * 2,
-                )
-                .map(
-                  ([address, fqdn]) =>
-                    `<li>${fqdn} (${address.slice(0, 6)}...${address.slice(-4)})</li>`,
-                )
-                .join('')}
-            </ul>
-          </mj-text>
-        </mj-column>
-      </mj-section>
-
-      <mj-section>
-        <mj-column width="60%">
           <mj-button
             background-color="#007bff"
-            color="#ffffff"
             border-radius="5px"
             font-weight="600"
             href="https://ao.link/#/message/${event.eventData.id}"
           >
             View on AO
           </mj-button>
+        </mj-column>
+      </mj-section>
+
+      <mj-section>
+        <mj-column width="60%">
           <mj-text
             font-size="12px"
-            color="#cccccc"
+            color="#afafaf"
             align="center"
           >
             <br/>
@@ -1566,15 +1463,14 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       }
     </mj-style>
   </mj-head>
-  <mj-body background-color="#1f2937">
-    <mj-wrapper>
+  <mj-body background-color="#f5f5f5">
+    <mj-wrapper padding="30px">
       <mj-section>
         <mj-column>
           <mj-text
             font-size="24px"
             font-weight="600"
             align="center"
-            color="#ffffff"
           >
             Epoch ${distributedEpochIndex} Observation Results
           </mj-text>
@@ -1614,18 +1510,8 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
               <td width="60%">${totalGatewaysPassed} (${((totalGatewaysPassed / totalEligibleGateways) * 100).toFixed(2)}%)</td>
             </tr>
           </mj-table>
-        </mj-column>
-      </mj-section>
 
-      <mj-section
-        background-color="white"
-        border-radius="8px"
-        padding="10px"
-        css-class="shadow-box"
-        width="100%"
-      >
-        <mj-column>
-          <mj-text
+            <mj-text
             font-size="18px"
             font-weight="600"
             color="#101010"
@@ -1654,20 +1540,6 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
               <td width="60%">${distributedTimestamp}</td>
             </tr>
           </mj-table>
-        </mj-column>
-      </mj-section>
-
-      ${
-        bestStreaks.items && bestStreaks.items.length > 0
-          ? `
-      <mj-section
-        background-color="white"
-        border-radius="8px"
-        padding="10px"
-        css-class="shadow-box"
-        width="100%"
-      >
-        <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
@@ -1686,23 +1558,6 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
               )
               .join('')}
           </mj-table>
-        </mj-column>
-      </mj-section>
-      `
-          : ''
-      }
-
-      ${
-        worstStreaks.items && worstStreaks.items.length > 0
-          ? `
-      <mj-section
-        background-color="white"
-        border-radius="8px"
-        padding="10px"
-        css-class="shadow-box"
-        width="100%"
-      >
-        <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
@@ -1721,26 +1576,22 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
               )
               .join('')}
           </mj-table>
-        </mj-column>
-      </mj-section>
-      `
-          : ''
-      }
-
-      <mj-section>
-        <mj-column width="60%">
           <mj-button
             background-color="#007bff"
-            color="#ffffff"
             border-radius="5px"
             font-weight="600"
             href="https://ao.link/#/message/${event.eventData.id}"
           >
             View on AO
           </mj-button>
+        </mj-column>
+      </mj-section>
+
+      <mj-section>
+        <mj-column width="60%">
           <mj-text
             font-size="12px"
-            color="#cccccc"
+            color="#afafaf"
             align="center"
           >
             <br/>
@@ -1778,15 +1629,14 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       }
     </mj-style>
   </mj-head>
-  <mj-body background-color="#1f2937">
-    <mj-wrapper>
+  <mj-body background-color="#f5f5f5">
+    <mj-wrapper padding="30px">
       <mj-section>
         <mj-column>
           <mj-text
             font-size="24px"
             font-weight="600"
             align="center"
-            color="#ffffff"
           >
             Event Details
           </mj-text>
@@ -1822,23 +1672,22 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
               )
               .join('')}
           </mj-table>
-        </mj-column>
-      </mj-section>
-
-      <mj-section>
-        <mj-column width="60%">
           <mj-button
             background-color="#007bff"
-            color="#ffffff"
             border-radius="5px"
             font-weight="600"
             href="https://ao.link/#/message/${event.eventData.id}"
           >
             View on AO
           </mj-button>
+        </mj-column>
+      </mj-section>
+
+      <mj-section>
+        <mj-column width="60%">
           <mj-text
             font-size="12px"
-            color="#cccccc"
+            color="#afafaf"
             align="center"
           >
             <br/>
