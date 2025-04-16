@@ -10,6 +10,7 @@
   - [ ] Discord
 - [ ] Better email formatting/styling
 - [ ] More performance stats in epoch distribution emails
+- [ ] Audit log for emails sent to subscribers
 
 ### In Progress
 
