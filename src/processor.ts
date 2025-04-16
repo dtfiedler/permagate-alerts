@@ -259,8 +259,8 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
     case 'failed-observation-notice':
       const observations = await ario.getObservations();
       const failureSummaries =
-        observations.failureSummaries[event.eventData.target] || [];
-      const totalObservations = Object.keys(observations.reports || {}).length;
+        observations?.failureSummaries[event.eventData.target] || [];
+      const totalObservations = Object.keys(observations?.reports || {}).length;
       const failurePercentage =
         (failureSummaries.length / totalObservations) * 100;
       const status = failurePercentage > 50 ? 'FAILING' : 'PASSING';
@@ -311,7 +311,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           align="center"
           padding-bottom="0"
         >
-            ${event.eventData.from} has failed ${gatewayDetails.settings.fqdn}
+          ${event.eventData.from} has failed ${gatewayDetails?.settings.fqdn}
         </mj-text>
       </mj-column>
     </mj-section>
@@ -340,7 +340,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
             </tr>
             <tr>
               <th width="40%"># Failures</th>
-              <td width="60%">${observations.failureSummaries[event.eventData.target].length}/${totalObservations}</td>
+              <td width="60%">${observations?.failureSummaries[event.eventData.target]?.length}/${totalObservations}</td>
             </tr>
             <tr>
               <th width="40%">Status</th>
@@ -353,8 +353,8 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
             <tr>
               <th width="40%">Report</th>
               <td width="60%">
-                <a href="https://arweave.net/${observations.reports[event.eventData.target]}" style="color: #007bff; text-decoration: none;">
-                  ${observations.reports[event.eventData.target]}
+                <a href="https://arweave.net/${observations?.reports[event.eventData.target]}" style="color: #007bff; text-decoration: none;">
+                  ${observations?.reports[event.eventData.target]}
                 </a>
               </td>
             </tr>
