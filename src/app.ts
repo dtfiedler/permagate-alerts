@@ -20,8 +20,10 @@ app.use(async (req: Request, _res: Response, next: NextFunction) => {
   req.processor = system.processor;
   // @ts-ignore
   req.arweave = system.arweave;
-  // @ts-ignore
-  req.rawBody = await getRawBody(req);
+  if (req.path === '/api/stripe/webhook') {
+    // @ts-ignore
+    req.rawBody = await getRawBody(req);
+  }
   next();
 });
 

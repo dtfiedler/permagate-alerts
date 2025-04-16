@@ -102,6 +102,9 @@ describe('container', function () {
       'http://localhost:3000/api/subscribe?email=test@example.com',
       {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           email: 'test@example.com',
           processes: {
@@ -193,6 +196,7 @@ describe('container', function () {
       {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'x-user-email': 'test@example.com',
           Authorization: `Bearer ${authToken}.${authHash}`,
         },
