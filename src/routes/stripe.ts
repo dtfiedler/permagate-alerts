@@ -16,7 +16,7 @@ stripeRouter.post(
   express.raw({ type: 'application/json' }),
   // @ts-ignore
   async (req: Request, res: Response) => {
-    logger.info('Received Stripe webhook', {
+    logger.debug('Received Stripe webhook', {
       body: req.body,
     });
 
