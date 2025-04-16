@@ -217,7 +217,7 @@ const getEmailSubjectForEvent = async (event: NewEvent) => {
       const gatewayDetails = await ario.getGateway({
         address: event.eventData.target,
       });
-      return `❌ ${event.eventData.from?.slice(0, 6)}...${event.eventData.from?.slice(-4)} marked ${gatewayDetails.settings.fqdn || event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)} as failed!`;
+      return `❌ ${event.eventData.from?.slice(0, 6)}...${event.eventData.from?.slice(-4)} marked ${gatewayDetails?.settings.fqdn || event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)} as failed!`;
     case 'epoch-created-notice':
       return `🔭 Epoch ${event.eventData.data.epochIndex} has been created!`;
     case 'epoch-distribution-notice':
