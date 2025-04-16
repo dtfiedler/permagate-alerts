@@ -3,7 +3,7 @@ import { logger } from '../logger.js';
 import { Router, Response } from 'express';
 import { Request } from '../types.js';
 import * as config from '../config.js';
-
+import express from 'express';
 const stripeRouter = Router();
 
 const stripe = new Stripe(config.stripeSecretKey!, {
@@ -13,6 +13,7 @@ const stripe = new Stripe(config.stripeSecretKey!, {
 // @ts-ignore
 stripeRouter.post(
   '/api/stripe/webhook',
+  express.raw({ type: 'application/json' }),
   // @ts-ignore
   async (req: Request, res: Response) => {
     logger.debug('Received Stripe webhook', {
