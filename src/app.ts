@@ -28,6 +28,7 @@ app.use(async (req: Request, _res: Response, next: NextFunction) => {
 });
 
 // Middleware
+app.use(express.raw());
 app.use(express.json());
 app.use(express.text());
 app.use(express.urlencoded({ extended: false }));
