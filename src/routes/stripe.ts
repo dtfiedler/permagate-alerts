@@ -147,6 +147,7 @@ stripeRouter.post(
 
 stripeRouter.post(
   '/api/stripe/create-checkout-session',
+  express.json(),
   // @ts-ignore
   async (req: Request, res: Response) => {
     const { email, priceId } = req.body;
@@ -178,6 +179,7 @@ stripeRouter.post(
 
 stripeRouter.get(
   '/api/stripe/verify-payment',
+  express.json(),
   // @ts-ignore
   async (req: Request, res: Response) => {
     const { session_id } = req.query as { session_id: string };
@@ -230,6 +232,7 @@ stripeRouter.get(
 
 stripeRouter.post(
   '/api/stripe/create-payment-intent',
+  express.json(),
   // @ts-ignore
   async (req: Request, res: Response) => {
     const { email, priceId } = req.body;
@@ -266,6 +269,7 @@ stripeRouter.post(
 
 stripeRouter.post(
   '/api/stripe/subscription/create',
+  express.json(),
   // @ts-ignore
   async (req: Request, res: Response) => {
     const { email, priceId } = req.body;
@@ -295,6 +299,7 @@ stripeRouter.post(
 
 stripeRouter.get(
   '/api/stripe/subscription/verify',
+  express.json(),
   // @ts-ignore
   async (req: Request, res: Response) => {
     const { session_id } = req.query as { session_id: string };

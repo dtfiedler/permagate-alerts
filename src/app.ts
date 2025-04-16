@@ -3,6 +3,7 @@ import { default as cors } from 'cors';
 import { logger } from './logger.js';
 import { router } from './router.js';
 import * as system from './system.js';
+import { stripeRouter } from './routes/stripe.js';
 
 const app = express();
 const port = process.env.PORT || 3000; // define port with environment variable or default to 3000
@@ -22,7 +23,10 @@ app.use(async (req: Request, _res: Response, next: NextFunction) => {
   next();
 });
 
-// Middleware
+// stripe added before any middleware as we need to parse the raw body
+app.use(stripeRouter);
+
+// middleware
 app.use(express.json());
 app.use(express.text());
 app.use(express.urlencoded({ extended: false }));
