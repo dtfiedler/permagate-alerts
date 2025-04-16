@@ -326,7 +326,7 @@ export class GQLEventPoller implements EventPoller {
     // if it is a save-observations-notice, find the related message that includes the failed-gateway addresses
     // get the reports from the target
     const [messageTags] = await fetchMessageTagsForTxId([event.id], gqlUrl);
-    const failedGatewayAddressesString = messageTags.tags.find(
+    const failedGatewayAddressesString = messageTags?.tags.find(
       (t) => t.name === 'Failed-Gateways',
     )?.value;
     if (failedGatewayAddressesString) {
