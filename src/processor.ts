@@ -277,10 +277,10 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
 <mjml>
   <mj-head>
     <mj-title>Failed Observation Notice</mj-title>
-    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-font name="Geist" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" />
     <mj-attributes>
-      <mj-all font-family="Inter, sans-serif" />
-      <mj-text font-size="14px" color="#333" line-height="1.5" />
+      <mj-all font-family="Geist, sans-serif" />
+      <mj-text font-size="12px" color="#333" line-height="1.5" />
     </mj-attributes>
     <mj-style inline="inline">
       .info-table th {
@@ -293,47 +293,42 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         text-align: left !important;
         padding: 6px !important;
       }
-    </mj-style> 
+      .shadow-box {
+        box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
+      }
+    </mj-style>
   </mj-head>
-  <mj-body background-color="#0f0f0f">
-    <!-- Top Padding -->
-    <mj-section padding="20px 0">
-      <mj-column></mj-column>
-    </mj-section>
+  <mj-body background-color="#1f2937">
+    <mj-wrapper>
+      <mj-section>
+        <mj-column>
+          <mj-text
+            font-size="24px"
+            font-weight="600"
+            align="center"
+            color="#ffffff"
+          >
+            ${event.eventData.from} has failed ${gatewayDetails?.settings.fqdn}
+          </mj-text>
+        </mj-column>
+      </mj-section>
 
-    <!-- Header Section -->
-    <mj-section background-color="#1c1c1c" padding="30px 20px">
-      <mj-column>
-        <mj-text
-          color="#ffffff"
-          font-size="24px"
-          font-weight="600"
-          align="center"
-          padding-bottom="0"
-        >
-          ${event.eventData.from} has failed ${gatewayDetails?.settings.fqdn}
-        </mj-text>
-      </mj-column>
-    </mj-section>
-
-    <!-- White Card Wrapper -->
-    <mj-wrapper
-      background-color="#ffffff"
-      border-radius="8px"
-      padding="20px 0"
-      css-class="card-container"
-    >
-      <mj-section padding="0">
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
         <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
             color="#101010"
-            padding="0 20px 10px"
           >
             Details
           </mj-text>
-          <mj-table css-class="info-table" padding="0 20px 20px">
+          <mj-table css-class="info-table">
             <tr>
               <th width="40%"># Observations (submitted/prescribed)</th>
               <td width="60%">${totalObservations}/${totalPrescribedObservers}</td>
@@ -361,35 +356,29 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           </mj-table>
         </mj-column>
       </mj-section>
-    </mj-wrapper>
-    <!-- Footer Section -->
-    <mj-section background-color="#1c1c1c" padding="20px">
-      <mj-column>
-        <mj-button
-          background-color="#007bff"
-          color="#ffffff"
-          border-radius="5px"
-          font-weight="600"
-          href="https://ao.link/#/message/${event.eventData.id}"
-        >
-          View on AO
-        </mj-button>
-        <mj-text
-          font-size="12px"
-          color="#cccccc"
-          align="center"
-        >
 
-          <br/>
-          You are receiving this email because you subscribed to subscribe.permagate.io
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    
-    <!-- Bottom Padding -->
-    <mj-section padding="20px 0">
-      <mj-column></mj-column>
-    </mj-section>
+      <mj-section>
+        <mj-column width="60%">
+          <mj-button
+            background-color="#007bff"
+            color="#ffffff"
+            border-radius="5px"
+            font-weight="600"
+            href="https://ao.link/#/message/${event.eventData.id}"
+          >
+            View on AO
+          </mj-button>
+          <mj-text
+            font-size="12px"
+            color="#cccccc"
+            align="center"
+          >
+            <br/>
+            You are receiving this email because you subscribed to subscribe.permagate.io
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
   </mj-body>
 </mjml>
   `;
@@ -414,11 +403,11 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       return `
 <mjml>
   <mj-head>
-    <mj-title>Debit Notice</mj-title>
-    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-title>Credit Notice</mj-title>
+    <mj-font name="Geist" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" />
     <mj-attributes>
-      <mj-all font-family="Inter, sans-serif" />
-      <mj-text font-size="14px" color="#333" line-height="1.5" />
+      <mj-all font-family="Geist, sans-serif" />
+      <mj-text font-size="12px" color="#333" line-height="1.5" />
     </mj-attributes>
     <mj-style inline="inline">
       .info-table th {
@@ -431,48 +420,42 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         text-align: left !important;
         padding: 6px !important;
       }
-    </mj-style> 
+      .shadow-box {
+        box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
+      }
+    </mj-style>
   </mj-head>
-  <mj-body background-color="#0f0f0f">
-    <!-- Top Padding -->
-    <mj-section padding="20px 0">
-      <mj-column></mj-column>
-    </mj-section>
-    
-    <!-- Header Section -->
-    <mj-section background-color="#1c1c1c" padding="30px 20px">
-      <mj-column>
-        <mj-text
-          color="#ffffff"
-          font-size="24px"
-          font-weight="600"
-          align="center"
-          padding-bottom="0"
-        >
-          Credit Notice
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    
-    <!-- White Card Wrapper -->
-    <mj-wrapper
-      background-color="#ffffff"
-      border-radius="8px"
-      padding="20px 0"
-      css-class="card-container"
-    >
-      <!-- Credit Details Section -->
-      <mj-section padding="0">
+  <mj-body background-color="#1f2937">
+    <mj-wrapper>
+      <mj-section>
+        <mj-column>
+          <mj-text
+            font-size="24px"
+            font-weight="600"
+            align="center"
+            color="#ffffff"
+          >
+            Credit Notice
+          </mj-text>
+        </mj-column>
+      </mj-section>
+
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
         <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
             color="#101010"
-            padding="0 20px 10px"
           >
             Transaction Details
           </mj-text>
-          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+          <mj-table css-class="info-table">
             <tr>
               <th width="40%">Transaction ID</th>
               <td width="60%"><a href="https://ao.link/#/message/${event.eventData.id}" style="color: #007bff; text-decoration: underline;">${event.eventData.id}</a></td>
@@ -484,7 +467,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
             <tr>
               <th width="40%">Recipient</th>
               <td width="60%">${creditNoticeRecipient}</td>
-            </tr> 
+            </tr>
             <tr>
               <th width="40%">Amount</th>
               <td width="60%">${amount} $ARIO</td>
@@ -492,36 +475,29 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           </mj-table>
         </mj-column>
       </mj-section>
-    </mj-wrapper>
-    
-    <!-- Footer Section -->
-    <mj-section background-color="#1c1c1c" padding="20px">
-      <mj-column>
-        <mj-button
-          background-color="#007bff"
-          color="#ffffff"
-          border-radius="5px"
-          font-weight="600"
-          href="https://ao.link/#/message/${event.eventData.id}"
-        >
-          View on AO
-        </mj-button>
-        <mj-text
-          font-size="12px"
-          color="#cccccc"
-          align="center"
-        >
 
-          <br/>
-          You are receiving this email because you subscribed to subscribe.permagate.io
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    
-    <!-- Bottom Padding -->
-    <mj-section padding="20px 0">
-      <mj-column></mj-column>
-    </mj-section>
+      <mj-section>
+        <mj-column width="60%">
+          <mj-button
+            background-color="#007bff"
+            color="#ffffff"
+            border-radius="5px"
+            font-weight="600"
+            href="https://ao.link/#/message/${event.eventData.id}"
+          >
+            View on AO
+          </mj-button>
+          <mj-text
+            font-size="12px"
+            color="#cccccc"
+            align="center"
+          >
+            <br/>
+            You are receiving this email because you subscribed to subscribe.permagate.io
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
   </mj-body>
 </mjml>
   `;
@@ -548,10 +524,10 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
 <mjml>
   <mj-head>
     <mj-title>Debit Notice</mj-title>
-    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-font name="Geist" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" />
     <mj-attributes>
-      <mj-all font-family="Inter, sans-serif" />
-      <mj-text font-size="14px" color="#333" line-height="1.5" />
+      <mj-all font-family="Geist, sans-serif" />
+      <mj-text font-size="12px" color="#333" line-height="1.5" />
     </mj-attributes>
     <mj-style inline="inline">
       .info-table th {
@@ -564,48 +540,42 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         text-align: left !important;
         padding: 6px !important;
       }
+      .shadow-box {
+        box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
+      }
     </mj-style>
   </mj-head>
+  <mj-body background-color="#1f2937">
+    <mj-wrapper>
+      <mj-section>
+        <mj-column>
+          <mj-text
+            font-size="24px"
+            font-weight="600"
+            align="center"
+            color="#ffffff"
+          >
+            Debit Notice
+          </mj-text>
+        </mj-column>
+      </mj-section>
 
-  <mj-body background-color="#0f0f0f">
-    <!-- Top Padding -->
-    <mj-section padding="20px 0">
-      <mj-column></mj-column>
-    </mj-section>
-
-    <!-- Header Section -->
-    <mj-section background-color="#1c1c1c" padding="30px 20px">
-      <mj-column>
-        <mj-text
-          color="#ffffff"
-          font-size="24px"
-          font-weight="600"
-          align="center"
-          padding-bottom="0"
-        >
-          Debit Notice
-        </mj-text>
-      </mj-column>
-    </mj-section>
-
-    <!-- White Card Wrapper -->
-    <mj-wrapper
-      background-color="#ffffff"
-      border-radius="8px"
-      padding="20px 0"
-      css-class="card-container"
-    >
-      <mj-section padding="0">
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
         <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
             color="#101010"
-            padding="0 20px 10px"
           >
             Transaction Details
           </mj-text>
-          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+          <mj-table css-class="info-table">
             <tr>
               <th width="40%">Transaction ID</th>
               <td width="60%"><a href="https://ao.link/#/message/${event.eventData.id}" style="color: #007bff; text-decoration: underline;">${event.eventData.id}</a></td>
@@ -625,36 +595,29 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           </mj-table>
         </mj-column>
       </mj-section>
-    </mj-wrapper>
-    
-    <!-- Footer Section -->
-    <mj-section background-color="#1c1c1c" padding="20px">
-      <mj-column>
-        <mj-button
-          background-color="#007bff"
-          color="#ffffff"
-          border-radius="5px"
-          font-weight="600"
-          href="https://ao.link/#/message/${event.eventData.id}"
-        >
-          View on AO
-        </mj-button>
-        <mj-text
-          font-size="12px"
-          color="#cccccc"
-          align="center"
-        >
 
-          <br/>
-          You are receiving this email because you subscribed to subscribe.permagate.io
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    
-    <!-- Bottom Padding -->
-    <mj-section padding="20px 0">
-      <mj-column></mj-column>
-    </mj-section>
+      <mj-section>
+        <mj-column width="60%">
+          <mj-button
+            background-color="#007bff"
+            color="#ffffff"
+            border-radius="5px"
+            font-weight="600"
+            href="https://ao.link/#/message/${event.eventData.id}"
+          >
+            View on AO
+          </mj-button>
+          <mj-text
+            font-size="12px"
+            color="#cccccc"
+            align="center"
+          >
+            <br/>
+            You are receiving this email because you subscribed to subscribe.permagate.io
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
   </mj-body>
 </mjml>
   `;
@@ -686,10 +649,10 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
 <mjml>
   <mj-head>
     <mj-title>Name Purchase Notice</mj-title>
-    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-font name="Geist" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" />
     <mj-attributes>
-      <mj-all font-family="Inter, sans-serif" />
-      <mj-text font-size="14px" color="#333" line-height="1.5" />
+      <mj-all font-family="Geist, sans-serif" />
+      <mj-text font-size="12px" color="#333" line-height="1.5" />
     </mj-attributes>
     <mj-style inline="inline">
       .info-table th {
@@ -702,56 +665,42 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         text-align: left !important;
         padding: 6px !important;
       }
-      ul {
-        margin: 5px 0 !important;
-        padding-left: 20px !important;
-      }
-      li {
-        margin: 5px 0 !important;
+      .shadow-box {
+        box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
       }
     </mj-style>
   </mj-head>
+  <mj-body background-color="#1f2937">
+    <mj-wrapper>
+      <mj-section>
+        <mj-column>
+          <mj-text
+            font-size="24px"
+            font-weight="600"
+            align="center"
+            color="#ffffff"
+          >
+            ${name} has been ${type === 'permabuy' ? 'permabought' : 'leased'}!
+          </mj-text>
+        </mj-column>
+      </mj-section>
 
-  <mj-body background-color="#0f0f0f">
-    <!-- Top Padding -->
-    <mj-section padding="20px 0">
-      <mj-column></mj-column>
-    </mj-section>
-    
-    <!-- Header Section -->
-    <mj-section background-color="#1c1c1c" padding="30px 20px">
-      <mj-column>
-        <mj-text
-          color="#ffffff"
-          font-size="24px"
-          font-weight="600"
-          align="center"
-          padding-bottom="0"
-        >
-          ${name} has been ${type === 'permabuy' ? 'permabought' : 'leased'}!
-        </mj-text>
-      </mj-column>
-    </mj-section>
-
-    <!-- White Card Wrapper -->
-    <mj-wrapper
-      background-color="#ffffff"
-      border-radius="8px"
-      padding="20px 0"
-      css-class="card-container"
-    >
-      <!-- Name Details Section -->
-      <mj-section padding="0">
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
         <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
             color="#101010"
-            padding="0 20px 10px"
           >
             Details
           </mj-text>
-          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+          <mj-table css-class="info-table">
             <tr>
               <th width="40%">Name</th>
               <td width="60%"><a href="https://${name}.permagate.io" style="color: #007bff; text-decoration: none;">${name}</a></td>
@@ -788,9 +737,8 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         </mj-column>
       </mj-section>
 
-      <!-- View on AO Button -->
-      <mj-section padding="10px 0 20px">
-        <mj-column>
+      <mj-section>
+        <mj-column width="60%">
           <mj-button
             background-color="#007bff"
             color="#ffffff"
@@ -800,35 +748,17 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           >
             View on AO
           </mj-button>
+          <mj-text
+            font-size="12px"
+            color="#cccccc"
+            align="center"
+          >
+            <br/>
+            You are receiving this email because you subscribed to subscribe.permagate.io
+          </mj-text>
         </mj-column>
       </mj-section>
-
-      <!--[if mso | IE]>
-        </td>
-        </tr>
-        </table>
-      <![endif]-->
     </mj-wrapper>
-
-    <!-- Footer Section -->
-    <mj-section background-color="#1c1c1c" padding="20px">
-      <mj-column>
-        <mj-text
-          font-size="12px"
-          color="#cccccc"
-          align="center"
-        >
-
-          <br/>
-          You are receiving this email because you subscribed to subscribe.permagate.io
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    
-    <!-- Bottom Padding -->
-    <mj-section padding="20px 0">
-      <mj-column></mj-column>
-    </mj-section>
   </mj-body>
 </mjml>
   `;
@@ -837,10 +767,10 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
 <mjml>
   <mj-head>
     <mj-title>${event.eventData.data.settings.fqdn} has joined the network!</mj-title>
-    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-font name="Geist" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" />
     <mj-attributes>
-      <mj-all font-family="Inter, sans-serif" />
-      <mj-text font-size="14px" color="#333" line-height="1.5" />
+      <mj-all font-family="Geist, sans-serif" />
+      <mj-text font-size="12px" color="#333" line-height="1.5" />
     </mj-attributes>
     <mj-style inline="inline">
       .info-table th {
@@ -853,56 +783,42 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         text-align: left !important;
         padding: 6px !important;
       }
-      ul {
-        margin: 5px 0 !important;
-        padding-left: 20px !important;
-      }
-      li {
-        margin: 5px 0 !important;
+      .shadow-box {
+        box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
       }
     </mj-style>
   </mj-head>
+  <mj-body background-color="#1f2937">
+    <mj-wrapper>
+      <mj-section>
+        <mj-column>
+          <mj-text
+            font-size="24px"
+            font-weight="600"
+            align="center"
+            color="#ffffff"
+          >
+            ${event.eventData.data.settings.fqdn} has joined the network!
+          </mj-text>
+        </mj-column>
+      </mj-section>
 
-  <mj-body background-color="#0f0f0f">
-    <!-- Top Padding -->
-    <mj-section padding="20px 0">
-      <mj-column></mj-column>
-    </mj-section>
-    
-    <!-- Header Section -->
-    <mj-section background-color="#1c1c1c" padding="30px 20px">
-      <mj-column>
-        <mj-text
-          color="#ffffff"
-          font-size="24px"
-          font-weight="600"
-          align="center"
-          padding-bottom="0"
-        >
-          ${event.eventData.data.settings.fqdn} has joined the network!
-        </mj-text>
-      </mj-column>
-    </mj-section>
-
-    <!-- White Card Wrapper -->
-    <mj-wrapper
-      background-color="#ffffff"
-      border-radius="8px"
-      padding="20px 0"
-      css-class="card-container"
-    >
-      <!-- Gateway Info Section -->
-      <mj-section padding="0">
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
         <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
             color="#101010"
-            padding="0 20px 10px"
           >
             Details
           </mj-text>
-          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+          <mj-table css-class="info-table">
             <tr>
               <th width="40%">FQDN</th>
               <td width="60%">${event.eventData.data.settings.fqdn}</td>
@@ -943,9 +859,8 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         </mj-column>
       </mj-section>
 
-      <!-- View on AO Button -->
-      <mj-section padding="10px 0 20px">
-        <mj-column>
+      <mj-section>
+        <mj-column width="60%">
           <mj-button
             background-color="#007bff"
             color="#ffffff"
@@ -955,35 +870,17 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           >
             View on AO
           </mj-button>
+          <mj-text
+            font-size="12px"
+            color="#cccccc"
+            align="center"
+          >
+            <br/>
+            You are receiving this email because you subscribed to subscribe.permagate.io
+          </mj-text>
         </mj-column>
       </mj-section>
-
-      <!--[if mso | IE]>
-        </td>
-        </tr>
-        </table>
-      <![endif]-->
     </mj-wrapper>
-
-    <!-- Footer Section -->
-    <mj-section background-color="#1c1c1c" padding="20px">
-      <mj-column>
-        <mj-text
-          font-size="12px"
-          color="#cccccc"
-          align="center"
-        >
-
-          <br/>
-          You are receiving this email because you subscribed to subscribe.permagate.io
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    
-    <!-- Bottom Padding -->
-    <mj-section padding="20px 0">
-      <mj-column></mj-column>
-    </mj-section>
   </mj-body>
 </mjml>
       `;
@@ -992,10 +889,10 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
 <mjml>
   <mj-head>
     <mj-title>Gateway Left Network</mj-title>
-    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-font name="Geist" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" />
     <mj-attributes>
-      <mj-all font-family="Inter, sans-serif" />
-      <mj-text font-size="14px" color="#333" line-height="1.5" />
+      <mj-all font-family="Geist, sans-serif" />
+      <mj-text font-size="12px" color="#333" line-height="1.5" />
     </mj-attributes>
     <mj-style inline="inline">
       .info-table th {
@@ -1008,48 +905,42 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         text-align: left !important;
         padding: 6px !important;
       }
+      .shadow-box {
+        box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
+      }
     </mj-style>
   </mj-head>
-  <mj-body background-color="#0f0f0f">
-    <!-- Top Padding -->
-    <mj-section padding="20px 0">
-      <mj-column></mj-column>
-    </mj-section>
-    
-    <!-- Header Section -->
-    <mj-section background-color="#1c1c1c" padding="30px 20px">
-      <mj-column>
-        <mj-text
-          color="#ffffff"
-          font-size="24px"
-          font-weight="600"
-          align="center"
-          padding-bottom="0"
-        >
-          ${event.eventData.data.settings.fqdn} has left the network
-        </mj-text>
-      </mj-column>
-    </mj-section>
+  <mj-body background-color="#1f2937">
+    <mj-wrapper>
+      <mj-section>
+        <mj-column>
+          <mj-text
+            font-size="24px"
+            font-weight="600"
+            align="center"
+            color="#ffffff"
+          >
+            ${event.eventData.data.settings.fqdn} has left the network
+          </mj-text>
+        </mj-column>
+      </mj-section>
 
-    <!-- White Card Wrapper -->
-    <mj-wrapper
-      background-color="#ffffff"
-      border-radius="8px"
-      padding="20px 0"
-      css-class="card-container"
-    >
-      <!-- Gateway Details Section -->
-      <mj-section padding="0">
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
         <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
             color="#101010"
-            padding="0 20px 10px"
           >
             Gateway Details
           </mj-text>
-          <mj-table css-class="info-table" padding="0 20px 20px">
+          <mj-table css-class="info-table">
             <tr>
               <th>Gateway FQDN</th>
               <td>${event.eventData.data.settings.fqdn}</td>
@@ -1127,9 +1018,8 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         </mj-column>
       </mj-section>
 
-      <!-- View on AO Button -->
-      <mj-section padding="10px 0 20px">
-        <mj-column>
+      <mj-section>
+        <mj-column width="60%">
           <mj-button
             background-color="#007bff"
             color="#ffffff"
@@ -1139,28 +1029,17 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           >
             View on AO
           </mj-button>
+          <mj-text
+            font-size="12px"
+            color="#cccccc"
+            align="center"
+          >
+            <br/>
+            You are receiving this email because you subscribed to subscribe.permagate.io
+          </mj-text>
         </mj-column>
       </mj-section>
     </mj-wrapper>
-
-    <!-- Footer Section -->
-    <mj-section background-color="#1c1c1c" padding="20px">
-      <mj-column>
-        <mj-text
-          font-size="12px"
-          color="#cccccc"
-          align="center"
-        >
-          <br/>
-          You are receiving this email because you subscribed to subscribe.permagate.io
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    
-    <!-- Bottom Padding -->
-    <mj-section padding="20px 0">
-      <mj-column></mj-column>
-    </mj-section>
   </mj-body>
 </mjml>
       `;
@@ -1169,10 +1048,10 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
 <mjml>
   <mj-head>
     <mj-title>Gateway Settings Update</mj-title>
-    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-font name="Geist" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" />
     <mj-attributes>
-      <mj-all font-family="Inter, sans-serif" />
-      <mj-text font-size="14px" color="#333" line-height="1.5" />
+      <mj-all font-family="Geist, sans-serif" />
+      <mj-text font-size="12px" color="#333" line-height="1.5" />
     </mj-attributes>
     <mj-style inline="inline">
       .info-table th {
@@ -1185,43 +1064,42 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         text-align: left !important;
         padding: 6px !important;
       }
-    </mj-style> 
+      .shadow-box {
+        box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
+      }
+    </mj-style>
   </mj-head>
-  <mj-body background-color="#0f0f0f">
-    <!-- Header Section -->
-    <mj-section background-color="#1c1c1c" padding="20px">
-      <mj-column>
-        <mj-text
-          color="#ffffff"
-          font-size="24px"
-          font-weight="600"
-          align="center"
-          padding-bottom="0"
-        >
-          ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)} has updated their gateway (${event.eventData.data.settings.fqdn})
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    
-    <!-- White Card Wrapper -->
-    <mj-wrapper
-      background-color="#ffffff"
-      border-radius="8px"
-      padding="20px 0"
-      css-class="card-container"
-    >
-      <!-- Gateway Details Section -->
-      <mj-section padding="0">
+  <mj-body background-color="#1f2937">
+    <mj-wrapper>
+      <mj-section>
+        <mj-column>
+          <mj-text
+            font-size="24px"
+            font-weight="600"
+            align="center"
+            color="#ffffff"
+          >
+            ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)} has updated their gateway (${event.eventData.data.settings.fqdn})
+          </mj-text>
+        </mj-column>
+      </mj-section>
+
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
         <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
             color="#101010"
-            padding="0 20px 10px"
           >
             Gateway Details
           </mj-text>
-          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+          <mj-table css-class="info-table">
             <tr>
               <th width="40%">FQDN</th>
               <td width="60%">${event.eventData.data.settings.fqdn}</td>
@@ -1253,35 +1131,29 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           </mj-table>
         </mj-column>
       </mj-section>
+
+      <mj-section>
+        <mj-column width="60%">
+          <mj-button
+            background-color="#007bff"
+            color="#ffffff"
+            border-radius="5px"
+            font-weight="600"
+            href="https://ao.link/#/message/${event.eventData.id}"
+          >
+            View on AO
+          </mj-button>
+          <mj-text
+            font-size="12px"
+            color="#cccccc"
+            align="center"
+          >
+            <br/>
+            You are receiving this email because you subscribed to subscribe.permagate.io
+          </mj-text>
+        </mj-column>
+      </mj-section>
     </mj-wrapper>
-    
-    <!-- Footer Section -->
-    <mj-section background-color="#1c1c1c" padding="20px">
-      <mj-column>
-        <mj-button
-          background-color="#007bff"
-          color="#ffffff"
-          border-radius="5px"
-          font-weight="600"
-          href="https://ao.link/#/message/${event.eventData.id}"
-        >
-          View on AO
-        </mj-button>
-        <mj-text
-          font-size="12px"
-          color="#cccccc"
-          align="center"
-        >
-          <br/>
-          You are receiving this email because you subscribed to subscribe.permagate.io
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    
-    <!-- Bottom Padding -->
-    <mj-section padding="20px 0">
-      <mj-column></mj-column>
-    </mj-section>
   </mj-body>
 </mjml>
   `;
@@ -1349,24 +1221,15 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
 <mjml>
   <mj-head>
     <mj-title>Epoch ${epochIndex} Created</mj-title>
-
-    <!-- Load the Inter font from Google Fonts -->
-    <mj-font
-      name="Inter"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
-    />
-
+    <mj-font name="Geist" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" />
     <mj-attributes>
-      <!-- Set the default font for all elements to Inter -->
-      <mj-all font-family="Inter, sans-serif" />
-      <mj-text font-size="14px" color="#333" line-height="1.5" />
+      <mj-all font-family="Geist, sans-serif" />
+      <mj-text font-size="12px" color="#333" line-height="1.5" />
     </mj-attributes>
-
     <mj-style inline="inline">
-      /* Table styling inside MJML */
       .info-table th {
         background-color: #fafafa !important;
-        font-weight: 600 !important; /* Slightly bolder for column headers */
+        font-weight: 600 !important;
       }
       .info-table th,
       .info-table td {
@@ -1374,89 +1237,65 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         text-align: left !important;
         padding: 6px !important;
       }
-
-      /* Custom UL styling */
-      ul {
-        margin: 0 !important;
-        padding-left: 20px !important;
-      }
-      li {
-        margin-bottom: 5px !important;
+      .shadow-box {
+        box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
       }
     </mj-style>
   </mj-head>
+  <mj-body background-color="#1f2937">
+    <mj-wrapper>
+      <mj-section>
+        <mj-column>
+          <mj-text
+            font-size="24px"
+            font-weight="600"
+            align="center"
+            color="#ffffff"
+          >
+            Epoch ${epochIndex} Has Been Created!
+          </mj-text>
+        </mj-column>
+      </mj-section>
 
-  <!-- Body: Dark background, similar to ar.io's vibe -->
-  <mj-body background-color="#0f0f0f">
-    <!-- Top Padding -->
-    <mj-section padding="20px 0">
-      <mj-column></mj-column>
-    </mj-section>
-
-    <!-- Header Section (Dark) -->
-    <mj-section background-color="#1c1c1c" padding="30px 20px">
-      <mj-column>
-        <mj-text
-          color="#ffffff"
-          font-size="24px"
-          font-weight="600"
-          align="center"
-          padding-bottom="0"
-        >
-          Epoch ${epochIndex} Has Been Created!
-        </mj-text>
-      </mj-column>
-    </mj-section>
-
-    <!-- White Card Wrapper with subtle shadow/rounding -->
-    <mj-wrapper
-      background-color="#ffffff"
-      border-radius="8px"
-      padding="20px 0"
-      css-class="card-container"
-    >
-      <!--[if mso | IE]>
-        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600"
-          style="box-shadow: 0 2px 5px rgba(0,0,0,0.2); border-radius: 8px;">
-          <tr>
-          <td>
-      <![endif]-->
-
-      <!-- Epoch Details -->
-      <mj-section padding="0">
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
         <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
             color="#101010"
-            padding="0 20px 10px"
           >
             Epoch Details
           </mj-text>
-          <mj-table css-class="info-table" padding="0 20px 20px">
+          <mj-table css-class="info-table">
             <tr>
-              <th>Epoch Index</th>
-              <td>${epochIndex}</td>
+              <th width="40%">Epoch Index</th>
+              <td width="60%">${epochIndex}</td>
             </tr>
             <tr>
-              <th>Start Timestamp</th>
-              <td>${epochStartTimestamp ? new Date(epochStartTimestamp).toLocaleString() : 'N/A'}</td>
+              <th width="40%">Start Timestamp</th>
+              <td width="60%">${epochStartTimestamp ? new Date(epochStartTimestamp).toLocaleString() : 'N/A'}</td>
             </tr>
             <tr>
-              <th>End Timestamp</th>
-              <td>${epochEndTimestamp ? new Date(epochEndTimestamp).toLocaleString() : 'N/A'}</td>
+              <th width="40%">End Timestamp</th>
+              <td width="60%">${epochEndTimestamp ? new Date(epochEndTimestamp).toLocaleString() : 'N/A'}</td>
             </tr>
             <tr>
-              <th># Eligible Gateways</th>
-              <td>${totalEligibleGatewaysCreated}</td>
+              <th width="40%"># Eligible Gateways</th>
+              <td width="60%">${totalEligibleGatewaysCreated}</td>
             </tr>
             <tr>
-              <th>Observer Reward</th>
-              <td>${totalEligibleObserverRewardCreated.toFixed(2).toLocaleString()} $ARIO</td>
+              <th width="40%">Observer Reward</th>
+              <td width="60%">${totalEligibleObserverRewardCreated.toFixed(2).toLocaleString()} $ARIO</td>
             </tr>
             <tr>
-              <th>Gateway Reward</th>
-              <td>${totalEligibleGatewayRewardCreated.toFixed(2).toLocaleString()} $ARIO</td>
+              <th width="40%">Gateway Reward</th>
+              <td width="60%">${totalEligibleGatewayRewardCreated.toFixed(2).toLocaleString()} $ARIO</td>
             </tr>
           </mj-table>
         </mj-column>
@@ -1465,18 +1304,22 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       ${
         newGatewaysFqdns && newGatewaysFqdns.length > 0
           ? `
-      <!-- New Gateways Section -->
-      <mj-section padding="0 0 20px">
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
         <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
             color="#101010"
-            padding="0 20px 10px"
           >
             New Gateways
           </mj-text>
-          <mj-text padding="0 20px">
+          <mj-text>
             <ul>
               ${newGatewaysFqdns.map((fqdn) => `<li>${fqdn}</li>`).join('')}
             </ul>
@@ -1487,18 +1330,22 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           : ''
       }
 
-      <!-- Prescribed Names Section -->
-      <mj-section padding="0 0 20px">
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
         <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
             color="#101010"
-            padding="0 20px 10px"
           >
             Prescribed Names
           </mj-text>
-          <mj-text padding="0 20px">
+          <mj-text>
             <ul>
               ${prescribedNames
                 .map(
@@ -1511,24 +1358,33 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         </mj-column>
       </mj-section>
 
-      <!-- Prescribed Observers Section -->
-      <mj-section padding="0">
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
         <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
             color="#101010"
-            padding="0 20px 10px"
           >
             Prescribed Observers
           </mj-text>
         </mj-column>
       </mj-section>
 
-      <mj-section padding="0 0 20px">
-        <!-- Split observers into columns -->
-        <mj-column width="33%" mobileWidth="100%">
-          <mj-text color="#333333" padding="0 20px">
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
+        <mj-column width="33%">
+          <mj-text color="#333333">
             <ul>
               ${Object.entries(prescribedGatewayFqdns)
                 .slice(
@@ -1544,9 +1400,8 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           </mj-text>
         </mj-column>
 
-        <!-- Column 2 -->
-        <mj-column width="33%" mobileWidth="100%">
-          <mj-text color="#333333" padding="0 20px">
+        <mj-column width="33%">
+          <mj-text color="#333333">
             <ul>
               ${Object.entries(prescribedGatewayFqdns)
                 .slice(
@@ -1562,9 +1417,8 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           </mj-text>
         </mj-column>
 
-        <!-- Column 3 -->
-        <mj-column width="33%" mobileWidth="100%">
-          <mj-text color="#333333" padding="0 20px">
+        <mj-column width="33%">
+          <mj-text color="#333333">
             <ul>
               ${Object.entries(prescribedGatewayFqdns)
                 .slice(
@@ -1580,9 +1434,8 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         </mj-column>
       </mj-section>
 
-      <!-- View on AO Button -->
-      <mj-section padding="10px 0 20px">
-        <mj-column>
+      <mj-section>
+        <mj-column width="60%">
           <mj-button
             background-color="#007bff"
             color="#ffffff"
@@ -1592,36 +1445,17 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           >
             View on AO
           </mj-button>
+          <mj-text
+            font-size="12px"
+            color="#cccccc"
+            align="center"
+          >
+            <br/>
+            You are receiving this email because you subscribed to subscribe.permagate.io
+          </mj-text>
         </mj-column>
       </mj-section>
-
-      <!--[if mso | IE]>
-        </td>
-        </tr>
-        </table>
-      <![endif]-->
     </mj-wrapper>
-
-    <!-- Footer Section -->
-    <mj-section background-color="#1c1c1c" padding="20px">
-      <mj-column>
-        <mj-text
-          font-size="12px"
-          color="#cccccc"
-          align="center"
-        >
-
-          <br/>
-          You are receiving this email because you subscribed to subscribe.permagate.io
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    
-    <!-- Bottom Padding -->
-    <mj-section padding="20px 0">
-      <mj-column></mj-column>
-    </mj-section>
-
   </mj-body>
 </mjml>`;
 
@@ -1711,10 +1545,10 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
 <mjml>
   <mj-head>
     <mj-title>Epoch ${distributedEpochIndex} Observation Results</mj-title>
-    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-font name="Geist" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" />
     <mj-attributes>
-      <mj-all font-family="Inter, sans-serif" />
-      <mj-text font-size="14px" color="#333" line-height="1.5" />
+      <mj-all font-family="Geist, sans-serif" />
+      <mj-text font-size="12px" color="#333" line-height="1.5" />
     </mj-attributes>
     <mj-style inline="inline">
       .info-table th {
@@ -1727,53 +1561,42 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         text-align: left !important;
         padding: 6px !important;
       }
-      ul {
-        margin: 5px 0 !important;
-        padding-left: 20px !important;
-      }
-      li {
-        margin: 5px 0 !important;
+      .shadow-box {
+        box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
       }
     </mj-style>
   </mj-head>
+  <mj-body background-color="#1f2937">
+    <mj-wrapper>
+      <mj-section>
+        <mj-column>
+          <mj-text
+            font-size="24px"
+            font-weight="600"
+            align="center"
+            color="#ffffff"
+          >
+            Epoch ${distributedEpochIndex} Observation Results
+          </mj-text>
+        </mj-column>
+      </mj-section>
 
-  <mj-body background-color="#0f0f0f">
-    <!-- Top Padding -->
-    <mj-section padding="20px 0">
-    <!-- Header Section -->
-    <mj-section background-color="#1c1c1c" padding="30px 20px">
-      <mj-column>
-        <mj-text
-          color="#ffffff"
-          font-size="24px"
-          font-weight="600"
-          align="center"
-          padding-bottom="0"
-        >
-          Epoch ${distributedEpochIndex} Observation Results
-        </mj-text>
-      </mj-column>
-    </mj-section>
-
-    <!-- White Card Wrapper -->
-    <mj-wrapper
-      background-color="#ffffff"
-      border-radius="8px"
-      padding="20px 0"
-      css-class="card-container"
-    >
-      <!-- Network Performance Section -->
-      <mj-section padding="0">
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
         <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
             color="#101010"
-            padding="0 20px 10px"
           >
             🔭 Network Performance
           </mj-text>
-          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+          <mj-table css-class="info-table">
             <tr>
               <th width="40%">Observations Submitted</th>
               <td width="60%">${totalObservationsSubmitted}/50 (${((totalObservationsSubmitted / 50) * 100).toFixed(2)}%)</td>
@@ -1794,18 +1617,22 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         </mj-column>
       </mj-section>
 
-      <!-- Rewards Section -->
-      <mj-section padding="0">
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
         <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
             color="#101010"
-            padding="0 20px 10px"
           >
             💰 Rewards
           </mj-text>
-          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+          <mj-table css-class="info-table">
             <tr>
               <th width="40%">Observer Reward</th>
               <td width="60%">${totalEligibleObserverReward.toFixed(2).toLocaleString()} $ARIO</td>
@@ -1833,18 +1660,22 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       ${
         bestStreaks.items && bestStreaks.items.length > 0
           ? `
-      <!-- Best Performers Section -->
-      <mj-section padding="0">
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
         <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
             color="#101010"
-            padding="0 20px 10px"
           >
             📈 Best Performers
           </mj-text>
-          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+          <mj-table css-class="info-table">
             ${bestStreaks.items
               .map(
                 (gateway) => `
@@ -1864,18 +1695,22 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       ${
         worstStreaks.items && worstStreaks.items.length > 0
           ? `
-      <!-- Worst Performers Section -->
-      <mj-section padding="0">
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
         <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
             color="#101010"
-            padding="0 20px 10px"
           >
             📉 Worst Performers
           </mj-text>
-          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+          <mj-table css-class="info-table">
             ${worstStreaks.items
               .map(
                 (gateway) => `
@@ -1891,37 +1726,29 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       `
           : ''
       }
+
+      <mj-section>
+        <mj-column width="60%">
+          <mj-button
+            background-color="#007bff"
+            color="#ffffff"
+            border-radius="5px"
+            font-weight="600"
+            href="https://ao.link/#/message/${event.eventData.id}"
+          >
+            View on AO
+          </mj-button>
+          <mj-text
+            font-size="12px"
+            color="#cccccc"
+            align="center"
+          >
+            <br/>
+            You are receiving this email because you subscribed to subscribe.permagate.io
+          </mj-text>
+        </mj-column>
+      </mj-section>
     </mj-wrapper>
-
-    <!-- Footer Section -->
-    <!-- Footer Section -->
-    <mj-section background-color="#1c1c1c" padding="20px">
-      <mj-column>
-        <mj-button
-          background-color="#007bff"
-          color="#ffffff"
-          border-radius="5px"
-          font-weight="600"
-          href="https://ao.link/#/message/${event.eventData.id}"
-        >
-          View on AO
-        </mj-button>
-        <mj-text
-          font-size="12px"
-          color="#cccccc"
-          align="center"
-        >
-
-          <br/>
-          You are receiving this email because you subscribed to subscribe.permagate.io
-        </mj-text>
-      </mj-column>
-    </mj-section>
-    
-    <!-- Bottom Padding -->
-    <mj-section padding="20px 0">
-      <mj-column></mj-column>
-    </mj-section>
   </mj-body>
 </mjml>
   `;
@@ -1930,10 +1757,10 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
 <mjml>
   <mj-head>
     <mj-title>Event Notification</mj-title>
-    <mj-font name="Inter" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <mj-font name="Geist" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" />
     <mj-attributes>
-      <mj-all font-family="Inter, sans-serif" />
-      <mj-text font-size="14px" color="#333" line-height="1.5" />
+      <mj-all font-family="Geist, sans-serif" />
+      <mj-text font-size="12px" color="#333" line-height="1.5" />
     </mj-attributes>
     <mj-style inline="inline">
       .info-table th {
@@ -1946,44 +1773,42 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         text-align: left !important;
         padding: 6px !important;
       }
+      .shadow-box {
+        box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
+      }
     </mj-style>
   </mj-head>
+  <mj-body background-color="#1f2937">
+    <mj-wrapper>
+      <mj-section>
+        <mj-column>
+          <mj-text
+            font-size="24px"
+            font-weight="600"
+            align="center"
+            color="#ffffff"
+          >
+            Event Details
+          </mj-text>
+        </mj-column>
+      </mj-section>
 
-  <mj-body background-color="#0f0f0f">
-    <!-- Header Section -->
-    <mj-section background-color="#1c1c1c" padding="30px 20px">
-      <mj-column>
-        <mj-text
-          color="#ffffff"
-          font-size="24px"
-          font-weight="600"
-          align="center"
-          padding-bottom="0"
-        >
-          Event Details
-        </mj-text>
-      </mj-column>
-    </mj-section>
-
-    <!-- White Card Wrapper -->
-    <mj-wrapper
-      background-color="#ffffff"
-      border-radius="8px"
-      padding="20px 0"
-      css-class="card-container"
-    >
-      <!-- Event Data Section -->
-      <mj-section padding="0">
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
         <mj-column>
           <mj-text
             font-size="18px"
             font-weight="600"
             color="#101010"
-            padding="0 20px 10px"
           >
             Details
           </mj-text>
-          <mj-table css-class="info-table" padding="0 20px 20px" width="100%">
+          <mj-table css-class="info-table">
             ${Object.entries(event.eventData.data)
               .filter(
                 ([_, value]) => typeof value !== 'object' || value === null,
@@ -2000,9 +1825,8 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         </mj-column>
       </mj-section>
 
-      <!-- View on AO Button -->
-      <mj-section padding="10px 0 20px">
-        <mj-column>
+      <mj-section>
+        <mj-column width="60%">
           <mj-button
             background-color="#007bff"
             color="#ffffff"
@@ -2012,22 +1836,17 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           >
             View on AO
           </mj-button>
+          <mj-text
+            font-size="12px"
+            color="#cccccc"
+            align="center"
+          >
+            <br/>
+            You are receiving this email because you subscribed to subscribe.permagate.io
+          </mj-text>
         </mj-column>
       </mj-section>
     </mj-wrapper>
-
-    <!-- Footer Section -->
-    <mj-section background-color="#1c1c1c" padding="20px">
-      <mj-column>
-        <mj-text
-          font-size="12px"
-          color="#cccccc"
-          align="center"
-        >
-
-        </mj-text>
-      </mj-column>
-    </mj-section>
   </mj-body>
 </mjml>
 `;
