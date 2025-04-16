@@ -337,6 +337,9 @@ apiRouter.post(
   // @ts-ignore
   async (req: Request, res: Response) => {
     try {
+      logger.info('Received subscriber update request', {
+        body: req.body,
+      });
       const { email, processes, premium } = JSON.parse(req.body);
       const authHeader = req.headers.authorization;
 
