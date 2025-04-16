@@ -36,7 +36,7 @@ apiRouter.get('/healthcheck', (_, res) => {
 apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
   try {
     const email = req.query.email as string;
-    const { processes = DEFAULT_PROCESS_SUBSCRIPTIONS } = JSON.parse(req.body);
+    const { processes = DEFAULT_PROCESS_SUBSCRIPTIONS } = req.body;
 
     logger.debug(`Received subscribe request`, {
       email,
@@ -337,10 +337,10 @@ apiRouter.post(
   // @ts-ignore
   async (req: Request, res: Response) => {
     try {
-      logger.info('Received subscriber update request', {
+      logger.debug('Received subscriber update request', {
         body: req.body,
       });
-      const { email, processes, premium } = JSON.parse(req.body);
+      const { email, processes, premium } = req.body;
       const authHeader = req.headers.authorization;
 
       if (!email || typeof email !== 'string') {
