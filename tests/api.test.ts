@@ -47,6 +47,7 @@ describe('container', function () {
         STRIPE_WEBHOOK_SECRET: 'test_key',
         DEBUG_KNEX: 'false',
         SECRET_KEY: 'test',
+        LOG_LEVEL: 'debug',
       })
       .withWaitStrategy('alerts-1', Wait.forHealthCheck())
       .withBuild()
@@ -68,6 +69,9 @@ describe('container', function () {
       'http://localhost:3000/api/subscribe?email=test@example.com',
       {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           email: 'test@example.com',
         }),
@@ -81,6 +85,9 @@ describe('container', function () {
   it('should return 400 if no email is provided', async function () {
     const response = await fetch('http://localhost:3000/api/subscribe', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({}),
     });
     assert.equal(response.status, 400);
@@ -91,6 +98,9 @@ describe('container', function () {
       'http://localhost:3000/api/subscribe?email=test@example.com',
       {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ email: 'test@example.com', processes: {} }),
       },
     );
@@ -126,6 +136,9 @@ describe('container', function () {
       'http://localhost:3000/api/subscribe?email=test@example.com',
       {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           email: 'test@example.com',
           processes: { invalid: [] },
