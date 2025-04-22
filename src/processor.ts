@@ -273,6 +273,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       const gatewayDetails = await ario.getGateway({
         address: event.eventData.target,
       });
+      const report = observations?.reports[event.eventData?.from || ''];
       return `
 <mjml>
   <mj-head>
@@ -307,7 +308,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
             font-weight="600"
             align="center"
           >
-            ${event.eventData.from} has failed ${gatewayDetails?.settings.fqdn}
+            ${event.eventData.from} marked ${gatewayDetails?.settings.fqdn} as ${status}
           </mj-text>
         </mj-column>
       </mj-section>
@@ -329,15 +330,15 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
           </mj-text>
           <mj-table css-class="info-table">
             <tr>
-              <th width="40%"># Observations (submitted/prescribed)</th>
+              <th width="40%"># Observations</th>
               <td width="60%">${totalObservations}/${totalPrescribedObservers}</td>
             </tr>
             <tr>
               <th width="40%"># Failures</th>
-              <td width="60%">${observations?.failureSummaries[event.eventData.target]?.length}/${totalObservations}</td>
+              <td width="60%">${observations?.failureSummaries[event.eventData.target]?.length} / ${totalObservations}</td>
             </tr>
             <tr>
-              <th width="40%">Status</th>
+              <th width="40%">Epoch Status</th>
               <td width="60%" style="color:${status === 'FAILING' ? '#ff4444' : '#44ff44'};">${status}</td>
             </tr>
             <tr>
@@ -347,8 +348,8 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
             <tr>
               <th width="40%">Report</th>
               <td width="60%">
-                <a href="https://arweave.net/${observations?.reports[event.eventData.target]}" style="color: #007bff; text-decoration: none;">
-                  ${observations?.reports[event.eventData.target]}
+                <a href="https://arweave.net/${report}" style="color: #007bff; text-decoration: none;">
+                  ${report.slice(0, 6)}...${report.slice(-4)}
                 </a>
               </td>
             </tr>
