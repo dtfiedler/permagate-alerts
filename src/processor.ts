@@ -273,6 +273,14 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       const gatewayDetails = await ario.getGateway({
         address: event.eventData.target,
       });
+      const observer = await ario.getPrescribedObservers().then((observers) => {
+        return observers.find(
+          (observer) => observer.observerAddress === event.eventData?.from,
+        );
+      });
+      const observerGateway = await ario.getGateway({
+        address: observer?.gatewayAddress || '',
+      });
       const report = observations?.reports[event.eventData?.from || ''];
       return `
 <mjml>
@@ -339,11 +347,11 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
             </tr>
             <tr>
               <th width="40%">Epoch Status</th>
-              <td width="60%" style="color:${status === 'FAILING' ? '#ff4444' : '#44ff44'};">${status}</td>
+              <td width="60%" style="color:${status === 'FAILING' ? '#ff0000' : '#006400'};">${status}</td>
             </tr>
             <tr>
-              <th width="40%">Reported by</th>
-              <td width="60%">${event.eventData.from?.slice(0, 6)}...${event.eventData.from?.slice(-4)}</td>
+              <th width="40%">Observer</th>
+              <td width="60%">${event.eventData.from?.slice(0, 6)}...${event.eventData.from?.slice(-4)} (${observerGateway?.settings?.fqdn})</td>
             </tr>
             <tr>
               <th width="40%">Report</th>
@@ -1420,7 +1428,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         .getGateways({
           sortBy: 'stats.failedConsecutiveEpochs',
           sortOrder: 'desc',
-          limit: 3,
+          limit: 10,
         })
         // filter out leaving gateways
         .then((gateways) => {
