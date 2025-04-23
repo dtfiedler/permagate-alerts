@@ -145,6 +145,8 @@ export class EventProcessor implements IEventProcessor {
       });
       return;
     }
+    // TODO: for certain events, we only want to notify on the first occurrence of an event within the epoch
+
     // make sure the event is created
     await this.db.createEvent(event);
 
