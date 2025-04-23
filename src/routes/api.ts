@@ -214,8 +214,8 @@ apiRouter.post(
       // send a raw email to the user with the manage link
       req.notifier?.sendRawEmail({
         to: [email],
-        text: `Please manage your subscription by clicking the link below:\n\n${manageLink}`,
-        subject: 'Update your subscription',
+        text: `✨ Click here to sign in to your account and manage your subscription: ${manageLink}\n\nThis link is unique to you and will expire in 24 hours.`,
+        subject: '✨ Your magic link is ready!',
       });
 
       return res.status(200).json({
