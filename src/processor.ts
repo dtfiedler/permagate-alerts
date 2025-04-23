@@ -316,7 +316,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
             font-weight="600"
             align="center"
           >
-            ${event.eventData.from} marked ${gatewayDetails?.settings.fqdn} as ${status}
+            ${event.eventData.from} marked ${gatewayDetails?.settings.fqdn} as failed!
           </mj-text>
         </mj-column>
       </mj-section>
