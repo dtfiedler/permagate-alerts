@@ -1,4 +1,8 @@
-import express, { NextFunction, Request, Response } from 'express';
+import express, {
+  type NextFunction,
+  type Request,
+  type Response,
+} from 'express';
 import { default as cors } from 'cors';
 import { logger } from './logger.js';
 import { router } from './router.js';
@@ -23,6 +27,9 @@ app.use(async (req: Request, _res: Response, next: NextFunction) => {
   next();
 });
 
+// setup cors for all routes
+app.use(cors());
+
 // stripe added before any middleware as we need to parse the raw body
 app.use(stripeRouter);
 
@@ -30,8 +37,10 @@ app.use(stripeRouter);
 app.use(express.json());
 app.use(express.text());
 app.use(express.urlencoded({ extended: false }));
-app.use(cors());
+
+// remaining routes that leverage all the middleware above
 app.use(router);
+
 // add logger to app context
 app.listen(port, () => {
   logger.info(`Server is running on port ${port}`);
