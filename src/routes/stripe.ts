@@ -1,12 +1,17 @@
 import Stripe from 'stripe';
 import { logger } from '../logger.js';
-import { Router, Response } from 'express';
-import { Request } from '../types.js';
+import { Router, type Response } from 'express';
+import type { Request } from '../types.js';
 import * as config from '../config.js';
 import express from 'express';
 const stripeRouter = Router();
 
-const stripe = new Stripe(config.stripeSecretKey!, {
+if (!config.stripeSecretKey) {
+  logger.error('Stripe secret key is not set');
+  process.exit(1);
+}
+
+const stripe = new Stripe(config.stripeSecretKey, {
   apiVersion: '2025-03-31.basil',
 });
 
@@ -22,22 +27,31 @@ stripeRouter.post(
 
     let event: Stripe.Event;
 
+    if (!config.stripeWebhookSecret) {
+      logger.error('Stripe webhook secret is not set');
+      return res
+        .status(500)
+        .json({ error: 'Stripe webhook secret is not set' });
+    }
+
     try {
       event = stripe.webhooks.constructEvent(
         req.body,
         req.headers['stripe-signature'] as string,
-        config.stripeWebhookSecret!,
+        config.stripeWebhookSecret,
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       logger.error('Error verifying webhook signature', {
-        error: error.message,
+        error: errorMessage,
       });
-      return res.status(400).send(`Webhook Error: ${error.message}`);
+      return res.status(400).send(`Webhook Error: ${errorMessage}`);
     }
 
     switch (event.type) {
       // charge.succeeded
-      case 'charge.succeeded':
+      case 'charge.succeeded': {
         const charge = event.data.object as Stripe.Charge;
         const customer = await stripe.customers.retrieve(
           charge.customer as string,
@@ -55,7 +69,7 @@ stripeRouter.post(
 
         try {
           // Check if subscriber exists
-          let subscriber = await req.db.getSubscriberByEmail(customerEmail);
+          const subscriber = await req.db.getSubscriberByEmail(customerEmail);
 
           if (subscriber) {
             // Update existing subscriber to premium
@@ -88,29 +102,22 @@ stripeRouter.post(
             error: 'Error processing subscription',
           });
         }
-      case 'customer.subscription.created':
-        const subscription = event.data.object as Stripe.Subscription;
-        const subscriptionCustomer = await stripe.customers.retrieve(
-          subscription.customer as string,
+      }
+      case 'customer.subscription.created': {
+        const newSubscription = event.data.object as Stripe.Subscription;
+        const newCustomer = await stripe.customers.retrieve(
+          newSubscription.customer as string,
         );
-        if (subscriptionCustomer.deleted) {
-          logger.error('Customer is deleted', { subscriptionCustomer });
+
+        if (newCustomer.deleted || !newCustomer.email) {
           return res.status(400).json({ error: 'Customer is deleted' });
         }
-        const subscriptionCustomerEmail = subscriptionCustomer.email;
 
-        if (!subscriptionCustomerEmail) {
-          logger.error('No customer email found in subscription', {
-            subscription,
-          });
-          return res.status(400).json({ error: 'No customer email provided' });
-        }
+        const customerEmail = newCustomer.email;
 
         try {
           // Check if subscriber exists
-          let subscriber = await req.db.getSubscriberByEmail(
-            subscriptionCustomerEmail,
-          );
+          const subscriber = await req.db.getSubscriberByEmail(customerEmail);
 
           if (subscriber) {
             // Update existing subscriber to premium
@@ -120,28 +127,82 @@ stripeRouter.post(
             });
 
             logger.info('Updated existing subscriber to premium', {
-              email: subscriptionCustomerEmail,
+              email: customerEmail,
             });
           } else {
             await req.db.createNewSubscriber({
-              email: subscriptionCustomerEmail,
+              email: customerEmail,
               premium: true,
             });
+
+            logger.info('Created new premium subscriber', {
+              email: customerEmail,
+            });
           }
+
+          return res.json({ received: true });
         } catch (error) {
           logger.error('Error processing subscription webhook', {
             error,
-            subscriptionCustomerEmail,
+            email: customerEmail,
+            eventId: event.id,
+          });
+          return res.status(500).json({
+            error: 'Error processing subscription webhook',
           });
         }
-        break;
-      default:
-        logger.info('Received unknown event', { event });
-        break;
-    }
+      }
+      // customer.subscription.canceled
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as Stripe.Subscription;
+        const customer = await stripe.customers.retrieve(
+          subscription.customer as string,
+        );
 
-    // Return 200 for other event types
-    res.json({ received: true });
+        if (customer.deleted || !customer.email) {
+          return res.status(400).json({ error: 'Customer is deleted' });
+        }
+
+        const customerEmail = customer.email;
+
+        // get the subscription status
+        const premiumActive =
+          subscription.status === 'active' ||
+          subscription.status === 'trialing';
+
+        try {
+          // Check if subscriber exists
+          const subscriber = await req.db.getSubscriberByEmail(customerEmail);
+
+          if (subscriber) {
+            // update the subscriber to not premium
+            await req.db.updateSubscriber(subscriber.id, {
+              id: subscriber.id,
+              premium: premiumActive,
+            });
+          }
+
+          logger.info('Updated existing subscriber', {
+            email: customerEmail,
+            premiumActive,
+          });
+
+          return res.json({ received: true });
+        } catch (error) {
+          logger.error('Error processing subscription webhook', {
+            error,
+            customerEmail,
+          });
+          return res.status(500).json({
+            error: 'Error processing subscription webhook',
+          });
+        }
+      }
+      default: {
+        logger.info('Received unknown event', event);
+        return res.status(200).json({ received: true });
+      }
+    }
   },
 );
 
@@ -171,8 +232,10 @@ stripeRouter.post(
       });
 
       res.json({ sessionId: session.id });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ error: errorMessage });
     }
   },
 );
@@ -193,7 +256,7 @@ stripeRouter.get(
 
       if (session.payment_status === 'paid') {
         // Check if subscriber exists
-        let subscriber = await req.db.getSubscriberByEmail(
+        const subscriber = await req.db.getSubscriberByEmail(
           session.customer_email as string,
         );
 
@@ -224,8 +287,10 @@ stripeRouter.get(
           .status(400)
           .json({ success: false, message: 'Payment not completed' });
       }
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ error: errorMessage });
     }
   },
 );
@@ -261,8 +326,10 @@ stripeRouter.post(
       });
 
       res.json({ clientSecret: paymentIntent.client_secret });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ error: errorMessage });
     }
   },
 );
@@ -291,8 +358,10 @@ stripeRouter.post(
       });
 
       res.json({ sessionId: session.id });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ error: errorMessage });
     }
   },
 );
@@ -332,27 +401,22 @@ stripeRouter.get(
         session.customer_email as string,
       );
 
-      if (subscriber && !subscriber.premium) {
-        // Update existing subscriber to premium
-        await req.db.updateSubscriber(subscriber.id, {
-          id: subscriber.id,
-          premium: true,
-        });
-      }
-
       res.json({
         status: subscription.status,
         trialEnd: subscription.trial_end,
         startDate: subscription.start_date,
         customerId: subscription.customer,
         premium: subscriber?.premium,
+        email: subscriber?.email,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       logger.error('Error verifying subscription', {
-        error: error.message,
+        error: errorMessage,
         sessionId: session_id,
       });
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: errorMessage });
     }
   },
 );

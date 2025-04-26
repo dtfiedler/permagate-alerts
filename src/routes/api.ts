@@ -1,6 +1,6 @@
-import { Router, Response } from 'express';
+import { Router, type Response } from 'express';
 import { logger } from '../logger.js';
-import { Request } from '../types.js';
+import type { Request } from '../types.js';
 import * as config from '../config.js';
 import { z } from 'zod';
 import {
@@ -38,7 +38,7 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
     const email = req.query.email as string;
     const { processes = DEFAULT_PROCESS_SUBSCRIPTIONS } = req.body;
 
-    logger.debug(`Received subscribe request`, {
+    logger.debug('Received subscribe request', {
       email,
       processes,
       body: req.body,
@@ -86,7 +86,7 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
         return res.status(500).json({ error: 'Failed to create subscriber' });
       }
 
-      logger.info(`Subscribing email to events for process...`, {
+      logger.info('Subscribing email to events for process...', {
         email,
         events: validatedEvents.data,
         processId,
@@ -99,7 +99,7 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
         events: validatedEvents.data,
       });
 
-      logger.info(`Successfully subscribed email to events for process...`, {
+      logger.info('Successfully subscribed email to events for process...', {
         email,
         events: validatedEvents.data,
         processId,
@@ -407,7 +407,7 @@ apiRouter.post(
         }
 
         logger.info(
-          `Updating subscription for email to events for process...`,
+          'Updating subscription for email to events for process...',
           {
             email,
             events: validatedEvents.data,
@@ -423,7 +423,7 @@ apiRouter.post(
         });
 
         logger.info(
-          `Successfully updated subscription for email to events for process...`,
+          'Successfully updated subscription for email to events for process...',
           {
             email,
             events: validatedEvents.data,
