@@ -373,6 +373,8 @@ stripeRouter.get(
   async (req: Request, res: Response) => {
     const { session_id } = req.query as { session_id: string };
 
+    logger.debug('Verifying subscription', { session_id });
+
     if (!session_id) {
       return res.status(400).json({ error: 'Session ID is required' });
     }
@@ -390,22 +392,35 @@ stripeRouter.get(
 
       const subscription = await stripe.subscriptions.retrieve(
         session.subscription as string,
+        {
+          expand: ['customer'],
+        },
       );
 
-      if (!subscription) {
+      if (!subscription || !subscription.customer) {
         return res.status(404).json({ error: 'Subscription not found' });
       }
 
-      // Check if subscriber exists
-      const subscriber = await req.db.getSubscriberByEmail(
-        session.customer_email as string,
-      );
+      const customer = subscription.customer as Stripe.Customer;
+
+      logger.debug('Subscription', {
+        sessionId: session_id,
+        customer: subscription.customer,
+      });
+
+      if (!customer.email) {
+        return res.status(404).json({ error: 'Customer email not found' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(customer.email);
+
+      logger.debug('Found subscriber in database', { subscriber });
 
       res.json({
         status: subscription.status,
         trialEnd: subscription.trial_end,
         startDate: subscription.start_date,
-        customerId: subscription.customer,
+        customerId: customer.id,
         premium: subscriber?.premium,
         email: subscriber?.email,
       });

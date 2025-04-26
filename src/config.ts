@@ -19,6 +19,10 @@ export const skipToCurrentBlock = process.env.SKIP_TO_CURRENT_BLOCK === 'true';
 export const gqlUrl =
   process.env.GQL_URL || 'https://arweave-search.goldsky.com/graphql';
 
+// Event processing
+export const disableEventProcessing =
+  process.env.DISABLE_EVENT_PROCESSING === 'true';
+
 // Auth0 configuration
 export const auth0Domain = process.env.AUTH0_DOMAIN;
 export const auth0Audience = process.env.AUTH0_AUDIENCE;

@@ -52,16 +52,25 @@ export const eventGqlPoller = new GQLEventPoller({
 });
 
 // every 1 minute, check GQL for new events
-export const eventGqlCron = cron.schedule(
-  '*/1 * * * *',
-  async () => {
-    await eventGqlPoller.fetchAndProcessEvents();
-    await eventGqlPoller.fetchAndProcessTriggers();
-  },
-  {
-    runOnInit: true,
-  },
-);
+export const eventGqlCron = config.disableEventProcessing
+  ? {
+      start: () => {
+        logger.info('Event processing is disabled');
+      },
+      stop: () => {
+        logger.info('Event processing is disabled');
+      },
+    }
+  : cron.schedule(
+      '*/1 * * * *',
+      async () => {
+        await eventGqlPoller.fetchAndProcessEvents();
+        await eventGqlPoller.fetchAndProcessTriggers();
+      },
+      {
+        runOnInit: true,
+      },
+    );
 
 process.on('unhandledRejection', (error: any) => {
   logger.error('Unhandled Rejection at:', error);
