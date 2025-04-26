@@ -421,7 +421,7 @@ stripeRouter.get(
         trialEnd: subscription.trial_end,
         startDate: subscription.start_date,
         customerId: customer.id,
-        premium: subscriber?.premium,
+        premium: !!subscriber?.premium,
         email: subscriber?.email,
       });
     } catch (error: unknown) {
