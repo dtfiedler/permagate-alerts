@@ -214,7 +214,9 @@ const getEmailSubjectForEvent = async (event: NewEvent) => {
     case 'buy-record-notice':
       const name = event.eventData.data.name;
       const type = event.eventData.data.type;
-      return `✅ ${name} has been ${type === 'permabuy' ? 'permabought' : 'leased'}!`;
+      return `💰 ${name} has been ${type === 'permabuy' ? 'permabought' : 'leased'}!`;
+    case 'save-observations-notice':
+      return `📝 ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)} submitted an observation report!`;
     case 'failed-observation-notice':
       const gatewayDetails = await ario.getGateway({
         address: event.eventData.target,
@@ -258,7 +260,134 @@ const getEmailSubjectForEvent = async (event: NewEvent) => {
 
 const getEmailBodyForEvent = async (event: NewEvent) => {
   switch (event.eventType.toLowerCase()) {
-    case 'failed-observation-notice':
+    case 'save-observations-notice': {
+      const prescribedObservers = await ario
+        .getPrescribedObservers()
+        .catch(() => undefined);
+      const observer = Object.values(prescribedObservers || {}).find(
+        (observer) => observer.observerAddress === event.eventData?.target,
+      );
+      const observerGateway = await ario
+        .getGateway({
+          address: observer?.gatewayAddress || '',
+        })
+        .catch(() => undefined);
+
+      const failedGateways = Object.entries(
+        event.eventData?.data.failureSummaries,
+      )
+        .map(([gatewayAddress, observersThatFailedGateway]) => {
+          console.log(
+            gatewayAddress,
+            observersThatFailedGateway,
+            event.eventData.target,
+          );
+          // if the gateway has the sender, increment the count
+          if (
+            (observersThatFailedGateway as string[]).includes(
+              event.eventData.target,
+            )
+          ) {
+            return gatewayAddress;
+          }
+          return undefined;
+        })
+        .filter(Boolean);
+      const reportTxId =
+        event.eventData?.data?.reports?.[event.eventData.target];
+      return `
+<mjml>
+  <mj-head>
+    <mj-title>Save Observation Notice</mj-title>
+    <mj-font name="Geist" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" />
+    <mj-attributes>
+      <mj-all font-family="Geist, sans-serif" />
+      <mj-text font-size="12px" color="#333" line-height="1.5" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .info-table th {
+        background-color: #fafafa !important;
+        font-weight: 600 !important;
+      }
+      .info-table th,
+      .info-table td {
+        border-bottom: 1px solid #eaeaea !important;
+        text-align: left !important;
+        padding: 6px !important;
+      }
+      .shadow-box {
+        box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
+      }
+    </mj-style>
+    
+  </mj-head>
+  <mj-body background-color="#f5f5f5">
+    <mj-wrapper padding="30px">
+      <mj-section>
+        <mj-column>
+          <mj-text
+            font-size="24px"
+            font-weight="600"
+            align="center"
+          >
+            ${observerGateway?.settings?.fqdn || event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)} submitted an observation report!
+          </mj-text>
+        </mj-column>
+      </mj-section>
+
+      <mj-section
+        background-color="white"
+        border-radius="8px"
+        padding="10px"
+        css-class="shadow-box"
+        width="100%"
+      >
+        <mj-column>
+          <mj-text
+            font-size="18px"
+            font-weight="600"
+            color="#101010"
+          >
+            Details
+          </mj-text>
+          <mj-table css-class="info-table">
+            <tr>
+              <th width="40%">Failed Gateways</th>
+              <td width="60%">${failedGateways?.length || 0}</td>
+            </tr>
+            <tr>
+              <th width="40%">Report Tx ID</th>
+              <td width="60%"><a href="https://permagate.io/${reportTxId}" style="color: #007bff; text-decoration: none;">${reportTxId.slice(0, 6)}...${reportTxId.slice(-4)}</a></td>
+            </tr>
+          </mj-table>
+          <mj-button
+            background-color="#007bff"
+            border-radius="5px"
+            font-weight="600"
+            href="https://ao.link/#/message/${event.eventData.id}"
+          >
+            View on AO
+          </mj-button>
+        </mj-column>
+      </mj-section>
+
+      <mj-section>
+        <mj-column width="60%">
+          <mj-text
+            font-size="12px"
+            color="#afafaf"
+            align="center"
+          >
+            <br/>
+            You are receiving this email because you subscribed to subscribe.permagate.io
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+  </mj-body>
+`;
+    }
+    case 'failed-observation-notice': {
       const observations = await ario.getObservations();
       const failureSummaries =
         observations?.failureSummaries[event.eventData.target] || [];
@@ -266,20 +395,16 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       const failurePercentage =
         (failureSummaries.length / totalObservations) * 100;
       const status = failurePercentage > 50 ? 'FAILING' : 'PASSING';
-      const prescribedObserversFailForEpoch = await ario
+      const prescribedObservers = await ario
         .getPrescribedObservers()
         .catch(() => ({}));
-      const totalPrescribedObservers = Object.keys(
-        prescribedObserversFailForEpoch || {},
-      ).length;
+      const totalPrescribedObservers = Object.keys(prescribedObservers).length;
       const gatewayDetails = await ario.getGateway({
         address: event.eventData.target,
       });
-      const observer = await ario.getPrescribedObservers().then((observers) => {
-        return observers.find(
-          (observer) => observer.observerAddress === event.eventData?.from,
-        );
-      });
+      const observer = Object.values(prescribedObservers).find(
+        (observer) => observer.observerAddress === event.eventData?.from,
+      );
       const observerGateway = await ario.getGateway({
         address: observer?.gatewayAddress || '',
       });
@@ -391,7 +516,8 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
   </mj-body>
 </mjml>
   `;
-    case 'credit-notice':
+    }
+    case 'credit-notice': {
       const amount =
         parseInt(
           event.eventData.tags.find((tag) => tag.name === 'Quantity')?.value ||
@@ -508,7 +634,8 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
   </mj-body>
 </mjml>
   `;
-    case 'debit-notice':
+    }
+    case 'debit-notice': {
       const debitAmount =
         parseInt(
           event.eventData.tags.find((tag) => tag.name === 'Quantity')?.value ||
@@ -626,8 +753,9 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
   </mj-body>
 </mjml>
   `;
+    }
     case 'buy-name-notice':
-    case 'buy-record-notice':
+    case 'buy-record-notice': {
       const name = event.eventData.data.name;
       const type = event.eventData.data.type;
       const startTimestamp = new Date(
@@ -765,7 +893,8 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
   </mj-body>
 </mjml>
   `;
-    case 'join-network-notice':
+    }
+    case 'join-network-notice': {
       return `
 <mjml>
   <mj-head>
@@ -885,7 +1014,8 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
   </mj-body>
 </mjml>
       `;
-    case 'leave-network-notice':
+    }
+    case 'leave-network-notice': {
       return `
 <mjml>
   <mj-head>
@@ -1042,7 +1172,8 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
   </mj-body>
 </mjml>
       `;
-    case 'update-gateway-settings-notice':
+    }
+    case 'update-gateway-settings-notice': {
       return `
 <mjml>
   <mj-head>
@@ -1153,8 +1284,9 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
     </mj-wrapper>
   </mj-body>
 </mjml>
-  `;
-    case 'epoch-created-notice':
+      `;
+    }
+    case 'epoch-created-notice': {
       const epochIndex = event.eventData.data.epochIndex;
       const epochStartTimestamp = event.eventData.data.startTimestamp;
       const epochEndTimestamp = event.eventData.data.endTimestamp;
@@ -1365,9 +1497,10 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
       </mj-section>
     </mj-wrapper>
   </mj-body>
-</mjml>`;
-
-    case 'epoch-distribution-notice':
+</mjml>
+      `;
+    }
+    case 'epoch-distribution-notice': {
       const observationData = event.eventData.data.observations;
       const epochData = event.eventData.data.distributions;
       const distributedEpochIndex = event.eventData.data.epochIndex;
@@ -1614,7 +1747,8 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
   </mj-body>
 </mjml>
   `;
-    default:
+    }
+    default: {
       return `
 <mjml>
   <mj-head>
@@ -1709,6 +1843,7 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
     </mj-wrapper>
   </mj-body>
 </mjml>
-`;
+      `;
+    }
   }
 };

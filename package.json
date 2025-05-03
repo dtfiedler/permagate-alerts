@@ -7,7 +7,7 @@
   "author": "Dylan Fiedler (@dtfiedler)",
   "license": "MIT",
   "scripts": {
-    "start": "node --import ./register.mjs --env-file=.env src/app.ts",
+    "start": "nodemon --import ./register.mjs --env-file=.env src/app.ts --watch src .env",
     "format:fix": "prettier --write src app",
     "clean": "rimraf [ node_modules dist ]",
     "build": "yarn clean && yarn && npx tsc --project ./tsconfig.json && mkdir dist/public && cp -r src/public dist",
@@ -37,7 +37,7 @@
     "cross-env": "^7.0.3",
     "markdown-toc-gen": "^1.0.1",
     "nock": "^13.5.5",
-    "nodemon": "^2.0.22",
+    "nodemon": "^3.1.10",
     "prettier": "^3.3.3",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
