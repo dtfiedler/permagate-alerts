@@ -45,7 +45,7 @@
     "typescript": "^5.0.3"
   },
   "dependencies": {
-    "@ar.io/sdk": "^3.10.0",
+    "@ar.io/sdk": "^3.10.2",
     "@permaweb/aoconnect": "^0.0.77",
     "arweave": "^1.15.1",
     "auth0": "^4.7.0",

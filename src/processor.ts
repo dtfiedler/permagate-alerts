@@ -1,5 +1,5 @@
 import { EmailProvider } from './email/mailgun.js';
-import { GQLEvent, NewEvent, RawEvent } from './db/schema.js';
+import { GQLEvent, NetworkEvent, NewEvent, RawEvent } from './db/schema.js';
 import { SqliteDatabase } from './db/sqlite.js';
 import * as winston from 'winston';
 import { logger } from './logger.js';
@@ -7,10 +7,12 @@ import mjml2html from 'mjml';
 import { minify } from 'html-minifier-terser';
 import { ario } from './lib/ao.js';
 import * as config from './config.js';
+import { ARIO_MAINNET_PROCESS_ID } from '@ar.io/sdk';
 
-interface IEventProcessor {
+export interface IEventProcessor {
   processGQLEvent(event: GQLEvent): Promise<void>;
   processRawEvent(event: RawEvent): Promise<void>;
+  processNetworkEvent(event: NetworkEvent): Promise<void>;
 }
 
 export class EventProcessor implements IEventProcessor {
@@ -87,6 +89,25 @@ export class EventProcessor implements IEventProcessor {
       processId,
       from,
     };
+  }
+
+  async processNetworkEvent(event: NetworkEvent): Promise<void> {
+    const { id, name, endTimestamp, startTimestamp, eventType, processId } =
+      event;
+    const newEvent: NewEvent = {
+      eventType,
+      eventData: {
+        id,
+        target: '',
+        from: '',
+        tags: [],
+        data: { name, endTimestamp, startTimestamp },
+      },
+      processId,
+      blockHeight: null,
+      nonce: +endTimestamp, // we may have to construct these nonce's since they are not on the network event
+    };
+    this.storeAndNotify(newEvent);
   }
 
   async processRawEvent(event: RawEvent): Promise<void> {

@@ -179,6 +179,19 @@ const gqlEventSchema = z.object({
 });
 
 export type GQLEvent = z.infer<typeof gqlEventSchema>;
+
+// arns event
+const arnsEventSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  endTimestamp: z.number(),
+  startTimestamp: z.number(),
+  eventType: z.string(),
+  processId: z.string(),
+});
+
+export type NetworkEvent = z.infer<typeof arnsEventSchema>;
+
 // Export schemas for validation
 export const schemas = {
   subscriber: subscriberSchema,

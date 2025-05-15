@@ -22,6 +22,8 @@ export const gqlUrl =
 // Event processing
 export const disableEventProcessing =
   process.env.DISABLE_EVENT_PROCESSING === 'true';
+export const disableNetworkProcessing =
+  process.env.DISABLE_NETWORK_PROCESSING === 'true';
 
 // Auth0 configuration
 export const auth0Domain = process.env.AUTH0_DOMAIN;
