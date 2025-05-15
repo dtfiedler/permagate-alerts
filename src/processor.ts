@@ -215,6 +215,8 @@ const getEmailSubjectForEvent = async (event: NewEvent) => {
       const name = event.eventData.data.name;
       const type = event.eventData.data.type;
       return `💰 ${name} has been ${type === 'permabuy' ? 'permabought' : 'leased'}!`;
+    case 'create-vault-notice':
+      return `💰 ${event.eventData.from?.slice(0, 6)}...${event.eventData.from?.slice(-4)} has vaulted ${event.eventData.data.balance} $ARIO for ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}!`;
     case 'save-observations-notice':
       return `📝 ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)} submitted an observation report!`;
     case 'failed-observation-notice':
@@ -260,6 +262,61 @@ const getEmailSubjectForEvent = async (event: NewEvent) => {
 
 const getEmailBodyForEvent = async (event: NewEvent) => {
   switch (event.eventType.toLowerCase()) {
+    case 'create-vault-notice': {
+      const amount = event.eventData.data.balance / 1_000_000;
+      return `
+<mjml>
+  <mj-head>
+    <mj-title>Vaulted Transfer Notice</mj-title>
+    <mj-font name="Geist" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" />
+    <mj-attributes>
+      <mj-all font-family="Geist, sans-serif" />
+      <mj-text font-size="12px" color="#333" line-height="1.5" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .info-table th {
+        background-color: #fafafa !important;
+        font-weight: 600 !important;
+      }
+      .info-table th,
+      .info-table td {
+        padding: 8px !important;
+        border: 1px solid #eee !important;
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#ffffff">
+    <mj-section>
+      <mj-column>
+        <mj-text font-size="20px" font-weight="bold" color="#333">
+          Vaulted Transfer Notice
+        </mj-text>
+        <mj-text>
+          A new vaulted transfer has been made in the network.
+        </mj-text>
+        <mj-table css-class="info-table">
+          <tr>
+            <th>From</th>
+            <td>${event.eventData.from?.slice(0, 6)}...${event.eventData.from?.slice(-4)}</td>
+          </tr>
+          <tr>
+            <th>To</th>
+            <td>${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}</td>
+          </tr>
+          <tr>
+            <th>Amount</th>
+            <td>${amount} $ARIO</td>
+          </tr>
+          <tr>
+            <th>Unlocks at</th>
+            <td>${new Date(event.eventData.data.endTimestamp).toLocaleString()}</td>
+          </tr>
+        </mj-table>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>`;
+    }
     case 'save-observations-notice': {
       const prescribedObservers = await ario
         .getPrescribedObservers()
@@ -277,11 +334,6 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         event.eventData?.data.failureSummaries,
       )
         .map(([gatewayAddress, observersThatFailedGateway]) => {
-          console.log(
-            gatewayAddress,
-            observersThatFailedGateway,
-            event.eventData.target,
-          );
           // if the gateway has the sender, increment the count
           if (
             (observersThatFailedGateway as string[]).includes(
