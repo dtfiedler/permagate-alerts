@@ -445,7 +445,8 @@ export const triggersForProcessGqlQuery = ({
               "Update-Gateway-Settings",
               "Join-Network",
               "Leave-Network",
-              "Save-Observations"
+              "Save-Observations",
+              "Vaulted-Transfer"
             ]
           }
         ],
