@@ -277,11 +277,6 @@ const getEmailBodyForEvent = async (event: NewEvent) => {
         event.eventData?.data.failureSummaries,
       )
         .map(([gatewayAddress, observersThatFailedGateway]) => {
-          console.log(
-            gatewayAddress,
-            observersThatFailedGateway,
-            event.eventData.target,
-          );
           // if the gateway has the sender, increment the count
           if (
             (observersThatFailedGateway as string[]).includes(
