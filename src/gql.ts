@@ -49,7 +49,6 @@ export class GQLEventPoller implements EventPoller {
     this.processor = processor;
     this.authorities = authorities;
     this.skipToCurrentBlock = skipToCurrentBlock;
-    this.fetching = false;
   }
 
   async getLastBlockHeight(): Promise<number> {
@@ -59,6 +58,11 @@ export class GQLEventPoller implements EventPoller {
         return event?.blockHeight;
       });
     const latestBlockHeight = await this.arweave.blocks.getCurrent();
+
+    this.logger.info('Last block height', {
+      lastBlockHeight: lastBlockHeight || 0,
+      latestBlockHeight: latestBlockHeight.height,
+    });
 
     // if we're skipping to the current block, set it to false once we've started
     if (this.skipToCurrentBlock) {

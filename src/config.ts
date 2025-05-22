@@ -36,6 +36,14 @@ export const mailgunFromEmail = process.env.MAILGUN_FROM_EMAIL;
 export const mailgunDomain = process.env.MAILGUN_DOMAIN;
 export const disableEmails = process.env.DISABLE_EMAILS === 'true';
 
+// Notifications
+export const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
+export const enableSlackNotifications =
+  process.env.ENABLE_SLACK_NOTIFICATIONS === 'true';
+export const webhookEndpoints = process.env.WEBHOOK_ENDPOINTS
+  ? JSON.parse(process.env.WEBHOOK_ENDPOINTS)
+  : [];
+
 // Admin
 export const adminApiKey = process.env.ADMIN_API_KEY;
 export const adminNotificationEmailAddress =

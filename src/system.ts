@@ -8,9 +8,16 @@ import { EventProcessor } from './processor.js';
 import Arweave from 'arweave';
 import { GQLEventPoller } from './gql.js';
 import { ARIO_MAINNET_PROCESS_ID } from '@ar.io/sdk';
+import {
+  CompositeNotificationProvider,
+  EmailNotificationProvider,
+  SlackNotificationProvider,
+  WebhookNotificationProvider,
+  WebhookRecipient,
+} from './notifications/index.js';
 
-// TODO: replace with composite provider that sends to all EventProviders
-export const notifier = config.mailgunApiKey
+// Initialize individual notification providers
+export const mailgunProvider = config.mailgunApiKey
   ? new MailgunEmailProvider({
       apiKey: config.mailgunApiKey!,
       domain: config.mailgunDomain!,
@@ -18,6 +25,50 @@ export const notifier = config.mailgunApiKey
       logger,
     })
   : undefined;
+
+// Email notification provider
+const emailNotifier = mailgunProvider
+  ? new EmailNotificationProvider({
+      emailProvider: mailgunProvider,
+      logger,
+      enabled: !config.disableEmails,
+    })
+  : undefined;
+
+// Slack notification provider
+const slackNotifier = config.slackWebhookUrl
+  ? new SlackNotificationProvider({
+      webhookUrl: config.slackWebhookUrl,
+      logger,
+      enabled: config.enableSlackNotifications,
+    })
+  : undefined;
+
+// Webhook notification provider
+const webhookEndpoints: WebhookRecipient[] = Array.isArray(
+  config.webhookEndpoints,
+)
+  ? config.webhookEndpoints
+  : [];
+
+const webhookNotifier = new WebhookNotificationProvider({
+  endpoints: webhookEndpoints,
+  logger,
+  enabled: webhookEndpoints.length > 0,
+});
+
+// Create composite notification provider with all enabled providers
+export const notificationProvider = new CompositeNotificationProvider({
+  providers: [
+    ...(emailNotifier ? [emailNotifier] : []),
+    ...(slackNotifier ? [slackNotifier] : []),
+    ...(webhookNotifier ? [webhookNotifier] : []),
+  ],
+  logger,
+});
+
+// For backward compatibility with existing code
+export const notifier = mailgunProvider;
 
 export const arweave = new Arweave({
   host: config.gatewayHost,
@@ -34,6 +85,7 @@ export const processor = new EventProcessor({
   db,
   logger,
   notifier,
+  notificationProvider,
 });
 
 export const eventGqlPoller = new GQLEventPoller({
@@ -65,7 +117,7 @@ export const eventGqlCron = config.disableEventProcessing
       '*/1 * * * *',
       async () => {
         await eventGqlPoller.fetchAndProcessEvents();
-        await eventGqlPoller.fetchAndProcessTriggers();
+        // await eventGqlPoller.fetchAndProcessTriggers();
       },
       {
         runOnInit: true,

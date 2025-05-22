@@ -7,6 +7,10 @@ import mjml2html from 'mjml';
 import { minify } from 'html-minifier-terser';
 import { ario } from './lib/ao.js';
 import * as config from './config.js';
+import {
+  NotificationProvider,
+  generateNotificationContent,
+} from './notifications/index.js';
 
 interface IEventProcessor {
   processGQLEvent(event: GQLEvent): Promise<void>;
@@ -16,19 +20,23 @@ interface IEventProcessor {
 export class EventProcessor implements IEventProcessor {
   private db: SqliteDatabase;
   private notifier: EmailProvider | undefined;
+  private notificationProvider: NotificationProvider | undefined;
   private logger: winston.Logger;
 
   constructor({
     db,
     notifier,
+    notificationProvider,
     logger,
   }: {
     logger: winston.Logger;
     db: SqliteDatabase;
     notifier?: EmailProvider;
+    notificationProvider?: NotificationProvider;
   }) {
     this.db = db;
     this.notifier = notifier;
+    this.notificationProvider = notificationProvider;
     this.logger = logger.child({
       module: 'EventProcessor',
     });
@@ -150,15 +158,15 @@ export class EventProcessor implements IEventProcessor {
     // make sure the event is created
     await this.db.createEvent(event);
 
-    this.logger.info('Sending email to subscribers', {
+    this.logger.info('Sending notifications to subscribers', {
       eventId: event.eventData.id,
       eventType: event.eventType,
       subscribers: subscribers.length,
     });
 
-    if (config.disableEmails) {
+    if (config.disableEmails && !this.notificationProvider) {
       this.logger.info(
-        'Skipping email as emails are disabled. Message will be marked as processed.',
+        'Skipping notifications as emails are disabled and no notification provider is available. Message will be marked as processed.',
         {
           eventId: event.eventData.id,
           eventType: event.eventType,
@@ -169,35 +177,60 @@ export class EventProcessor implements IEventProcessor {
     }
 
     if (subscribers.length > 0) {
-      const mjmlTemplate = await getEmailBodyForEvent(event);
-      // Convert MJML to HTML
-      const htmlOutput = mjml2html(mjmlTemplate, {
-        keepComments: false,
-        beautify: false,
-        minify: false, // we'll minify ourselves in the next step
-      });
+      // Check if we're using the new notification system
+      if (this.notificationProvider) {
+        try {
+          // Generate content for all notification channels
+          const notificationData = await generateNotificationContent(
+            event,
+            subscribers.map((subscriber) => subscriber.email),
+            this.logger,
+          );
 
-      // Minify the HTML to reduce size
-      const html = await minify(htmlOutput.html, {
-        collapseWhitespace: true,
-        removeComments: true,
-        minifyCSS: true,
-        minifyJS: true,
-        minifyURLs: true,
-        removeEmptyElements: true,
-      });
-      const subject = await getEmailSubjectForEvent(event);
-      // send email, but don't await
-      this.notifier
-        ?.sendEventEmail({
-          to: subscribers.map((subscriber) => subscriber.email),
-          subject,
-          html,
-        })
-        .then(() => this.db.markEventAsProcessed(+event.nonce))
-        .catch((error) => {
-          this.logger.error('Error sending email', { error });
+          // Send notifications using the composite provider
+          await this.notificationProvider
+            .handle(notificationData)
+            .then(() => this.db.markEventAsProcessed(+event.nonce))
+            .catch((error) => {
+              this.logger.error('Error sending notifications', { error });
+            });
+        } catch (error) {
+          this.logger.error('Error generating notification content', { error });
+        }
+      }
+      // Fallback to legacy email provider if no notification provider or if we want both
+      else if (this.notifier) {
+        const mjmlTemplate = await getEmailBodyForEvent(event);
+        // Convert MJML to HTML
+        const htmlOutput = mjml2html(mjmlTemplate, {
+          keepComments: false,
+          beautify: false,
+          minify: false, // we'll minify ourselves in the next step
         });
+
+        // Minify the HTML to reduce size
+        const html = await minify(htmlOutput.html, {
+          collapseWhitespace: true,
+          removeComments: true,
+          minifyCSS: true,
+          minifyJS: true,
+          minifyURLs: true,
+          removeEmptyElements: true,
+        });
+        const subject = await getEmailSubjectForEvent(event);
+
+        // send email, but don't await
+        this.notifier
+          .sendEventEmail({
+            to: subscribers.map((subscriber) => subscriber.email),
+            subject,
+            html,
+          })
+          .then(() => this.db.markEventAsProcessed(+event.nonce))
+          .catch((error) => {
+            this.logger.error('Error sending email', { error });
+          });
+      }
     } else {
       this.logger.info('No subscribers found for event', {
         eventId: event.eventData.id,
@@ -208,7 +241,7 @@ export class EventProcessor implements IEventProcessor {
   }
 }
 
-const getEmailSubjectForEvent = async (event: NewEvent) => {
+export const getEmailSubjectForEvent = async (event: NewEvent) => {
   switch (event.eventType) {
     case 'buy-name-notice':
     case 'buy-record-notice':
@@ -258,7 +291,7 @@ const getEmailSubjectForEvent = async (event: NewEvent) => {
   }
 };
 
-const getEmailBodyForEvent = async (event: NewEvent) => {
+export const getEmailBodyForEvent = async (event: NewEvent) => {
   switch (event.eventType.toLowerCase()) {
     case 'save-observations-notice': {
       const prescribedObservers = await ario
