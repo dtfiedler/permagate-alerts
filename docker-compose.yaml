@@ -1,5 +1,5 @@
 services:
-  alerts:
+  api:
     build:
       context: .
       dockerfile: Dockerfile
@@ -12,10 +12,32 @@ services:
       - SKIP_TO_CURRENT_BLOCK=${SKIP_TO_CURRENT_BLOCK:-true}
       - GQL_URL=${GQL_URL:-https://arweave-search.goldsky.com/graphql}
       - LOG_LEVEL=${LOG_LEVEL:-}
+      - DISABLE_EMAIL_NOTIFICATIONS=true
+      - DISABLE_EVENT_PROCESSING=true
+      - FRONTEND_URL=${FRONTEND_URL:-https://subscribe.permagate.io}
+      - SECRET_KEY=${SECRET_KEY:-}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+    volumes:
+      - ./data:/usr/src/app/data
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - RUN_MIGRATIONS=true
+    environment:
+      - PORT=${PORT:-3000}
+      - NODE_ENV=${NODE_ENV:-development}
+      - HOST_URL=${HOST_URL:-http://localhost:3000}
+      - SKIP_TO_CURRENT_BLOCK=${SKIP_TO_CURRENT_BLOCK:-true}
+      - GQL_URL=${GQL_URL:-https://arweave-search.goldsky.com/graphql}
+      - LOG_LEVEL=${LOG_LEVEL:-}
       - MAILGUN_API_KEY=${MAILGUN_API_KEY:-}
       - MAILGUN_DOMAIN=${MAILGUN_DOMAIN:-}
       - MAILGUN_FROM_EMAIL=${MAILGUN_FROM_EMAIL:-}
-      - DISABLE_EMAILS=${DISABLE_EMAILS:-false}
+      - DISABLE_EMAIL_NOTIFICATIONS=${DISABLE_EMAIL_NOTIFICATIONS:-false}
       - FRONTEND_URL=${FRONTEND_URL:-https://subscribe.permagate.io}
       - SECRET_KEY=${SECRET_KEY:-}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}

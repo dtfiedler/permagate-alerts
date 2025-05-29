@@ -49,9 +49,9 @@ describe('container', function () {
         SECRET_KEY: 'test',
         LOG_LEVEL: 'debug',
       })
-      .withWaitStrategy('alerts-1', Wait.forHealthCheck())
+      .withWaitStrategy('api-1', Wait.forHealthCheck())
       .withBuild()
-      .up(['alerts']);
+      .up(['api']);
   });
 
   after(async function () {
