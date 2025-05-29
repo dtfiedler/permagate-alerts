@@ -5,7 +5,6 @@ import {
   NotificationProviderOptions,
 } from './interface.js';
 import axios from 'axios';
-import Turndown from 'turndown';
 
 export interface SlackNotificationProviderOptions
   extends NotificationProviderOptions {
@@ -108,24 +107,6 @@ export class SlackNotificationProvider implements NotificationProvider {
           },
         ],
       };
-
-      // Add link to event if available
-      // if (data.event.eventData.id) {
-      //   message.blocks.push({
-      //     type: 'actions',
-      //     elements: [
-      //       {
-      //         type: 'button',
-      //         text: {
-      //           type: 'plain_text',
-      //           text: 'View on AO',
-      //           emoji: true,
-      //         },
-      //         url: `https://ao.link/#/message/${data.event.eventData.id}`,
-      //       },
-      //     ],
-      //   });
-      // }
 
       this.logger.debug('Sending Slack notification', {
         eventType: data.event.eventType,
