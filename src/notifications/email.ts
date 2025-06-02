@@ -1,8 +1,13 @@
 import { Logger } from 'winston';
-import { NotificationData, NotificationProvider, NotificationProviderOptions } from './interface.js';
+import {
+  NotificationData,
+  NotificationProvider,
+  NotificationProviderOptions,
+} from './interface.js';
 import { EmailProvider } from '../email/mailgun.js';
 
-export interface EmailNotificationProviderOptions extends NotificationProviderOptions {
+export interface EmailNotificationProviderOptions
+  extends NotificationProviderOptions {
   emailProvider: EmailProvider;
 }
 
@@ -11,7 +16,11 @@ export class EmailNotificationProvider implements NotificationProvider {
   private logger: Logger;
   private enabled: boolean;
 
-  constructor({ emailProvider, logger, enabled = true }: EmailNotificationProviderOptions) {
+  constructor({
+    emailProvider,
+    logger,
+    enabled = true,
+  }: EmailNotificationProviderOptions) {
     this.emailProvider = emailProvider;
     this.logger = logger.child({
       module: 'EmailNotificationProvider',
