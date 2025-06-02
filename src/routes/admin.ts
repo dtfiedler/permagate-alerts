@@ -10,7 +10,7 @@ const adminRouter = Router();
 adminRouter.use('/api/admin', adminMiddleware);
 
 adminRouter.get(
-  '/send-verification-email',
+  '/api/admin/send-verification-email',
   // @ts-ignore
   async (req: Request, res: Response) => {
     try {
