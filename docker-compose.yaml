@@ -12,6 +12,7 @@ services:
       - SKIP_TO_CURRENT_BLOCK=${SKIP_TO_CURRENT_BLOCK:-true}
       - GQL_URL=${GQL_URL:-https://arweave-search.goldsky.com/graphql}
       - LOG_LEVEL=${LOG_LEVEL:-}
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-}
       - MAILGUN_API_KEY=${MAILGUN_API_KEY:-}
       - MAILGUN_DOMAIN=${MAILGUN_DOMAIN:-}
       - MAILGUN_FROM_EMAIL=${MAILGUN_FROM_EMAIL:-}
@@ -37,6 +38,7 @@ services:
       - SKIP_TO_CURRENT_BLOCK=${SKIP_TO_CURRENT_BLOCK:-true}
       - GQL_URL=${GQL_URL:-https://arweave-search.goldsky.com/graphql}
       - LOG_LEVEL=${LOG_LEVEL:-}
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-}
       - MAILGUN_API_KEY=${MAILGUN_API_KEY:-}
       - MAILGUN_DOMAIN=${MAILGUN_DOMAIN:-}
       - MAILGUN_FROM_EMAIL=${MAILGUN_FROM_EMAIL:-}
