@@ -18,6 +18,7 @@ services:
       - MAILGUN_FROM_EMAIL=${MAILGUN_FROM_EMAIL:-}
       - DISABLE_EMAIL_NOTIFICATIONS=true
       - DISABLE_EVENT_PROCESSING=true
+      - ENABLE_HOSTED_FRONTEND=false
       - FRONTEND_URL=${FRONTEND_URL:-https://subscribe.permagate.io}
       - SECRET_KEY=${SECRET_KEY:-}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
@@ -47,5 +48,6 @@ services:
       - SECRET_KEY=${SECRET_KEY:-}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - ENABLE_HOSTED_FRONTEND=false
     volumes:
       - ./data:/usr/src/app/data

@@ -63,3 +63,7 @@ export const arioProcessId = process.env.ARIO_PROCESS_ID;
 // Stripe
 export const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 export const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+// enable hosted frontend
+export const enableHostedFrontend =
+  process.env.ENABLE_HOSTED_FRONTEND === 'true';
