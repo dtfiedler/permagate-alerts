@@ -241,15 +241,51 @@ export class EventProcessor implements IEventProcessor {
   }
 }
 
+/**
+ * Checks if a string is Punycode encoded
+ * @param str String to check
+ * @returns Boolean indicating if the string is Punycode
+ */
+const isPunycode = (str: string): boolean => {
+  return str.startsWith('xn--');
+};
+
+/**
+ * Decodes a Punycode domain name to Unicode
+ * @param str Punycode string to decode
+ * @returns Unicode representation of the domain
+ */
+const decodePunycode = (str: string): string => {
+  try {
+    // Use built-in Node.js punycode support
+    return new URL(`https://${str}`).hostname;
+  } catch (error) {
+    // If there's an error, return the original string
+    return str;
+  }
+};
+
+/**
+ * Formats a domain name for display, handling Punycode if needed
+ * @param name Domain name that might be Punycode
+ * @returns Formatted name for display (with both Punycode and decoded versions if applicable)
+ */
+export const formatNameForDisplay = (name: string): string => {
+  if (isPunycode(name)) {
+    const decoded = decodePunycode(name);
+    return `${decoded} (${name})`;
+  }
+  return name;
+};
+
 export const getEmailSubjectForEvent = async (event: NewEvent) => {
   switch (event.eventType) {
     case 'buy-name-notice':
     case 'buy-record-notice':
       const name = event.eventData.data.name;
       const type = event.eventData.data.type;
-      return `💰 ${name} has been ${type === 'permabuy' ? 'permabought' : 'leased'}!`;
-    case 'create-vault-notice':
-      return `💰 ${event.eventData.from?.slice(0, 6)}...${event.eventData.from?.slice(-4)} has vaulted ${event.eventData.data.balance} $ARIO for ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}!`;
+      const displayName = formatNameForDisplay(name);
+      return `💰 ${displayName} has been ${type === 'permabuy' ? 'permabought' : 'leased'}!`;
     case 'save-observations-notice':
       return `📝 ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)} submitted an observation report!`;
     case 'failed-observation-notice':
@@ -842,6 +878,7 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
     case 'buy-name-notice':
     case 'buy-record-notice': {
       const name = event.eventData.data.name;
+      const displayName = formatNameForDisplay(name);
       const type = event.eventData.data.type;
       const startTimestamp = new Date(
         event.eventData.data.startTimestamp,
@@ -897,7 +934,7 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
             font-weight="600"
             align="center"
           >
-            ${name} has been ${type === 'permabuy' ? 'permabought' : 'leased'}!
+            ${displayName} has been ${type === 'permabuy' ? 'permabought' : 'leased'}!
           </mj-text>
         </mj-column>
       </mj-section>
@@ -920,7 +957,7 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
           <mj-table css-class="info-table">
             <tr>
               <th width="40%">Name</th>
-              <td width="60%"><a href="https://${name}.permagate.io" style="color: #007bff; text-decoration: none;">${name}</a></td>
+              <td width="60%"><a href="https://${name}.permagate.io" style="color: #007bff; text-decoration: none;">${displayName}</a></td>
             </tr>
             <tr>
               <th width="40%">Purchase Price</th>
@@ -1533,10 +1570,10 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
           <mj-text>
             <ul>
               ${prescribedNames
-                .map(
-                  (name: string) =>
-                    `<li><a href="https://${name}.permagate.io" style="color: #007bff; text-decoration: none;">ar://${name}</a></li>`,
-                )
+                .map((name: string) => {
+                  const displayName = formatNameForDisplay(name);
+                  return `<li><a href="https://${name}.permagate.io" style="color: #007bff; text-decoration: none;">ar://${displayName}</a></li>`;
+                })
                 .join('')}
             </ul>
           </mj-text>
