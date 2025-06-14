@@ -5,6 +5,7 @@ import { logger } from './logger.js';
 import * as config from './config.js';
 import { MailgunEmailProvider } from './email/mailgun.js';
 import { EventProcessor } from './processor.js';
+import { ExchangeRateService } from './lib/exchangeRate.js';
 import Arweave from 'arweave';
 import { GQLEventPoller } from './gql.js';
 import { ARIO_MAINNET_PROCESS_ID } from '@ar.io/sdk';
@@ -80,6 +81,11 @@ export const db = new SqliteDatabase({
   knex,
   logger,
 });
+
+export const exchangeRateService = new ExchangeRateService(
+  logger,
+  config.marketCapApiKey,
+);
 
 export const processor = new EventProcessor({
   db,

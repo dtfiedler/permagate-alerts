@@ -64,6 +64,13 @@ describe('container', function () {
     assert.equal(response.status, 200);
   });
 
+  it('should return the current ARIO/USD rate', async function () {
+    const response = await fetch('http://localhost:3000/api/rate');
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.ok(Object.prototype.hasOwnProperty.call(body, 'rate'));
+  });
+
   it('should store a subscriber with default process subscriptions', async function () {
     const response = await fetch(
       'http://localhost:3000/api/subscribe?email=test@example.com',

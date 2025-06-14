@@ -73,6 +73,13 @@ The service uses [Mailgun](https://www.mailgun.com/) to send emails. The followi
 - `MAILGUN_DOMAIN` - the domain for Mailgun
 - `MAILGUN_FROM` - the email address to send from
 
+## Market Data
+
+If you would like notification emails to display the current USD value of
+`$ARIO`, provide a CoinMarketCap API key via the `MARKET_CAP_API_KEY` environment
+variable. When set, the service will fetch the latest exchange rate and include
+approximate conversions in relevant messages.
+
 ## Database
 
 The service uses a SQLite database store user data. The database is stored in the `data` directory. The database schema is defined in [src/db/schema.sql](./src/db/schema.ts). [Knex](https://knexjs.org/guide/#node-js) is used to perform database migrations and queries.

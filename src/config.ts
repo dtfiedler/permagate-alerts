@@ -64,6 +64,9 @@ export const arioProcessId = process.env.ARIO_PROCESS_ID;
 export const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 export const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+// Market data
+export const marketCapApiKey = process.env.MARKET_CAP_API_KEY;
+
 // enable hosted frontend
 export const enableHostedFrontend =
   process.env.ENABLE_HOSTED_FRONTEND === 'true';

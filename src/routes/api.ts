@@ -1,6 +1,7 @@
 import { Router, type Response } from 'express';
 import { logger } from '../logger.js';
 import type { Request } from '../types.js';
+import { exchangeRateService } from '../system.js';
 import * as config from '../config.js';
 import { z } from 'zod';
 import {
@@ -29,6 +30,12 @@ const DEFAULT_PROCESS_SUBSCRIPTIONS = {
 // Healthcheck
 apiRouter.get('/healthcheck', (_, res) => {
   res.send('OK');
+});
+
+// Retrieve ARIO to USD conversion rate
+apiRouter.get('/api/rate', async (_req: Request, res: Response) => {
+  const rate = await exchangeRateService.getArioUsdRate();
+  res.json({ rate });
 });
 
 // Route to add a new subscriber
