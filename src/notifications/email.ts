@@ -1,23 +1,28 @@
 import { Logger } from 'winston';
 import {
-  NotificationData,
+  NotificationDataWithRecipients,
   NotificationProvider,
   NotificationProviderOptions,
 } from './interface.js';
 import { EmailProvider } from '../email/mailgun.js';
+import { generateNotificationContent } from './content.js';
+import { SqliteDatabase } from '../db/sqlite.js';
 
 export interface EmailNotificationProviderOptions
   extends NotificationProviderOptions {
   emailProvider: EmailProvider;
+  db: SqliteDatabase;
 }
 
 export class EmailNotificationProvider implements NotificationProvider {
   private emailProvider: EmailProvider;
   private logger: Logger;
   private enabled: boolean;
+  private db: SqliteDatabase;
 
   constructor({
     emailProvider,
+    db,
     logger,
     enabled = true,
   }: EmailNotificationProviderOptions) {
@@ -26,31 +31,52 @@ export class EmailNotificationProvider implements NotificationProvider {
       module: 'EmailNotificationProvider',
     });
     this.enabled = enabled;
+    this.db = db;
   }
 
-  async handle(data: NotificationData): Promise<void> {
+  async handle(data: NotificationDataWithRecipients): Promise<void> {
     if (!this.enabled) {
       this.logger.info('Email notifications are disabled');
       return;
     }
 
-    if (!data.html || !data.subject) {
+    const subscribers = await this.db.findSubscribersByEvent({
+      processId: data.event.processId,
+      event: data.event.eventType,
+      target: data.event.eventData.target,
+    });
+
+    const emailData = await generateNotificationContent(
+      data.event,
+      this.logger,
+    );
+
+    if (!emailData.html || !emailData.subject) {
       this.logger.error('Missing html or subject for email notification', {
         eventType: data.event.eventType,
       });
       return;
     }
 
-    try {
-      this.logger.debug('Sending email notification', {
-        recipients: data.recipients.length,
+    if (subscribers.length === 0) {
+      this.logger.info('No subscribers found for event', {
+        eventId: data.event.eventData.id,
         eventType: data.event.eventType,
+      });
+      return;
+    }
+
+    try {
+      this.logger.debug('Sending email notification to subscribers', {
+        recipients: subscribers.length,
+        eventType: data.event.eventType,
+        eventId: data.event.eventData.id,
       });
 
       await this.emailProvider.sendEventEmail({
-        to: data.recipients,
-        subject: data.subject,
-        html: data.html,
+        to: subscribers.map((subscriber) => subscriber.email),
+        subject: emailData.subject,
+        html: emailData.html,
       });
 
       this.logger.debug('Email notification sent successfully', {

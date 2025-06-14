@@ -5,6 +5,7 @@ import {
   NotificationProviderOptions,
 } from './interface.js';
 import axios from 'axios';
+import { formatNameForDisplay, getEmailSubjectForEvent } from './content.js';
 
 export interface SlackNotificationProviderOptions
   extends NotificationProviderOptions {
@@ -36,17 +37,31 @@ export class SlackNotificationProvider implements NotificationProvider {
 
     try {
       // Create a simplified text-only version if no text is provided
-      const text = data.text || `New ${data.event.eventType} event`;
+      const text = Object.entries(data.event.eventData.data)
+        .flatMap(([key, value]) => {
+          if (typeof value === 'object' && value !== null) {
+            return Object.entries(value).map(
+              ([subKey, subValue]) =>
+                `*${subKey}*: ${typeof subValue === 'string' ? subValue : JSON.stringify(subValue)}`,
+            );
+          }
+          return [
+            `*${key}*: ${typeof value === 'string' ? value : JSON.stringify(value)}`,
+          ];
+        })
+        .join('\n');
+
+      const header = await getEmailSubjectForEvent(data.event);
 
       // Basic message for Slack
       const message = {
-        text: data.subject || `Permagate Alert: ${data.event.eventType}`,
+        text: header,
         blocks: [
           {
             type: 'header',
             text: {
               type: 'plain_text',
-              text: data.subject || `Permagate Alert: ${data.event.eventType}`,
+              text: `${header}`,
               emoji: true,
             },
           },
@@ -88,7 +103,7 @@ export class SlackNotificationProvider implements NotificationProvider {
               },
               {
                 type: 'mrkdwn',
-                text: `*Process ID:*\n${data.event.processId.slice(0, 6)}...${data.event.processId.slice(-4)}`,
+                text: `*Process ID:*\n<https://ao.link/#/entity/${data.event.processId}|${data.event.processId.slice(0, 6)}...${data.event.processId.slice(-4)}>`,
               },
             ],
           },
@@ -97,11 +112,11 @@ export class SlackNotificationProvider implements NotificationProvider {
             fields: [
               {
                 type: 'mrkdwn',
-                text: `*Target:*\n${data.event.eventData.target ? `${data.event.eventData.target.slice(0, 6)}...${data.event.eventData.target.slice(-4)}` : 'N/A'}`,
+                text: `*Target:*\n<https://ao.link/#/entity/${data.event.eventData.target}|${data.event.eventData.target ? `${formatNameForDisplay(data.event.eventData.target)}` : 'N/A'}>`,
               },
               {
                 type: 'mrkdwn',
-                text: `*From:*\n${data.event.eventData.from ? `${data.event.eventData.from.slice(0, 6)}...${data.event.eventData.from.slice(-4)}` : 'N/A'}`,
+                text: `*From:*\n<https://ao.link/#/entity/${data.event.eventData.from}|${data.event.eventData.from ? `${formatNameForDisplay(data.event.eventData.from)}` : 'N/A'}>`,
               },
             ],
           },

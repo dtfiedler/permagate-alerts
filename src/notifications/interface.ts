@@ -3,9 +3,15 @@ import { NewEvent } from '../db/schema.js';
 
 export interface NotificationData {
   event: NewEvent;
-  html?: string;
-  subject?: string;
-  text?: string;
+}
+
+export interface EmailNotificationData extends NotificationData {
+  html: string;
+  subject: string;
+  text: string;
+}
+
+export interface NotificationDataWithRecipients extends NotificationData {
   recipients: string[];
 }
 
@@ -39,7 +45,7 @@ export class CompositeNotificationProvider implements NotificationProvider {
     });
   }
 
-  async handle(data: NotificationData): Promise<void> {
+  async handle(data: NotificationDataWithRecipients): Promise<void> {
     this.logger.debug('Handling notification with composite provider', {
       providersCount: this.providers.length,
       eventType: data.event.eventType,

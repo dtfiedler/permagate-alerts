@@ -2,7 +2,6 @@ import Arweave from 'arweave';
 import { EventProcessor } from './processor.js';
 import winston from 'winston';
 import { SqliteDatabase } from './db/sqlite.js';
-import { ao } from './lib/ao.js';
 import { GQLEvent, NewEvent } from './db/schema.js';
 
 interface EventPoller {
@@ -17,9 +16,10 @@ export class GQLEventPoller implements EventPoller {
   private authorities: string[];
   private gqlUrl: string;
   private logger: winston.Logger;
-  private fetching = false;
   private skipToCurrentBlock: boolean;
+  private ao: any;
   constructor({
+    ao,
     processId,
     arweave,
     processor,
@@ -29,6 +29,7 @@ export class GQLEventPoller implements EventPoller {
     db,
     skipToCurrentBlock,
   }: {
+    ao: any;
     db: SqliteDatabase;
     processId: string;
     arweave: Arweave;
@@ -49,26 +50,28 @@ export class GQLEventPoller implements EventPoller {
     this.processor = processor;
     this.authorities = authorities;
     this.skipToCurrentBlock = skipToCurrentBlock;
+    this.ao = ao;
   }
 
   async getLastBlockHeight(): Promise<number> {
-    const lastBlockHeight = await this.db
-      .getLatestEventByBlockHeight({ processId: this.processId })
-      .then((event) => {
-        return event?.blockHeight;
-      });
     const latestBlockHeight = await this.arweave.blocks.getCurrent();
-
-    this.logger.info('Last block height', {
-      lastBlockHeight: lastBlockHeight || 0,
-      latestBlockHeight: latestBlockHeight.height,
-    });
 
     // if we're skipping to the current block, set it to false once we've started
     if (this.skipToCurrentBlock) {
       this.skipToCurrentBlock = false;
       return latestBlockHeight.height;
     }
+
+    const lastBlockHeight = await this.db
+      .getLatestEventByBlockHeight({ processId: this.processId })
+      .then((event) => {
+        return event?.blockHeight;
+      });
+
+    this.logger.info('Last block height', {
+      lastBlockHeight: lastBlockHeight || 0,
+      latestBlockHeight: latestBlockHeight.height,
+    });
 
     // return the minimum of the last block height or the latest block height
     return Math.min(
@@ -82,11 +85,6 @@ export class GQLEventPoller implements EventPoller {
    * @returns void
    */
   async fetchAndProcessEvents(): Promise<void> {
-    if (this.fetching) {
-      this.logger.info('Already fetching events, skipping...');
-      return;
-    }
-    this.fetching = true;
     let cursor;
     let hasNextPage = true;
     let lastBlockHeight = await this.getLastBlockHeight();
@@ -198,7 +196,6 @@ export class GQLEventPoller implements EventPoller {
     } catch (error) {
       this.logger.error('Error fetching events', error);
     } finally {
-      this.fetching = false;
       this.logger.info(
         `Finished fetching events up to block height ${lastBlockHeight}`,
       );
@@ -209,14 +206,8 @@ export class GQLEventPoller implements EventPoller {
     const lastBlockHeight = await this.getLastBlockHeight();
     let cursor;
     let hasNextPage = true;
-    let fetching = false;
     try {
       while (hasNextPage) {
-        if (fetching) {
-          this.logger.info('Already fetching triggers, skipping...');
-          return;
-        }
-        fetching = true;
         const query = triggersForProcessGqlQuery({
           processId: this.processId,
           minBlockHeight: lastBlockHeight,
@@ -276,7 +267,7 @@ export class GQLEventPoller implements EventPoller {
         });
 
         for (const event of sortedEvents) {
-          const messageResult = await ao.result({
+          const messageResult = await this.ao.result({
             message: event.node.id,
             process: this.processId,
           });

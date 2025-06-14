@@ -16,6 +16,20 @@ import {
   WebhookRecipient,
 } from './notifications/index.js';
 
+import { ARIO } from '@ar.io/sdk';
+import { connect } from '@permaweb/aoconnect';
+
+export const ario = ARIO.mainnet();
+export const ao = connect({
+  CU_URL: config.cuUrl,
+  MODE: 'legacy',
+});
+
+export const db = new SqliteDatabase({
+  knex,
+  logger,
+});
+
 // Initialize individual notification providers
 export const mailgunProvider = config.mailgunApiKey
   ? new MailgunEmailProvider({
@@ -30,6 +44,7 @@ export const mailgunProvider = config.mailgunApiKey
 const emailNotifier = mailgunProvider
   ? new EmailNotificationProvider({
       emailProvider: mailgunProvider,
+      db,
       logger,
       enabled: !config.disableEmails,
     })
@@ -76,19 +91,14 @@ export const arweave = new Arweave({
   protocol: 'https',
 });
 
-export const db = new SqliteDatabase({
-  knex,
-  logger,
-});
-
 export const processor = new EventProcessor({
   db,
   logger,
-  notifier,
   notificationProvider,
 });
 
 export const eventGqlPoller = new GQLEventPoller({
+  ao,
   logger,
   processId: config.arioProcessId || ARIO_MAINNET_PROCESS_ID,
   processor,
