@@ -398,7 +398,7 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
             <tr>
               <th width="40%">Report</th>
               <td width="60%">
-                <a href="https://arweave.net/${report}" style="color: #007bff; text-decoration: none;">
+                <a href="https://permagate.io/${report}" style="color: #007bff; text-decoration: none;">
                   ${report.slice(0, 6)}...${report.slice(-4)}
                 </a>
               </td>

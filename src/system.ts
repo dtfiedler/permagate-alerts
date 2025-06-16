@@ -18,6 +18,7 @@ import {
 
 import { ARIO } from '@ar.io/sdk';
 import { connect } from '@permaweb/aoconnect';
+import { SESEmailProvider } from './email/ses.js';
 
 export const ario = ARIO.mainnet();
 export const ao = connect({
@@ -31,18 +32,23 @@ export const db = new SqliteDatabase({
 });
 
 // Initialize individual notification providers
-export const mailgunProvider = config.mailgunApiKey
-  ? new MailgunEmailProvider({
-      apiKey: config.mailgunApiKey!,
-      domain: config.mailgunDomain!,
-      from: config.mailgunFromEmail!,
-    })
-  : undefined;
+export const emailProvider =
+  config.awsAccessKeyId &&
+  config.awsSecretAccessKey &&
+  config.awsRegion &&
+  config.awsFromEmail
+    ? new SESEmailProvider({
+        accessKeyId: config.awsAccessKeyId,
+        secretAccessKey: config.awsSecretAccessKey,
+        region: config.awsRegion,
+        from: config.awsFromEmail,
+      })
+    : undefined;
 
 // Email notification provider
-const emailNotifier = mailgunProvider
+const emailNotifier = emailProvider
   ? new EmailNotificationProvider({
-      emailProvider: mailgunProvider,
+      emailProvider: emailProvider,
       db,
       logger,
       enabled: !config.disableEmails,
@@ -101,11 +107,7 @@ export const eventGqlPoller = new GQLEventPoller({
   gqlUrl: config.gqlUrl,
   skipToCurrentBlock: config.skipToCurrentBlock,
   db: db,
-  arweave: Arweave.init({
-    host: 'arweave.net',
-    port: 443,
-    protocol: 'https',
-  }),
+  arweave: arweave,
   authorities: ['fcoN_xJeisVsPXA-trzVAuIiqO3ydLQxM-L4XbrQKzY'],
 });
 
