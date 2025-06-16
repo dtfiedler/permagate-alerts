@@ -1,7 +1,6 @@
 import Mailgun from 'mailgun.js';
 import { Interfaces } from 'mailgun.js/definitions';
 import FormData from 'form-data';
-import { Event } from '../db/schema.js';
 import { Logger } from 'winston';
 
 const mailgun = new Mailgun.default(FormData);
@@ -30,23 +29,18 @@ export class MailgunEmailProvider implements EmailProvider {
   private client: Interfaces.IMailgunClient;
   private from: string;
   private domain: string;
-  private logger: Logger;
 
   constructor({
     apiKey,
     from,
     domain,
-    logger,
-  }: EmailProviderOptions & { domain: string; logger: Logger }) {
+  }: EmailProviderOptions & { domain: string }) {
     this.client = mailgun.client({
       username: 'api',
       key: apiKey,
     });
     this.domain = domain;
     this.from = from;
-    this.logger = logger.child({
-      module: 'MailgunEmailProvider',
-    });
   }
 
   async sendRawEmail(data: {
