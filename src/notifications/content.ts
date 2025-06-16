@@ -1342,6 +1342,9 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
               <td width="60%">${totalEligibleGatewayRewardCreated.toFixed(2).toLocaleString()} $ARIO</td>
             </tr>
           </mj-table>
+          ${
+            newGatewaysFqdns.length > 0
+              ? `
           <mj-text
             font-size="18px"
             font-weight="600"
@@ -1354,6 +1357,9 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
               ${newGatewaysFqdns.map((fqdn) => `<li>${fqdn}</li>`).join('')}
             </ul>
           </mj-text>
+          `
+              : ''
+          }
           <mj-text
             font-size="18px"
             font-weight="600"
@@ -1600,6 +1606,9 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
               <td width="60%">${distributedTimestamp}</td>
             </tr>
           </mj-table>
+          ${
+            bestStreaks.items.length > 0
+              ? `
           <mj-text
             font-size="18px"
             font-weight="600"
@@ -1618,6 +1627,12 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
               )
               .join('')}
           </mj-table>
+          `
+              : ''
+          }
+          ${
+            worstStreaks.items.length > 0
+              ? `
           <mj-text
             font-size="18px"
             font-weight="600"
@@ -1636,6 +1651,9 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
               )
               .join('')}
           </mj-table>
+          `
+              : ''
+          }
           <mj-button
             background-color="#007bff"
             border-radius="5px"
