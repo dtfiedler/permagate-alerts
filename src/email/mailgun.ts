@@ -12,15 +12,8 @@ export interface EventEmail {
   html: string;
 }
 
-export interface DigestEmailData {
-  to: string[];
-  subject: string;
-  digestItems: Map<string, Event[]>;
-}
-
 export interface EmailProvider {
   sendEventEmail(data: EventEmail): Promise<void>;
-  sendDigestEmail(data: DigestEmailData): Promise<void>;
   sendRawEmail(data: {
     to: string[];
     subject: string;
@@ -88,27 +81,6 @@ export class MailgunEmailProvider implements EmailProvider {
     };
 
     await this.client.messages.create(this.domain, emailData);
-  }
-
-  async sendDigestEmail(data: DigestEmailData): Promise<void> {
-    const { to, subject, digestItems } = data;
-    this.logger.info('Sending digest email', {
-      to,
-      subject,
-    });
-    let text = '';
-    for (const [eventType, events] of digestItems) {
-      text += `\n${eventType}\n${events
-        .map(
-          (event: Event) => `${JSON.stringify(event.eventData.tags, null, 2)}`,
-        )
-        .join('\n')}\n`;
-    }
-    const fullText = `Permagate Digest\n\n${text}`;
-    this.logger.info(`Sending digest email to ${to} with subject ${subject}`, {
-      text: fullText,
-    });
-    return this.sendRawEmail({ to, subject, text });
   }
 
   async sendEventEmail({ to, html, subject }: EventEmail): Promise<void> {

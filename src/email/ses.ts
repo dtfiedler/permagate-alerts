@@ -1,31 +1,31 @@
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
-import { Event } from '../db/schema.js';
-import { Logger } from 'winston';
-import type { EmailProvider, EventEmail, DigestEmailData } from './mailgun.js';
+import type { EmailProvider, EventEmail } from './mailgun.js';
 
 export interface SESEmailProviderOptions {
   accessKeyId: string;
   secretAccessKey: string;
   region: string;
   from: string;
-  logger: Logger;
 }
 
 export class SESEmailProvider implements EmailProvider {
   private client: SESClient;
   private from: string;
-  private logger: Logger;
 
-  constructor(options: SESEmailProviderOptions) {
+  constructor({
+    accessKeyId,
+    secretAccessKey,
+    region,
+    from,
+  }: SESEmailProviderOptions) {
     this.client = new SESClient({
-      region: options.region,
+      region,
       credentials: {
-        accessKeyId: options.accessKeyId,
-        secretAccessKey: options.secretAccessKey,
+        accessKeyId,
+        secretAccessKey,
       },
     });
-    this.from = options.from;
-    this.logger = options.logger.child({ module: 'SESEmailProvider' });
+    this.from = from;
   }
 
   private async send(command: SendEmailCommand) {
@@ -64,20 +64,5 @@ export class SESEmailProvider implements EmailProvider {
       },
     };
     await this.send(new SendEmailCommand(params));
-  }
-
-  async sendDigestEmail(data: DigestEmailData): Promise<void> {
-    const { to, subject, digestItems } = data;
-    let text = '';
-    for (const [eventType, events] of digestItems) {
-      text += `\n${eventType}\n${events
-        .map(
-          (event: Event) => `${JSON.stringify(event.eventData.tags, null, 2)}`,
-        )
-        .join('\n')}\n`;
-    }
-    const fullText = `Permagate Digest\n\n${text}`;
-    this.logger.info(`Sending digest email to ${to} with subject ${subject}`);
-    await this.sendRawEmail({ to, subject, text: fullText });
   }
 }
