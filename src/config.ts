@@ -67,3 +67,10 @@ export const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 // enable hosted frontend
 export const enableHostedFrontend =
   process.env.ENABLE_HOSTED_FRONTEND === 'true';
+
+// AWS
+export const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
+export const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+export const awsRegion = process.env.AWS_REGION || 'us-east-1';
+export const awsFromEmail =
+  process.env.AWS_FROM_EMAIL || 'noreply@permagate.io';
