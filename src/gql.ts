@@ -306,7 +306,6 @@ export class GQLEventPoller implements EventPoller {
     } catch (error) {
       this.logger.error('Error fetching events', error);
     } finally {
-      this.fetching = false;
       this.logger.info(
         `Finished fetching events up to block height ${lastBlockHeight}`,
       );
