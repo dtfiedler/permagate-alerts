@@ -36,7 +36,6 @@ export const mailgunProvider = config.mailgunApiKey
       apiKey: config.mailgunApiKey!,
       domain: config.mailgunDomain!,
       from: config.mailgunFromEmail!,
-      logger,
     })
   : undefined;
 
@@ -81,9 +80,6 @@ export const notificationProvider = new CompositeNotificationProvider({
   ],
   logger,
 });
-
-// For backward compatibility with existing code
-export const notifier = mailgunProvider;
 
 export const arweave = new Arweave({
   host: config.gatewayHost,
