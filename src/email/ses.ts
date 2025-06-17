@@ -38,7 +38,7 @@ export class SESEmailProvider implements EmailProvider {
     text: string;
   }): Promise<void> {
     const params = {
-      Source: this.from,
+      Source: `Permagate Alerts <${this.from}>`,
       Destination: {
         ToAddresses: ['noreply@permagate.io'],
         BccAddresses: data.to,
@@ -53,7 +53,7 @@ export class SESEmailProvider implements EmailProvider {
 
   async sendEventEmail({ to, html, subject }: EventEmail): Promise<void> {
     const params = {
-      Source: this.from,
+      Source: `Permagate Alerts <${this.from}>`,
       Destination: {
         ToAddresses: ['noreply@permagate.io'],
         BccAddresses: to,
