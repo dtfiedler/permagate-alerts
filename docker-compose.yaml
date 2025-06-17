@@ -13,6 +13,10 @@ services:
       - GQL_URL=${GQL_URL:-https://arweave-search.goldsky.com/graphql}
       - LOG_LEVEL=${LOG_LEVEL:-}
       - ADMIN_API_KEY=${ADMIN_API_KEY:-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_FROM_EMAIL=${AWS_FROM_EMAIL:-}
       - MAILGUN_API_KEY=${MAILGUN_API_KEY:-}
       - MAILGUN_DOMAIN=${MAILGUN_DOMAIN:-}
       - MAILGUN_FROM_EMAIL=${MAILGUN_FROM_EMAIL:-}
@@ -40,6 +44,10 @@ services:
       - GQL_URL=${GQL_URL:-https://arweave-search.goldsky.com/graphql}
       - LOG_LEVEL=${LOG_LEVEL:-}
       - ADMIN_API_KEY=${ADMIN_API_KEY:-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_FROM_EMAIL=${AWS_FROM_EMAIL:-}
       - MAILGUN_API_KEY=${MAILGUN_API_KEY:-}
       - MAILGUN_DOMAIN=${MAILGUN_DOMAIN:-}
       - MAILGUN_FROM_EMAIL=${MAILGUN_FROM_EMAIL:-}
