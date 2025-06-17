@@ -3,7 +3,6 @@ import { SqliteDatabase } from './db/sqlite.js';
 import { knex } from './db/knexfile.js';
 import { logger } from './logger.js';
 import * as config from './config.js';
-import { MailgunEmailProvider } from './email/mailgun.js';
 import { EventProcessor } from './processor.js';
 import Arweave from 'arweave';
 import { GQLEventPoller } from './gql.js';

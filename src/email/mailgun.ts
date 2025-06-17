@@ -1,7 +1,6 @@
 import Mailgun from 'mailgun.js';
 import { Interfaces } from 'mailgun.js/definitions';
 import FormData from 'form-data';
-import { Logger } from 'winston';
 
 const mailgun = new Mailgun.default(FormData);
 
