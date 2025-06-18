@@ -15,11 +15,11 @@ import {
   WebhookRecipient,
 } from './notifications/index.js';
 
-import { ARIO } from '@ar.io/sdk';
+import { CachedArio } from "./lib/cachedArio.js";
 import { connect } from '@permaweb/aoconnect';
 import { SESEmailProvider } from './email/ses.js';
 
-export const ario = ARIO.mainnet();
+export const ario = new CachedArio();
 export const ao = connect({
   CU_URL: config.cuUrl,
   MODE: 'legacy',
