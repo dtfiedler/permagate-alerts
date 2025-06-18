@@ -6,7 +6,7 @@ import * as config from './config.js';
 import { EventProcessor } from './processor.js';
 import Arweave from 'arweave';
 import { GQLEventPoller } from './gql.js';
-import { ARIO_MAINNET_PROCESS_ID } from '@ar.io/sdk';
+import { ARIO, ARIO_MAINNET_PROCESS_ID } from '@ar.io/sdk';
 import {
   CompositeNotificationProvider,
   EmailNotificationProvider,
@@ -15,11 +15,14 @@ import {
   WebhookRecipient,
 } from './notifications/index.js';
 
-import { CachedArio } from "./lib/cachedArio.js";
+import { CachedArio } from './ario.js';
 import { connect } from '@permaweb/aoconnect';
 import { SESEmailProvider } from './email/ses.js';
 
-export const ario = new CachedArio();
+export const ario = new CachedArio({
+  ario: ARIO.mainnet(),
+  logger,
+});
 export const ao = connect({
   CU_URL: config.cuUrl,
   MODE: 'legacy',
