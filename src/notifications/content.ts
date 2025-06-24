@@ -6,6 +6,7 @@ import { Logger } from 'winston';
 import Turndown from 'turndown';
 import { ario } from '../system.js';
 import { logger } from '../logger.js';
+import { toUnicode } from 'punycode';
 // @ts-ignore
 import turndownPluginGfm from 'turndown-plugin-gfm';
 
@@ -1798,10 +1799,8 @@ const isPunycode = (str: string): boolean => {
  */
 const decodePunycode = (str: string): string => {
   try {
-    // Use built-in Node.js punycode support
-    return new URL(`https://${str}`).hostname;
+    return toUnicode(str);
   } catch (error) {
-    // If there's an error, return the original string
     return str;
   }
 };
