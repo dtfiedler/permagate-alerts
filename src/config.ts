@@ -40,6 +40,9 @@ export const disableEmails = process.env.DISABLE_EMAIL_NOTIFICATIONS === 'true';
 export const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
 export const enableSlackNotifications =
   process.env.ENABLE_SLACK_NOTIFICATIONS === 'true';
+export const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL;
+export const enableDiscordNotifications =
+  process.env.ENABLE_DISCORD_NOTIFICATIONS === 'true';
 export const webhookEndpoints = process.env.WEBHOOK_ENDPOINTS
   ? JSON.parse(process.env.WEBHOOK_ENDPOINTS)
   : [];

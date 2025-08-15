@@ -14,6 +14,7 @@ import {
   WebhookNotificationProvider,
   WebhookRecipient,
 } from './notifications/index.js';
+import { DiscordNotificationProvider } from './notifications/discord.js';
 
 import { CachedArio } from './ario.js';
 import { connect } from '@permaweb/aoconnect';
@@ -74,6 +75,15 @@ const slackNotifier = config.slackWebhookUrl
     })
   : undefined;
 
+// Discord notification provider
+const discordNotifier = config.discordWebhookUrl
+  ? new DiscordNotificationProvider({
+      webhookUrl: config.discordWebhookUrl,
+      logger,
+      enabled: config.enableDiscordNotifications,
+    })
+  : undefined;
+
 // Webhook notification provider
 const webhookEndpoints: WebhookRecipient[] = Array.isArray(
   config.webhookEndpoints,
@@ -92,6 +102,7 @@ export const notificationProvider = new CompositeNotificationProvider({
   providers: [
     ...(emailNotifier ? [emailNotifier] : []),
     ...(slackNotifier ? [slackNotifier] : []),
+    ...(discordNotifier ? [discordNotifier] : []),
     ...(webhookNotifier ? [webhookNotifier] : []),
   ],
   logger,
