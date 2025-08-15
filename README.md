@@ -23,7 +23,7 @@ This service acts as a notification service for IO contract events from the [ar.
 
 ## AR.IO Gateway
 
-In order to integrate with an ar.io gateway, you must update the `WEBHOOK_SERVERS` environment variable with the url that the gateway can send webhook requests to. You can read more about setting up a gateway here. Additionally, it is recommended the gateway have the following environment variables configured `ARNS_UNBUNDLE_FILTER=XXX` `ANS_104_UNBUNDLE_FILTER` and `ANS_104_INDEX_FILTER` set to the following.
+The service depends on the ar.io gateway GraphQL endpoint (defaulting to `https://arweave-search.goldsky.com`) which provides indexed data from the ARIO contract for querying contract events and state.
 
 Example (permagate.io .env)
 
@@ -56,22 +56,16 @@ All should be easy to install on a Mac via `homebrew` (e.g. `brew install <name>
 
 ## Authentication
 
-[Auth0](https://auth0.com/) is used to authenticate users. The [auth0](https://www.npmjs.com/package/auth0) package is used to interact with the Auth0 API. The backend service validates tokens from the frontend and parses out the included `email` claim to identify the user (note: we will replace this in the future). Auth0 requires the following environment variables:
+The service uses magic link authentication. Users receive an email with a secure link that allows them to authenticate without passwords. The authentication is handled by the service itself using secure tokens.
 
-- `AUTH0_DOMAIN` - the domain for the Auth0 API
-- `AUTH0_IDENTIFIER` - the `issuer` for the Auth0 API that is included in all JWT
-- `AUTH0_NAMESPACE` - the namespace for the Auth0 API that is included in all JWT, used to identify special claims on the JWT (e.g. `email`)
-- `AUTH0_CLIENT_ID` - the client ID for the Auth0 API
-- `AUTH0_CLIENT_SECRET` - the client secret for the Auth0 API
-- `AUTH0_CALLBACK_URL` - the callback URL for the Auth0 API (e.g. `http://localhost:3000/auth/callback`)
+## AWS SES
 
-## Mailgun
+The service uses [AWS SES (Simple Email Service)](https://aws.amazon.com/ses/) to send emails including magic link authentication emails and notifications. The following environment variables should be set:
 
-The service uses [Mailgun](https://www.mailgun.com/) to send emails. The following environment variables should be set:
-
-- `MAILGUN_API_KEY` - the API key for Mailgun
-- `MAILGUN_DOMAIN` - the domain for Mailgun
-- `MAILGUN_FROM` - the email address to send from
+- `AWS_REGION` - the AWS region for SES
+- `AWS_ACCESS_KEY_ID` - the AWS access key ID
+- `AWS_SECRET_ACCESS_KEY` - the AWS secret access key
+- `SES_FROM_EMAIL` - the email address to send from (must be verified in AWS SES)
 
 ## Database
 
