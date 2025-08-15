@@ -4,7 +4,7 @@ import mjml2html from 'mjml';
 import { minify } from 'html-minifier-terser';
 import { Logger } from 'winston';
 import Turndown from 'turndown';
-import { ario } from '../system.js';
+import { ario, priceService } from '../system.js';
 import { logger } from '../logger.js';
 import { toUnicode } from 'punycode';
 // @ts-ignore
@@ -128,6 +128,10 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
   switch (event.eventType.toLowerCase()) {
     case 'create-vault-notice': {
       const amount = event.eventData.data.balance / 1_000_000;
+      const amountUSD = await priceService.getPriceForTokenQuantity({
+        token: 'ar-io-network',
+        quantity: amount,
+      });
       return `
 <mjml>
   <mj-head>
@@ -169,7 +173,7 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
           </tr>
           <tr>
             <th>Amount</th>
-            <td>${amount} $ARIO</td>
+            <td>${amount} $ARIO ($${amountUSD.toFixed(2).toLocaleString()} USD)</td>
           </tr>
           <tr>
             <th>Unlocks at</th>
@@ -692,6 +696,11 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
             )
           : undefined;
       };
+      const purchasePrice = event.eventData.data.purchasePrice / 1_000_000;
+      const purchasePriceUSD = await priceService.getPriceForTokenQuantity({
+        token: 'ar-io-network',
+        quantity: purchasePrice,
+      });
       const leaseDurationYears =
         getLeaseDurationYears(startTimestamp, endTimestamp) || 0;
 
@@ -756,7 +765,7 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
             </tr>
             <tr>
               <th width="40%">Purchase Price</th>
-              <td width="60%">${(event.eventData.data.purchasePrice / 1_000_000).toFixed(2).toLocaleString()} $ARIO</td>
+              <td width="60%">${purchasePrice.toFixed(2).toLocaleString()} $ARIO ($${purchasePriceUSD.toFixed(2).toLocaleString()} USD)</td>
             </tr>
             <tr>
               <th width="40%">Owner</th>
@@ -812,6 +821,17 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
   `;
     }
     case 'join-network-notice': {
+      const operatorStake = event.eventData.data.operatorStake / 1_000_000;
+      const operatorStakeUSD = await priceService.getPriceForTokenQuantity({
+        token: 'ar-io-network',
+        quantity: operatorStake,
+      });
+      const minDelegatedStake =
+        event.eventData.data.settings.minDelegatedStake / 1_000_000;
+      const minDelegatedStakeUSD = await priceService.getPriceForTokenQuantity({
+        token: 'ar-io-network',
+        quantity: minDelegatedStake,
+      });
       return `
 <mjml>
   <mj-head>
@@ -873,7 +893,7 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
             </tr>
             <tr>
               <th width="40%">Operator Stake</th>
-              <td width="60%">${event.eventData.data.operatorStake ? (event.eventData.data.operatorStake / 1_000_000).toFixed(2).toLocaleString() + ' $ARIO' : 'N/A'}</td>
+              <td width="60%">${event.eventData.data.operatorStake ? `${operatorStake.toFixed(2).toLocaleString()} $ARIO ($${operatorStakeUSD.toFixed(2).toLocaleString()} USD)` : 'N/A'}</td>
             </tr>
             <tr>
               <th width="40%">Allows Delegated Staking</th>
@@ -881,7 +901,7 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
             </tr>
             <tr>
               <th width="40%">Minimum Delegated Stake</th>
-              <td width="60%">${event.eventData.data.settings.allowDelegatedStaking ? (event.eventData.data.settings.minDelegatedStake / 1_000_000).toFixed(2).toLocaleString() + ' $ARIO' : 'N/A'}</td>
+              <td width="60%">${event.eventData.data.settings.allowDelegatedStaking ? `${minDelegatedStake.toFixed(2).toLocaleString()} $ARIO ($${minDelegatedStakeUSD.toFixed(2).toLocaleString()} USD)` : 'N/A'}</td>
             </tr>
             <tr>
               <th width="40%">Delegate Reward Percentage</th>
@@ -933,6 +953,38 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
       `;
     }
     case 'leave-network-notice': {
+      const totalVaultedDelegateStakes = Object.values(
+        event.eventData.data?.delegates as Record<
+          string,
+          {
+            vaults: Record<string, { startTimestamp: number; balance: number }>;
+          }
+        >,
+      ).reduce(
+        (acc, delegate) =>
+          acc +
+          Object.values(delegate.vaults).reduce(
+            (acc, vault) => acc + vault.balance / 1_000_000,
+            0,
+          ),
+        0,
+      );
+      const totalVaultedDelegateStakesUSD =
+        await priceService.getPriceForTokenQuantity({
+          token: 'ar-io-network',
+          quantity: totalVaultedDelegateStakes,
+        });
+      const totalVaultedOperatorStake = Object.values(
+        event.eventData.data?.vaults as Record<
+          string,
+          { startTimestamp: number; balance: number }
+        >,
+      ).reduce((acc, vault) => acc + vault.balance / 1_000_000, 0);
+      const totalVaultedOperatorStakeUSD =
+        await priceService.getPriceForTokenQuantity({
+          token: 'ar-io-network',
+          quantity: totalVaultedOperatorStake,
+        });
       return `
 <mjml>
   <mj-head>
@@ -1006,56 +1058,10 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
             </tr>
             <tr>
               <th>Total Vaulted Delegate Stakes</th>
-              <td>${
-                Object.values(
-                  event.eventData.data?.delegates as Record<
-                    string,
-                    {
-                      vaults: Record<
-                        string,
-                        { startTimestamp: number; balance: number }
-                      >;
-                    }
-                  >,
-                )
-                  .reduce(
-                    (
-                      acc: number,
-                      delegate: {
-                        vaults: Record<
-                          string,
-                          { startTimestamp: number; balance: number }
-                        >;
-                      },
-                    ) =>
-                      acc +
-                      Object.values(delegate.vaults).reduce(
-                        (acc, vault) => acc + vault.balance / 1_000_000,
-                        0,
-                      ),
-                    0,
-                  )
-                  .toFixed(2) + ' $ARIO'
-              }</td>
+              <td>${totalVaultedDelegateStakes.toFixed(2).toLocaleString()} $ARIO ($${totalVaultedDelegateStakesUSD.toFixed(2).toLocaleString()} USD)</td>
             <tr>
               <th>Total Vaulted Operator Stake</th>
-              <td>${
-                Object.values(
-                  event.eventData.data?.vaults as Record<
-                    string,
-                    { startTimestamp: number; balance: number }
-                  >,
-                )
-                  .reduce(
-                    (
-                      acc: number,
-                      vault: { startTimestamp: number; balance: number },
-                    ) => acc + vault.balance / 1_000_000,
-                    0,
-                  )
-                  .toFixed(2)
-                  .toLocaleString() + ' $ARIO'
-              }</td>
+              <td>${totalVaultedOperatorStake.toFixed(2).toLocaleString()} $ARIO ($${totalVaultedOperatorStakeUSD.toFixed(2).toLocaleString()} USD)</td>
             </tr>
             <tr>
               <th>Stakes returned at</th>
@@ -1091,6 +1097,17 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
       `;
     }
     case 'update-gateway-settings-notice': {
+      const operatorStake = event.eventData.data.operatorStake / 1_000_000;
+      const operatorStakeUSD = await priceService.getPriceForTokenQuantity({
+        token: 'ar-io-network',
+        quantity: operatorStake,
+      });
+      const minDelegatedStake =
+        event.eventData.data.settings.minDelegatedStake / 1_000_000;
+      const minDelegatedStakeUSD = await priceService.getPriceForTokenQuantity({
+        token: 'ar-io-network',
+        quantity: minDelegatedStake,
+      });
       return `
 <mjml>
   <mj-head>
@@ -1156,7 +1173,7 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
             </tr>
             <tr>
               <th width="40%">Operator Stake</th>
-              <td width="60%">${event.eventData.data.operatorStake ? (event.eventData.data.operatorStake / 1_000_000).toFixed(2).toLocaleString() + ' $ARIO' : 'N/A'}</td>
+              <td width="60%">${event.eventData.data.operatorStake ? `${operatorStake.toFixed(2).toLocaleString()} $ARIO ($${operatorStakeUSD.toFixed(2).toLocaleString()} USD)` : 'N/A'}</td>
             </tr>
             <tr>
               <th width="40%">Auto Stake Enabled</th>
@@ -1168,7 +1185,7 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
             </tr>
             <tr>
               <th width="40%">Minimum Delegated Stake</th>
-              <td width="60%">${event.eventData.data.settings.minDelegatedStake ? (event.eventData.data.settings.minDelegatedStake / 1_000_000).toFixed(2).toLocaleString() + ' $ARIO' : 'N/A'}</td>
+              <td width="60%">${event.eventData.data.settings.minDelegatedStake ? `${minDelegatedStake.toFixed(2).toLocaleString()} $ARIO ($${minDelegatedStakeUSD.toFixed(2).toLocaleString()} USD)` : 'N/A'}</td>
             </tr>
             <tr>
               <th width="40%">Delegate Reward Percentage</th>
@@ -1213,9 +1230,13 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
       const totalEligibleObserverRewardCreated =
         event.eventData.data.distributions.totalEligibleObserverReward /
         1_000_000;
+      const totalEligibleObserverRewardUSD =
+        totalEligibleObserverRewardCreated * (await priceService.getPrice());
       const totalEligibleGatewayRewardCreated =
         event.eventData.data.distributions.totalEligibleGatewayReward /
         1_000_000;
+      const totalEligibleGatewayRewardUSD =
+        totalEligibleGatewayRewardCreated * (await priceService.getPrice());
 
       const prescribedObservers: Record<string, string> =
         event.eventData.data.prescribedObservers;
@@ -1336,11 +1357,11 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
             </tr>
             <tr>
               <th width="40%">Observer Reward</th>
-              <td width="60%">${totalEligibleObserverRewardCreated.toFixed(2).toLocaleString()} $ARIO</td>
+              <td width="60%">${totalEligibleObserverRewardCreated.toFixed(2).toLocaleString()} $ARIO ($${totalEligibleObserverRewardUSD.toFixed(2).toLocaleString()} USD)</td>
             </tr>
             <tr>
               <th width="40%">Gateway Reward</th>
-              <td width="60%">${totalEligibleGatewayRewardCreated.toFixed(2).toLocaleString()} $ARIO</td>
+              <td width="60%">${totalEligibleGatewayRewardCreated.toFixed(2).toLocaleString()} $ARIO ($${totalEligibleGatewayRewardUSD.toFixed(2).toLocaleString()} USD)</td>
             </tr>
           </mj-table>
           ${
@@ -1440,6 +1461,26 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
       const totalDistributedRewards = epochData.totalDistributedRewards
         ? epochData.totalDistributedRewards / 1_000_000
         : 0;
+      const totalEligibleObserverRewardUSD =
+        await priceService.getPriceForTokenQuantity({
+          token: 'ar-io-network',
+          quantity: totalEligibleObserverReward,
+        });
+      const totalEligibleGatewayRewardUSD =
+        await priceService.getPriceForTokenQuantity({
+          token: 'ar-io-network',
+          quantity: totalEligibleGatewayReward,
+        });
+      const totalEligibleRewardsUSD =
+        await priceService.getPriceForTokenQuantity({
+          token: 'ar-io-network',
+          quantity: totalEligibleRewards,
+        });
+      const totalDistributedRewardsUSD =
+        await priceService.getPriceForTokenQuantity({
+          token: 'ar-io-network',
+          quantity: totalDistributedRewards,
+        });
       const totalObservationsSubmitted =
         Object.keys(observationData.reports || {}).length || 0;
       const totalGatewaysFailed = Object.entries(
@@ -1588,19 +1629,19 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
           <mj-table css-class="info-table">
             <tr>
               <th width="40%">Observer Reward</th>
-              <td width="60%">${totalEligibleObserverReward.toFixed(2).toLocaleString()} $ARIO</td>
+              <td width="60%">${totalEligibleObserverReward.toFixed(2).toLocaleString()} $ARIO ($${totalEligibleObserverRewardUSD.toFixed(2).toLocaleString()} USD)</td>
             </tr>
             <tr>
               <th width="40%">Gateway Reward</th>
-              <td width="60%">${totalEligibleGatewayReward.toFixed(2).toLocaleString()} $ARIO</td>
+              <td width="60%">${totalEligibleGatewayReward.toFixed(2).toLocaleString()} $ARIO ($${totalEligibleGatewayRewardUSD.toFixed(2).toLocaleString()} USD)</td>
             </tr>
             <tr>
               <th width="40%">Total Eligible Rewards</th>
-              <td width="60%">${totalEligibleRewards.toFixed(2).toLocaleString()} $ARIO</td>
+              <td width="60%">${totalEligibleRewards.toFixed(2).toLocaleString()} $ARIO ($${totalEligibleRewardsUSD.toFixed(2).toLocaleString()} USD)</td>
             </tr>
             <tr>
               <th width="40%">Total Distributed Rewards</th>
-              <td width="60%">${totalDistributedRewards.toFixed(2).toLocaleString()} $ARIO (${((totalDistributedRewards / totalEligibleRewards) * 100).toFixed(2)}%)</td>
+              <td width="60%">${totalDistributedRewards.toFixed(2).toLocaleString()} $ARIO ($${totalDistributedRewardsUSD.toFixed(2).toLocaleString()} USD) (${((totalDistributedRewards / totalEligibleRewards) * 100).toFixed(2)}%)</td>
             </tr>
             <tr>
               <th width="40%">Distribution Timestamp</th>

@@ -18,6 +18,7 @@ import {
 import { CachedArio } from './ario.js';
 import { connect } from '@permaweb/aoconnect';
 import { SESEmailProvider } from './email/ses.js';
+import { CoinGeckoService } from './prices/coin-gecko.js';
 
 export const ario = new CachedArio({
   ario: ARIO.mainnet(),
@@ -32,6 +33,13 @@ export const db = new SqliteDatabase({
   knex,
   logger,
 });
+
+export const priceService = new CoinGeckoService({
+  ttlSeconds: config.priceServiceTTLSeconds,
+});
+
+// trigger initial price fetch
+priceService.getPrice();
 
 // Initialize individual notification providers
 export const emailProvider =
