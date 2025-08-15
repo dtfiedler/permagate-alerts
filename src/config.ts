@@ -44,6 +44,11 @@ export const webhookEndpoints = process.env.WEBHOOK_ENDPOINTS
   ? JSON.parse(process.env.WEBHOOK_ENDPOINTS)
   : [];
 
+// CoinGecko
+export const priceServiceTTLSeconds = process.env.PRICE_SERVICE_TTL_SECONDS
+  ? +process.env.PRICE_SERVICE_TTL_SECONDS
+  : 60 * 60; // 1 hour
+
 // Admin
 export const adminApiKey = process.env.ADMIN_API_KEY;
 export const adminNotificationEmailAddress =
