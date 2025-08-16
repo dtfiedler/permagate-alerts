@@ -4,7 +4,7 @@ import {
   NotificationProvider,
   NotificationProviderOptions,
 } from './interface.js';
-import { formatNameForDisplay, getEmailSubjectForEvent } from './content.js';
+import { getEmailSubjectForEvent, getNotificationFields } from './content.js';
 
 export interface DiscordNotificationProviderOptions
   extends NotificationProviderOptions {
@@ -36,65 +36,14 @@ export class DiscordNotificationProvider implements NotificationProvider {
 
     try {
       const header = await getEmailSubjectForEvent(data.event);
+      const fields = await getNotificationFields(data.event);
 
-      // Create formatted text content for Discord
-      const textContent = Object.entries(data.event.eventData.data)
-        .flatMap(([key, value]) => {
-          if (typeof value === 'object' && value !== null) {
-            return Object.entries(value).map(
-              ([subKey, subValue]) =>
-                `**${subKey}**: ${typeof subValue === 'string' ? subValue : JSON.stringify(subValue)}`,
-            );
-          }
-          return [
-            `**${key}**: ${typeof value === 'string' ? value : JSON.stringify(value)}`,
-          ];
-        })
-        .join('\n');
+      // Format fields as markdown text to match email content
+      const fieldsText = fields.map(field => `**${field.key}**: ${field.value}`).join('\n');
 
-      // Discord embed message
-      const embed = {
-        title: header,
-        description: textContent.slice(0, 4096), // Discord description limit
-        color: this.getColorForEventType(data.event.eventType),
-        timestamp: new Date().toISOString(),
-        fields: [
-          {
-            name: 'Event Type',
-            value: data.event.eventType,
-            inline: true,
-          },
-          {
-            name: 'Process ID',
-            value: `[${data.event.processId.slice(0, 6)}...${data.event.processId.slice(-4)}](https://ao.link/#/entity/${data.event.processId})`,
-            inline: true,
-          },
-          ...(data.event.eventData.target
-            ? [
-                {
-                  name: 'Target',
-                  value: `[${formatNameForDisplay(data.event.eventData.target)}](https://ao.link/#/entity/${data.event.eventData.target})`,
-                  inline: true,
-                },
-              ]
-            : []),
-          ...(data.event.eventData.from
-            ? [
-                {
-                  name: 'From',
-                  value: `[${formatNameForDisplay(data.event.eventData.from)}](https://ao.link/#/entity/${data.event.eventData.from})`,
-                  inline: true,
-                },
-              ]
-            : []),
-        ],
-        footer: {
-          text: 'Permagate Alerts',
-        },
-      };
-
+      // Simple Discord message matching email content
       const message = {
-        embeds: [embed],
+        content: `${header}\n\n${fieldsText}`,
       };
 
       this.logger.debug('Sending Discord notification', {
@@ -122,14 +71,6 @@ export class DiscordNotificationProvider implements NotificationProvider {
         eventType: data.event.eventType,
       });
       throw error;
-    }
-  }
-
-  private getColorForEventType(eventType: string): number {
-    // Return different colors based on event type
-    switch (eventType.toLowerCase()) {
-      default:
-        return 0x5865f2; // Discord Blurple
     }
   }
 }
