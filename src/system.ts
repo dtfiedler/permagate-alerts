@@ -11,6 +11,7 @@ import {
   CompositeNotificationProvider,
   EmailNotificationProvider,
   SlackNotificationProvider,
+  TwitterNotificationProvider,
   WebhookNotificationProvider,
   WebhookRecipient,
 } from './notifications/index.js';
@@ -66,6 +67,15 @@ const emailNotifier = emailProvider
     })
   : undefined;
 
+// Twitter notification provider
+const twitterNotifier = config.twitterBearerToken
+  ? new TwitterNotificationProvider({
+      bearerToken: config.twitterBearerToken,
+      logger,
+      enabled: config.enableTwitterNotifications,
+    })
+  : undefined;
+
 // Slack notification provider
 const slackNotifier = config.slackWebhookUrl
   ? new SlackNotificationProvider({
@@ -101,6 +111,7 @@ const webhookNotifier = new WebhookNotificationProvider({
 export const notificationProvider = new CompositeNotificationProvider({
   providers: [
     ...(emailNotifier ? [emailNotifier] : []),
+    ...(twitterNotifier ? [twitterNotifier] : []),
     ...(slackNotifier ? [slackNotifier] : []),
     ...(discordNotifier ? [discordNotifier] : []),
     ...(webhookNotifier ? [webhookNotifier] : []),

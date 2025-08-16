@@ -82,3 +82,10 @@ export const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
 export const awsRegion = process.env.AWS_REGION || 'us-east-1';
 export const awsFromEmail =
   process.env.AWS_FROM_EMAIL || 'noreply@permagate.io';
+
+// Twitter
+export const twitterBearerToken = process.env.TWITTER_BEARER_TOKEN;
+export const enableTwitterNotifications =
+  process.env.ENABLE_TWITTER_NOTIFICATIONS === 'true';
+export const twitterApiKey = process.env.TWITTER_API_KEY;
+export const twitterApiSecret = process.env.TWITTER_API_SECRET;
