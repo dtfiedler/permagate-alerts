@@ -39,14 +39,31 @@ export class SlackNotificationProvider implements NotificationProvider {
       const header = await getEmailSubjectForEvent(data.event);
       const fields = await getNotificationFields(data.event);
 
-      // Format fields as markdown text to match email content
+      // Format fields as mrkdwn text for Slack
       const fieldsText = fields
-        .map((field) => `**${field.key}**: ${field.value}`)
+        .map((field) => `*${field.key}*: ${field.value}`)
         .join('\n');
 
-      // Simple Slack message matching email content
+      // Slack message with proper formatting
       const message = {
-        text: `${header}\n\n${fieldsText}`,
+        text: header,
+        blocks: [
+          {
+            type: 'header',
+            text: {
+              type: 'plain_text',
+              text: header,
+              emoji: true,
+            },
+          },
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: fieldsText,
+            },
+          },
+        ],
       };
 
       this.logger.debug('Sending Slack notification', {
