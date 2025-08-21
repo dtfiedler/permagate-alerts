@@ -36,6 +36,7 @@ apiRouter.get('/healthcheck', (_, res) => {
 apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
   try {
     const email = req.query.email as string;
+    const decodedEmail = decodeURIComponent(email);
     const { processes = DEFAULT_PROCESS_SUBSCRIPTIONS } = req.body;
 
     logger.debug('Received subscribe request', {
@@ -46,7 +47,7 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
 
     const emailSchema = z.string().email();
 
-    if (!email || !emailSchema.safeParse(email).success) {
+    if (!email || !emailSchema.safeParse(decodedEmail).success) {
       return res.status(400).json({ error: 'Email is required' });
     }
 
@@ -58,7 +59,7 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
         .json({ error: 'At least one process ID must be provided' });
     }
 
-    let subscriber = await req.db.getSubscriberByEmail(email);
+    let subscriber = await req.db.getSubscriberByEmail(decodedEmail);
     for (const processId of processIds) {
       // validate the processId is in the list of processes
       if (!(await req.db.getProcessByProcessId(processId))) {
@@ -79,7 +80,7 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
       }
 
       subscriber ??= await req.db.createNewSubscriber({
-        email,
+        email: decodedEmail,
       });
 
       if (!subscriber) {
@@ -87,7 +88,7 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
       }
 
       logger.info('Subscribing email to events for process...', {
-        email,
+        email: decodedEmail,
         events: validatedEvents.data,
         processId,
       });
@@ -100,7 +101,7 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
       });
 
       logger.info('Successfully subscribed email to events for process...', {
-        email,
+        email: decodedEmail,
         events: validatedEvents.data,
         processId,
       });
@@ -109,9 +110,9 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
     // if the subscriber is not verified, send verification email
     if (!subscriber?.verified) {
       // send verify email
-      const verifyLink = generateVerifyLink(email);
-      req.notifier?.sendRawEmail({
-        to: [email],
+      const verifyLink = generateVerifyLink(decodedEmail);
+      await req.mailer?.sendRawEmail({
+        to: [decodedEmail],
         text: `Please verify your email address by clicking the link below:\n\n${verifyLink}`,
         subject: '🤖 Verify your email address',
       });
@@ -133,10 +134,10 @@ apiRouter.post('/api/subscribe', async (req: Request, res: Response) => {
         {} as Record<string, string[]>,
       );
 
-      const unsubscribeLink = generateUnsubscribeLink(email);
+      const unsubscribeLink = generateUnsubscribeLink(decodedEmail);
       // send intro email in background
-      req.notifier?.sendRawEmail({
-        to: [email],
+      req.mailer?.sendRawEmail({
+        to: [decodedEmail],
         text: `You have successfully updated your subscription to subscribe.permagate.io!
 
 You will receive alerts for the following: 
@@ -225,7 +226,7 @@ apiRouter.post(
       // generate a link that allows the user to manage their subscription at subscribe.permagate.io
       const manageLink = generateManageLink(decodedEmail);
       // send a raw email to the user with the manage link
-      await req.notifier?.sendRawEmail({
+      await req.mailer?.sendRawEmail({
         to: [decodedEmail],
         text: `✨ Click here to sign in to your account and manage your subscription: ${manageLink}\n\nThis link is unique to you and will expire in 24 hours.`,
         subject: '✨ Your magic link is ready!',
@@ -521,7 +522,7 @@ apiRouter.get(
 
       const unsubscribeLink = generateUnsubscribeLink(decodedEmail);
       // send intro email in background
-      req.notifier?.sendRawEmail({
+      req.mailer?.sendRawEmail({
         to: [decodedEmail],
         text: `You have successfully been subscribed to subscribe.permagate.io!
 

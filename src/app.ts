@@ -8,6 +8,10 @@ import { logger } from './logger.js';
 import { router } from './router.js';
 import * as system from './system.js';
 import { stripeRouter } from './routes/stripe.js';
+import { fileURLToPath } from 'url';
+import path from 'path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 3000; // define port with environment variable or default to 3000
@@ -17,7 +21,7 @@ app.use(async (req: Request, _res: Response, next: NextFunction) => {
   // @ts-ignore
   req.db = system.db;
   // @ts-ignore
-  req.notifier = system.notifier;
+  req.mailer = system.emailProvider;
   // @ts-ignore
   req.logger = logger;
   // @ts-ignore
@@ -26,6 +30,9 @@ app.use(async (req: Request, _res: Response, next: NextFunction) => {
   req.arweave = system.arweave;
   next();
 });
+
+// setup local public directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 // setup cors for all routes
 app.use(cors());

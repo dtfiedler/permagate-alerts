@@ -21,7 +21,7 @@ adminRouter.get(
         email: decodedEmail,
         verifyLink,
       });
-      await req.notifier?.sendRawEmail({
+      await req.mailer?.sendRawEmail({
         to: [decodedEmail],
         text: `Please verify your email address by clicking the link below:\n\n${verifyLink}`,
         subject: '🤖 Verify your email address',

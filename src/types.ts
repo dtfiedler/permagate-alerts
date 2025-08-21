@@ -6,7 +6,7 @@ import { EventProcessor } from './processor.js';
 
 export interface Request extends ExpressRequest {
   db: SqliteDatabase;
-  notifier?: EmailProvider;
+  mailer?: EmailProvider;
   processor: EventProcessor;
   logger: winston.Logger;
   rawBody: string;
