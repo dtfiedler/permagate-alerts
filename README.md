@@ -10,7 +10,7 @@
   - [Requirements](#requirements)
   - [Running Locally](#running-locally)
 - [Authentication](#authentication)
-- [Mailgun](#mailgun)
+- [AWS SES](#aws-ses)
 - [Database](#database)
   - [Migrations](#migrations)
 - [Docker](#docker)
