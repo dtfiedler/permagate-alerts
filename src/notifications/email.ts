@@ -4,7 +4,7 @@ import {
   NotificationProvider,
   NotificationProviderOptions,
 } from './interface.js';
-import { EmailProvider } from '../email/mailgun.js';
+import { EmailProvider } from '../email/ses.js';
 import { generateNotificationContent } from './content.js';
 import { SqliteDatabase } from '../db/sqlite.js';
 

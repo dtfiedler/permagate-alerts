@@ -43,8 +43,8 @@ export const enableSlackNotifications =
 export const discordWebhookUrls = process.env.DISCORD_WEBHOOK_URLS
   ? JSON.parse(process.env.DISCORD_WEBHOOK_URLS)
   : process.env.DISCORD_WEBHOOK_URL
-  ? [process.env.DISCORD_WEBHOOK_URL]
-  : [];
+    ? [process.env.DISCORD_WEBHOOK_URL]
+    : [];
 export const enableDiscordNotifications =
   process.env.ENABLE_DISCORD_NOTIFICATIONS === 'true';
 export const webhookEndpoints = process.env.WEBHOOK_ENDPOINTS

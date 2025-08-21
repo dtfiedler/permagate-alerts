@@ -15,10 +15,14 @@ adminRouter.get(
   async (req: Request, res: Response) => {
     try {
       const email = req.query.email as string;
-      const verifyLink = generateVerifyLink(email);
-      logger.info('Sending verification email', { email, verifyLink });
+      const decodedEmail = decodeURIComponent(email);
+      const verifyLink = generateVerifyLink(decodedEmail);
+      logger.info('Sending verification email', {
+        email: decodedEmail,
+        verifyLink,
+      });
       await req.notifier?.sendRawEmail({
-        to: [email],
+        to: [decodedEmail],
         text: `Please verify your email address by clicking the link below:\n\n${verifyLink}`,
         subject: '🤖 Verify your email address',
       });

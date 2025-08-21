@@ -50,6 +50,7 @@ export const emailProvider =
   config.awsRegion &&
   config.awsFromEmail
     ? new SESEmailProvider({
+        logger: logger,
         accessKeyId: config.awsAccessKeyId,
         secretAccessKey: config.awsSecretAccessKey,
         region: config.awsRegion,
@@ -86,13 +87,14 @@ const slackNotifier = config.slackWebhookUrl
   : undefined;
 
 // Discord notification provider
-const discordNotifier = config.discordWebhookUrls.length > 0
-  ? new DiscordNotificationProvider({
-      webhookUrls: config.discordWebhookUrls,
-      logger,
-      enabled: config.enableDiscordNotifications,
-    })
-  : undefined;
+const discordNotifier =
+  config.discordWebhookUrls.length > 0
+    ? new DiscordNotificationProvider({
+        webhookUrls: config.discordWebhookUrls,
+        logger,
+        enabled: config.enableDiscordNotifications,
+      })
+    : undefined;
 
 // Webhook notification provider
 const webhookEndpoints: WebhookRecipient[] = Array.isArray(
