@@ -50,7 +50,7 @@ export class DiscordNotificationProvider implements NotificationProvider {
 
       // Simple Discord message matching email content
       const message = {
-        content: `${header}\n\n${fieldsText}`,
+        content: `# ${header}\n\n${fieldsText}`,
       };
 
       this.logger.debug('Sending Discord notifications', {

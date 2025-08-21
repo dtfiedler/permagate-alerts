@@ -1863,8 +1863,10 @@ export const formatNameForDisplay = (name: string): string => {
  * Extracts structured notification fields that match email content
  * This utility parses the same data that appears in email notifications
  */
-export async function getNotificationFields(event: NewEvent): Promise<Array<{key: string, value: string}>> {
-  const fields: Array<{key: string, value: string}> = [];
+export async function getNotificationFields(
+  event: NewEvent,
+): Promise<Array<{ key: string; value: string }>> {
+  const fields: Array<{ key: string; value: string }> = [];
 
   switch (event.eventType.toLowerCase()) {
     case 'create-vault-notice': {
@@ -1874,37 +1876,63 @@ export async function getNotificationFields(event: NewEvent): Promise<Array<{key
         quantity: amount,
       });
       fields.push(
-        { key: 'From', value: `${event.eventData.from?.slice(0, 6)}...${event.eventData.from?.slice(-4)}` },
-        { key: 'To', value: `${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}` },
-        { key: 'Amount', value: `${amount} $ARIO ($${amountUSD.toFixed(2).toLocaleString()} USD)` },
-        { key: 'Unlocks at', value: new Date(event.eventData.data.endTimestamp).toLocaleString() }
+        {
+          key: 'From',
+          value: `${event.eventData.from?.slice(0, 6)}...${event.eventData.from?.slice(-4)}`,
+        },
+        {
+          key: 'To',
+          value: `${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}`,
+        },
+        {
+          key: 'Amount',
+          value: `${amount} $ARIO ($${amountUSD.toFixed(2).toLocaleString()} USD)`,
+        },
+        {
+          key: 'Unlocks at',
+          value: new Date(event.eventData.data.endTimestamp).toLocaleString(),
+        },
       );
       break;
     }
     case 'save-observations-notice': {
-      const failedGateways = Object.entries(event.eventData?.data.failureSummaries)
+      const failedGateways = Object.entries(
+        event.eventData?.data.failureSummaries,
+      )
         .map(([gatewayAddress, observersThatFailedGateway]) => {
-          if ((observersThatFailedGateway as string[]).includes(event.eventData.target)) {
+          if (
+            (observersThatFailedGateway as string[]).includes(
+              event.eventData.target,
+            )
+          ) {
             return gatewayAddress;
           }
           return undefined;
         })
         .filter(Boolean);
-      const reportTxId = event.eventData?.data?.reports?.[event.eventData.target];
-      
+      const reportTxId =
+        event.eventData?.data?.reports?.[event.eventData.target];
+
       fields.push(
         { key: 'Failed Gateways', value: `${failedGateways?.length || 0}` },
-        { key: 'Report Tx ID', value: `${reportTxId.slice(0, 6)}...${reportTxId.slice(-4)}` }
+        {
+          key: 'Report Tx ID',
+          value: `${reportTxId.slice(0, 6)}...${reportTxId.slice(-4)}`,
+        },
       );
       break;
     }
     case 'failed-observation-notice': {
       const observations = await ario.getObservations();
-      const failureSummaries = observations?.failureSummaries[event.eventData.target] || [];
+      const failureSummaries =
+        observations?.failureSummaries[event.eventData.target] || [];
       const totalObservations = Object.keys(observations?.reports || {}).length;
-      const failurePercentage = (failureSummaries.length / totalObservations) * 100;
+      const failurePercentage =
+        (failureSummaries.length / totalObservations) * 100;
       const status = failurePercentage > 50 ? 'FAILING' : 'PASSING';
-      const prescribedObservers = await ario.getPrescribedObservers().catch(() => ({}));
+      const prescribedObservers = await ario
+        .getPrescribedObservers()
+        .catch(() => ({}));
       const totalPrescribedObservers = Object.keys(prescribedObservers).length;
       const observer = Object.values(prescribedObservers).find(
         (observer) => observer.observerAddress === event.eventData?.from,
@@ -1915,37 +1943,74 @@ export async function getNotificationFields(event: NewEvent): Promise<Array<{key
       const report = observations?.reports[event.eventData?.from || ''];
 
       fields.push(
-        { key: '# Observations', value: `${totalObservations}/${totalPrescribedObservers}` },
-        { key: '# Failures', value: `${observations?.failureSummaries[event.eventData.target]?.length} / ${totalObservations}` },
+        {
+          key: '# Observations',
+          value: `${totalObservations}/${totalPrescribedObservers}`,
+        },
+        {
+          key: '# Failures',
+          value: `${observations?.failureSummaries[event.eventData.target]?.length} / ${totalObservations}`,
+        },
         { key: 'Epoch Status', value: status },
-        { key: 'Observer', value: `${event.eventData.from?.slice(0, 6)}...${event.eventData.from?.slice(-4)} (${observerGateway?.settings?.fqdn})` },
-        { key: 'Report', value: `${report.slice(0, 6)}...${report.slice(-4)}` }
+        {
+          key: 'Observer',
+          value: `${event.eventData.from?.slice(0, 6)}...${event.eventData.from?.slice(-4)} (${observerGateway?.settings?.fqdn})`,
+        },
+        { key: 'Report', value: `${report.slice(0, 6)}...${report.slice(-4)}` },
       );
       break;
     }
     case 'credit-notice': {
-      const amount = parseInt(event.eventData.tags.find((tag) => tag.name === 'Quantity')?.value || '0') / 1_000_000;
-      const creditNoticeRecipient = event.eventData.target.slice(0, 6) + '...' + event.eventData.target.slice(-4);
-      const creditNoticeSender = event.eventData.tags.find((tag) => tag.name === 'Sender')?.value.slice(0, 6) + '...' + event.eventData.tags.find((tag) => tag.name === 'Sender')?.value.slice(-4);
-      
+      const amount =
+        parseInt(
+          event.eventData.tags.find((tag) => tag.name === 'Quantity')?.value ||
+            '0',
+        ) / 1_000_000;
+      const creditNoticeRecipient =
+        event.eventData.target.slice(0, 6) +
+        '...' +
+        event.eventData.target.slice(-4);
+      const creditNoticeSender =
+        event.eventData.tags
+          .find((tag) => tag.name === 'Sender')
+          ?.value.slice(0, 6) +
+        '...' +
+        event.eventData.tags
+          .find((tag) => tag.name === 'Sender')
+          ?.value.slice(-4);
+
       fields.push(
         { key: 'Transaction ID', value: event.eventData.id },
         { key: 'Sender', value: creditNoticeSender },
         { key: 'Recipient', value: creditNoticeRecipient },
-        { key: 'Amount', value: `${amount} $ARIO` }
+        { key: 'Amount', value: `${amount} $ARIO` },
       );
       break;
     }
     case 'debit-notice': {
-      const debitAmount = parseInt(event.eventData.tags.find((tag) => tag.name === 'Quantity')?.value || '0') / 1_000_000;
-      const debitNoticeSender = event.eventData.target.slice(0, 6) + '...' + event.eventData.target.slice(-4);
-      const debitNoticeRecipient = event.eventData.tags.find((tag) => tag.name === 'Recipient')?.value.slice(0, 6) + '...' + event.eventData.tags.find((tag) => tag.name === 'Recipient')?.value.slice(-4);
+      const debitAmount =
+        parseInt(
+          event.eventData.tags.find((tag) => tag.name === 'Quantity')?.value ||
+            '0',
+        ) / 1_000_000;
+      const debitNoticeSender =
+        event.eventData.target.slice(0, 6) +
+        '...' +
+        event.eventData.target.slice(-4);
+      const debitNoticeRecipient =
+        event.eventData.tags
+          .find((tag) => tag.name === 'Recipient')
+          ?.value.slice(0, 6) +
+        '...' +
+        event.eventData.tags
+          .find((tag) => tag.name === 'Recipient')
+          ?.value.slice(-4);
 
       fields.push(
         { key: 'Transaction ID', value: event.eventData.id },
         { key: 'Sender', value: debitNoticeSender },
         { key: 'Recipient', value: debitNoticeRecipient },
-        { key: 'Amount', value: `${debitAmount} $ARIO` }
+        { key: 'Amount', value: `${debitAmount} $ARIO` },
       );
       break;
     }
@@ -1954,25 +2019,52 @@ export async function getNotificationFields(event: NewEvent): Promise<Array<{key
       const name = event.eventData.data.name;
       const displayName = formatNameForDisplay(name);
       const type = event.eventData.data.type;
-      const startTimestamp = new Date(event.eventData.data.startTimestamp).getTime();
-      const endTimestamp = type === 'permabuy' ? undefined : new Date(event.eventData.data.endTimestamp).getTime();
-      const getLeaseDurationYears = (startTimestamp: number, endTimestamp: number | undefined) => {
-        return startTimestamp && endTimestamp ? Math.round((endTimestamp - startTimestamp) / (1000 * 60 * 60 * 24 * 365)) : undefined;
+      const startTimestamp = new Date(
+        event.eventData.data.startTimestamp,
+      ).getTime();
+      const endTimestamp =
+        type === 'permabuy'
+          ? undefined
+          : new Date(event.eventData.data.endTimestamp).getTime();
+      const getLeaseDurationYears = (
+        startTimestamp: number,
+        endTimestamp: number | undefined,
+      ) => {
+        return startTimestamp && endTimestamp
+          ? Math.round(
+              (endTimestamp - startTimestamp) / (1000 * 60 * 60 * 24 * 365),
+            )
+          : undefined;
       };
       const purchasePrice = event.eventData.data.purchasePrice / 1_000_000;
       const purchasePriceUSD = await priceService.getPriceForTokenQuantity({
         token: 'ar-io-network',
         quantity: purchasePrice,
       });
-      const leaseDurationYears = getLeaseDurationYears(startTimestamp, endTimestamp) || 0;
+      const leaseDurationYears =
+        getLeaseDurationYears(startTimestamp, endTimestamp) || 0;
 
       fields.push(
         { key: 'Name', value: displayName },
-        { key: 'Purchase Price', value: `${purchasePrice.toFixed(2).toLocaleString()} $ARIO ($${purchasePriceUSD.toFixed(2).toLocaleString()} USD)` },
-        { key: 'Owner', value: `${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}` },
+        {
+          key: 'Purchase Price',
+          value: `${purchasePrice.toFixed(2).toLocaleString()} $ARIO ($${purchasePriceUSD.toFixed(2).toLocaleString()} USD)`,
+        },
+        {
+          key: 'Owner',
+          value: `${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}`,
+        },
         { key: 'Type', value: event.eventData.data.type },
-        { key: 'Lease Duration', value: leaseDurationYears ? `${leaseDurationYears} years` : 'Permanent' },
-        { key: 'Process ID', value: `${event.processId.slice(0, 6)}...${event.processId.slice(-4)}` }
+        {
+          key: 'Lease Duration',
+          value: leaseDurationYears
+            ? `${leaseDurationYears} years`
+            : 'Permanent',
+        },
+        {
+          key: 'Process ID',
+          value: `${event.processId.slice(0, 6)}...${event.processId.slice(-4)}`,
+        },
       );
       break;
     }
@@ -1982,46 +2074,108 @@ export async function getNotificationFields(event: NewEvent): Promise<Array<{key
         token: 'ar-io-network',
         quantity: operatorStake,
       });
-      const minDelegatedStake = event.eventData.data.settings.minDelegatedStake / 1_000_000;
+      const minDelegatedStake =
+        event.eventData.data.settings.minDelegatedStake / 1_000_000;
       const minDelegatedStakeUSD = await priceService.getPriceForTokenQuantity({
         token: 'ar-io-network',
         quantity: minDelegatedStake,
       });
-      
+
       fields.push(
         { key: 'FQDN', value: event.eventData.data.settings.fqdn },
-        { key: 'Operator Stake', value: event.eventData.data.operatorStake ? `${operatorStake.toFixed(2).toLocaleString()} $ARIO ($${operatorStakeUSD.toFixed(2).toLocaleString()} USD)` : 'N/A' },
-        { key: 'Allows Delegated Staking', value: event.eventData.data.settings.allowDelegatedStaking ? 'Yes' : 'No' },
-        { key: 'Minimum Delegated Stake', value: event.eventData.data.settings.allowDelegatedStaking ? `${minDelegatedStake.toFixed(2).toLocaleString()} $ARIO ($${minDelegatedStakeUSD.toFixed(2).toLocaleString()} USD)` : 'N/A' },
-        { key: 'Delegate Reward Percentage', value: event.eventData.data.settings.allowDelegatedStaking ? event.eventData.data.settings.delegateRewardShareRatio.toFixed(2).toLocaleString() + '%' : 'N/A' },
-        { key: 'Gateway Address', value: `${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}` },
-        { key: 'Observer Address', value: `${event.eventData.data.observerAddress.slice(0, 6)}...${event.eventData.data.observerAddress.slice(-4)}` }
+        {
+          key: 'Operator Stake',
+          value: event.eventData.data.operatorStake
+            ? `${operatorStake.toFixed(2).toLocaleString()} $ARIO ($${operatorStakeUSD.toFixed(2).toLocaleString()} USD)`
+            : 'N/A',
+        },
+        {
+          key: 'Allows Delegated Staking',
+          value: event.eventData.data.settings.allowDelegatedStaking
+            ? 'Yes'
+            : 'No',
+        },
+        {
+          key: 'Minimum Delegated Stake',
+          value: event.eventData.data.settings.allowDelegatedStaking
+            ? `${minDelegatedStake.toFixed(2).toLocaleString()} $ARIO ($${minDelegatedStakeUSD.toFixed(2).toLocaleString()} USD)`
+            : 'N/A',
+        },
+        {
+          key: 'Delegate Reward Percentage',
+          value: event.eventData.data.settings.allowDelegatedStaking
+            ? event.eventData.data.settings.delegateRewardShareRatio
+                .toFixed(2)
+                .toLocaleString() + '%'
+            : 'N/A',
+        },
+        {
+          key: 'Gateway Address',
+          value: `${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}`,
+        },
+        {
+          key: 'Observer Address',
+          value: `${event.eventData.data.observerAddress.slice(0, 6)}...${event.eventData.data.observerAddress.slice(-4)}`,
+        },
       );
       break;
     }
     case 'leave-network-notice': {
       const totalVaultedDelegateStakes = Object.values(
-        event.eventData.data?.delegates as Record<string, { vaults: Record<string, { startTimestamp: number; balance: number }> }>
-      ).reduce((acc, delegate) => acc + Object.values(delegate.vaults).reduce((acc, vault) => acc + vault.balance / 1_000_000, 0), 0);
-      const totalVaultedDelegateStakesUSD = await priceService.getPriceForTokenQuantity({
-        token: 'ar-io-network',
-        quantity: totalVaultedDelegateStakes,
-      });
+        event.eventData.data?.delegates as Record<
+          string,
+          {
+            vaults: Record<string, { startTimestamp: number; balance: number }>;
+          }
+        >,
+      ).reduce(
+        (acc, delegate) =>
+          acc +
+          Object.values(delegate.vaults).reduce(
+            (acc, vault) => acc + vault.balance / 1_000_000,
+            0,
+          ),
+        0,
+      );
+      const totalVaultedDelegateStakesUSD =
+        await priceService.getPriceForTokenQuantity({
+          token: 'ar-io-network',
+          quantity: totalVaultedDelegateStakes,
+        });
       const totalVaultedOperatorStake = Object.values(
-        event.eventData.data?.vaults as Record<string, { startTimestamp: number; balance: number }>
+        event.eventData.data?.vaults as Record<
+          string,
+          { startTimestamp: number; balance: number }
+        >,
       ).reduce((acc, vault) => acc + vault.balance / 1_000_000, 0);
-      const totalVaultedOperatorStakeUSD = await priceService.getPriceForTokenQuantity({
-        token: 'ar-io-network',
-        quantity: totalVaultedOperatorStake,
-      });
-      
+      const totalVaultedOperatorStakeUSD =
+        await priceService.getPriceForTokenQuantity({
+          token: 'ar-io-network',
+          quantity: totalVaultedOperatorStake,
+        });
+
       fields.push(
         { key: 'Gateway FQDN', value: event.eventData.data.settings.fqdn },
-        { key: 'Gateway Address', value: `${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}` },
-        { key: '# Delegates', value: `${Object.keys(event.eventData.data.delegates).length}` },
-        { key: 'Total Vaulted Delegate Stakes', value: `${totalVaultedDelegateStakes.toFixed(2).toLocaleString()} $ARIO ($${totalVaultedDelegateStakesUSD.toFixed(2).toLocaleString()} USD)` },
-        { key: 'Total Vaulted Operator Stake', value: `${totalVaultedOperatorStake.toFixed(2).toLocaleString()} $ARIO ($${totalVaultedOperatorStakeUSD.toFixed(2).toLocaleString()} USD)` },
-        { key: 'Stakes returned at', value: new Date(event.eventData.data.endTimestamp).toLocaleString() }
+        {
+          key: 'Gateway Address',
+          value: `${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}`,
+        },
+        {
+          key: '# Delegates',
+          value: `${Object.keys(event.eventData.data.delegates).length}`,
+        },
+        {
+          key: 'Total Vaulted Delegate Stakes',
+          value: `${totalVaultedDelegateStakes.toFixed(2).toLocaleString()} $ARIO ($${totalVaultedDelegateStakesUSD.toFixed(2).toLocaleString()} USD)`,
+        },
+        {
+          key: 'Total Vaulted Operator Stake',
+          value: `${totalVaultedOperatorStake.toFixed(2).toLocaleString()} $ARIO ($${totalVaultedOperatorStakeUSD.toFixed(2).toLocaleString()} USD)`,
+        },
+        {
+          key: 'Stakes returned at',
+          value: new Date(event.eventData.data.endTimestamp).toLocaleString(),
+        },
       );
       break;
     }
@@ -2031,20 +2185,45 @@ export async function getNotificationFields(event: NewEvent): Promise<Array<{key
         token: 'ar-io-network',
         quantity: operatorStake,
       });
-      const minDelegatedStake = event.eventData.data.settings.minDelegatedStake / 1_000_000;
+      const minDelegatedStake =
+        event.eventData.data.settings.minDelegatedStake / 1_000_000;
       const minDelegatedStakeUSD = await priceService.getPriceForTokenQuantity({
         token: 'ar-io-network',
         quantity: minDelegatedStake,
       });
-      
+
       fields.push(
         { key: 'FQDN', value: event.eventData.data.settings.fqdn },
-        { key: 'Observer Address', value: `${event.eventData.data.observerAddress.slice(0, 6)}...${event.eventData.data.observerAddress.slice(-4)}` },
-        { key: 'Operator Stake', value: event.eventData.data.operatorStake ? `${operatorStake.toFixed(2).toLocaleString()} $ARIO ($${operatorStakeUSD.toFixed(2).toLocaleString()} USD)` : 'N/A' },
-        { key: 'Auto Stake Enabled', value: event.eventData.data.settings.autoStake ? 'Yes' : 'No' },
-        { key: 'Allows Delegated Staking', value: event.eventData.data.settings.allowDelegatedStaking ? 'Yes' : 'No' },
-        { key: 'Minimum Delegated Stake', value: event.eventData.data.settings.minDelegatedStake ? `${minDelegatedStake.toFixed(2).toLocaleString()} $ARIO ($${minDelegatedStakeUSD.toFixed(2).toLocaleString()} USD)` : 'N/A' },
-        { key: 'Delegate Reward Percentage', value: `${event.eventData.data.settings.delegateRewardShareRatio.toFixed(2).toLocaleString()}%` }
+        {
+          key: 'Observer Address',
+          value: `${event.eventData.data.observerAddress.slice(0, 6)}...${event.eventData.data.observerAddress.slice(-4)}`,
+        },
+        {
+          key: 'Operator Stake',
+          value: event.eventData.data.operatorStake
+            ? `${operatorStake.toFixed(2).toLocaleString()} $ARIO ($${operatorStakeUSD.toFixed(2).toLocaleString()} USD)`
+            : 'N/A',
+        },
+        {
+          key: 'Auto Stake Enabled',
+          value: event.eventData.data.settings.autoStake ? 'Yes' : 'No',
+        },
+        {
+          key: 'Allows Delegated Staking',
+          value: event.eventData.data.settings.allowDelegatedStaking
+            ? 'Yes'
+            : 'No',
+        },
+        {
+          key: 'Minimum Delegated Stake',
+          value: event.eventData.data.settings.minDelegatedStake
+            ? `${minDelegatedStake.toFixed(2).toLocaleString()} $ARIO ($${minDelegatedStakeUSD.toFixed(2).toLocaleString()} USD)`
+            : 'N/A',
+        },
+        {
+          key: 'Delegate Reward Percentage',
+          value: `${event.eventData.data.settings.delegateRewardShareRatio.toFixed(2).toLocaleString()}%`,
+        },
       );
       break;
     }
@@ -2052,19 +2231,57 @@ export async function getNotificationFields(event: NewEvent): Promise<Array<{key
       const epochIndex = event.eventData.data.epochIndex;
       const epochStartTimestamp = event.eventData.data.startTimestamp;
       const epochEndTimestamp = event.eventData.data.endTimestamp;
-      const totalEligibleGatewaysCreated = event.eventData.data.distributions.totalEligibleGateways;
-      const totalEligibleObserverRewardCreated = event.eventData.data.distributions.totalEligibleObserverReward / 1_000_000;
-      const totalEligibleObserverRewardUSD = totalEligibleObserverRewardCreated * (await priceService.getPrice());
-      const totalEligibleGatewayRewardCreated = event.eventData.data.distributions.totalEligibleGatewayReward / 1_000_000;
-      const totalEligibleGatewayRewardUSD = totalEligibleGatewayRewardCreated * (await priceService.getPrice());
+      const totalEligibleRewards =
+        event.eventData.data.distributions.totalEligibleRewards / 1_000_000;
+      const totalEligibleRewardsUSD =
+        await priceService.getPriceForTokenQuantity({
+          token: 'ar-io-network',
+          quantity: totalEligibleRewards,
+        });
+      const totalEligibleGatewaysCreated =
+        event.eventData.data.distributions.totalEligibleGateways;
+      const totalEligibleObserverRewardCreated =
+        event.eventData.data.distributions.totalEligibleObserverReward /
+        1_000_000;
+      const totalEligibleObserverRewardUSD =
+        totalEligibleObserverRewardCreated * (await priceService.getPrice());
+      const totalEligibleGatewayRewardCreated =
+        event.eventData.data.distributions.totalEligibleGatewayReward /
+        1_000_000;
+      const totalEligibleGatewayRewardUSD =
+        totalEligibleGatewayRewardCreated * (await priceService.getPrice());
 
       fields.push(
         { key: 'Epoch Index', value: `${epochIndex}` },
-        { key: 'Start Timestamp', value: epochStartTimestamp ? new Date(epochStartTimestamp).toLocaleString() : 'N/A' },
-        { key: 'End Timestamp', value: epochEndTimestamp ? new Date(epochEndTimestamp).toLocaleString() : 'N/A' },
-        { key: '# Eligible Gateways', value: `${totalEligibleGatewaysCreated}` },
-        { key: 'Observer Reward', value: `${totalEligibleObserverRewardCreated.toFixed(2).toLocaleString()} $ARIO ($${totalEligibleObserverRewardUSD.toFixed(2).toLocaleString()} USD)` },
-        { key: 'Gateway Reward', value: `${totalEligibleGatewayRewardCreated.toFixed(2).toLocaleString()} $ARIO ($${totalEligibleGatewayRewardUSD.toFixed(2).toLocaleString()} USD)` }
+        {
+          key: 'Start Timestamp',
+          value: epochStartTimestamp
+            ? new Date(epochStartTimestamp).toLocaleString()
+            : 'N/A',
+        },
+        {
+          key: 'End Timestamp',
+          value: epochEndTimestamp
+            ? new Date(epochEndTimestamp).toLocaleString()
+            : 'N/A',
+        },
+        {
+          key: 'Total Eligible Gateways',
+          value: `${totalEligibleGatewaysCreated}`,
+        },
+        {
+          key: 'Total Eligible Rewards',
+          value: `${totalEligibleRewards.toFixed(2).toLocaleString()} $ARIO ($${totalEligibleRewardsUSD.toFixed(2).toLocaleString()} USD)`,
+        },
+        {
+          key: 'Observer Reward',
+          value: `${totalEligibleObserverRewardCreated.toFixed(2).toLocaleString()} $ARIO ($${totalEligibleObserverRewardUSD.toFixed(2).toLocaleString()} USD)`,
+        },
+        {
+          key: 'Gateway Reward',
+          value: `${totalEligibleGatewayRewardCreated.toFixed(2).toLocaleString()} $ARIO ($${totalEligibleGatewayRewardUSD.toFixed(2).toLocaleString()} USD)`,
+        },
+        // TODO add prescribed observers
       );
       break;
     }
@@ -2072,43 +2289,87 @@ export async function getNotificationFields(event: NewEvent): Promise<Array<{key
       const observationData = event.eventData.data.observations;
       const epochData = event.eventData.data.distributions;
       const totalEligibleGateways = epochData.totalEligibleGateways || 0;
-      const totalEligibleRewards = epochData.totalEligibleRewards ? epochData.totalEligibleRewards / 1_000_000 : 0;
-      const totalEligibleObserverReward = epochData.totalEligibleObserverReward ? epochData.totalEligibleObserverReward / 1_000_000 : 0;
-      const totalEligibleGatewayReward = epochData.totalEligibleGatewayReward ? epochData.totalEligibleGatewayReward / 1_000_000 : 0;
-      const totalDistributedRewards = epochData.totalDistributedRewards ? epochData.totalDistributedRewards / 1_000_000 : 0;
-      const totalEligibleObserverRewardUSD = await priceService.getPriceForTokenQuantity({
-        token: 'ar-io-network',
-        quantity: totalEligibleObserverReward,
-      });
-      const totalEligibleGatewayRewardUSD = await priceService.getPriceForTokenQuantity({
-        token: 'ar-io-network',
-        quantity: totalEligibleGatewayReward,
-      });
-      const totalEligibleRewardsUSD = await priceService.getPriceForTokenQuantity({
-        token: 'ar-io-network',
-        quantity: totalEligibleRewards,
-      });
-      const totalDistributedRewardsUSD = await priceService.getPriceForTokenQuantity({
-        token: 'ar-io-network',
-        quantity: totalDistributedRewards,
-      });
-      const totalObservationsSubmitted = Object.keys(observationData.reports || {}).length || 0;
-      const totalGatewaysFailed = Object.entries(observationData.failureSummaries || {}).reduce((count, [_, reports]) => {
-        return count + (Array.isArray(reports) && reports.length > totalObservationsSubmitted * 0.5 ? 1 : 0);
+      const totalEligibleRewards = epochData.totalEligibleRewards
+        ? epochData.totalEligibleRewards / 1_000_000
+        : 0;
+      const totalEligibleObserverReward = epochData.totalEligibleObserverReward
+        ? epochData.totalEligibleObserverReward / 1_000_000
+        : 0;
+      const totalEligibleGatewayReward = epochData.totalEligibleGatewayReward
+        ? epochData.totalEligibleGatewayReward / 1_000_000
+        : 0;
+      const totalDistributedRewards = epochData.totalDistributedRewards
+        ? epochData.totalDistributedRewards / 1_000_000
+        : 0;
+      const totalEligibleObserverRewardUSD =
+        await priceService.getPriceForTokenQuantity({
+          token: 'ar-io-network',
+          quantity: totalEligibleObserverReward,
+        });
+      const totalEligibleGatewayRewardUSD =
+        await priceService.getPriceForTokenQuantity({
+          token: 'ar-io-network',
+          quantity: totalEligibleGatewayReward,
+        });
+      const totalEligibleRewardsUSD =
+        await priceService.getPriceForTokenQuantity({
+          token: 'ar-io-network',
+          quantity: totalEligibleRewards,
+        });
+      const totalDistributedRewardsUSD =
+        await priceService.getPriceForTokenQuantity({
+          token: 'ar-io-network',
+          quantity: totalDistributedRewards,
+        });
+      const totalObservationsSubmitted =
+        Object.keys(observationData.reports || {}).length || 0;
+      const totalGatewaysFailed = Object.entries(
+        observationData.failureSummaries || {},
+      ).reduce((count, [_, reports]) => {
+        return (
+          count +
+          (Array.isArray(reports) &&
+          reports.length > totalObservationsSubmitted * 0.5
+            ? 1
+            : 0)
+        );
       }, 0);
       const totalGatewaysPassed = totalEligibleGateways - totalGatewaysFailed;
-      const distributedTimestamp = epochData.distributedTimestamp ? new Date(epochData.distributedTimestamp).toLocaleString() : 'N/A';
+      const distributedTimestamp = epochData.distributedTimestamp
+        ? new Date(epochData.distributedTimestamp).toLocaleString()
+        : 'N/A';
 
       fields.push(
-        { key: 'Observations Submitted', value: `${totalObservationsSubmitted}/50 (${((totalObservationsSubmitted / 50) * 100).toFixed(2)}%)` },
-        { key: 'Gateways Eligible', value: `${totalEligibleGateways}` },
-        { key: 'Gateways Failed', value: `${totalGatewaysFailed} (${((totalGatewaysFailed / totalEligibleGateways) * 100).toFixed(2)}%)` },
-        { key: 'Gateways Passed', value: `${totalGatewaysPassed} (${((totalGatewaysPassed / totalEligibleGateways) * 100).toFixed(2)}%)` },
-        { key: 'Observer Reward', value: `${totalEligibleObserverReward.toFixed(2).toLocaleString()} $ARIO ($${totalEligibleObserverRewardUSD.toFixed(2).toLocaleString()} USD)` },
-        { key: 'Gateway Reward', value: `${totalEligibleGatewayReward.toFixed(2).toLocaleString()} $ARIO ($${totalEligibleGatewayRewardUSD.toFixed(2).toLocaleString()} USD)` },
-        { key: 'Total Eligible Rewards', value: `${totalEligibleRewards.toFixed(2).toLocaleString()} $ARIO ($${totalEligibleRewardsUSD.toFixed(2).toLocaleString()} USD)` },
-        { key: 'Total Distributed Rewards', value: `${totalDistributedRewards.toFixed(2).toLocaleString()} $ARIO ($${totalDistributedRewardsUSD.toFixed(2).toLocaleString()} USD) (${((totalDistributedRewards / totalEligibleRewards) * 100).toFixed(2)}%)` },
-        { key: 'Distribution Timestamp', value: distributedTimestamp }
+        {
+          key: 'Observations',
+          value: `${totalObservationsSubmitted}/50 (${((totalObservationsSubmitted / 50) * 100).toFixed(2)}%)`,
+        },
+        { key: 'Total Eligible Gateways', value: `${totalEligibleGateways}` },
+        {
+          key: 'Total Eligible Rewards',
+          value: `${totalEligibleRewards.toFixed(2).toLocaleString()} $ARIO ($${totalEligibleRewardsUSD.toFixed(2).toLocaleString()} USD)`,
+        },
+        {
+          key: 'Total Gateways Failed',
+          value: `${totalGatewaysFailed} (${((totalGatewaysFailed / totalEligibleGateways) * 100).toFixed(2)}%)`,
+        },
+        {
+          key: 'Total Gateways Passed',
+          value: `${totalGatewaysPassed} (${((totalGatewaysPassed / totalEligibleGateways) * 100).toFixed(2)}%)`,
+        },
+        {
+          key: 'Observer Reward',
+          value: `${totalEligibleObserverReward.toFixed(2).toLocaleString()} $ARIO ($${totalEligibleObserverRewardUSD.toFixed(2).toLocaleString()} USD)`,
+        },
+        {
+          key: 'Gateway Reward',
+          value: `${totalEligibleGatewayReward.toFixed(2).toLocaleString()} $ARIO ($${totalEligibleGatewayRewardUSD.toFixed(2).toLocaleString()} USD)`,
+        },
+        {
+          key: 'Total Distributed Rewards',
+          value: `${totalDistributedRewards.toFixed(2).toLocaleString()} $ARIO ($${totalDistributedRewardsUSD.toFixed(2).toLocaleString()} USD) (${((totalDistributedRewards / totalEligibleRewards) * 100).toFixed(2)}%)`,
+        },
+        { key: 'Distribution Timestamp', value: distributedTimestamp },
       );
       break;
     }
