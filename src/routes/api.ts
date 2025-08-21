@@ -199,6 +199,10 @@ apiRouter.post(
     try {
       const { email } = req.query;
 
+      logger.info('Received manage request', {
+        email,
+      });
+
       if (!email || typeof email !== 'string') {
         return res.status(400).json({ error: 'Email is required' });
       }
@@ -207,8 +211,16 @@ apiRouter.post(
       const subscriber = await req.db.getSubscriberByEmail(decodedEmail);
 
       if (!subscriber) {
+        logger.error('Subscriber not found', {
+          email: decodedEmail,
+        });
         return res.status(404).json({ error: 'Subscriber not found' });
       }
+
+      logger.info('Subscriber found', {
+        email: decodedEmail,
+        subscriber,
+      });
 
       // generate a link that allows the user to manage their subscription at subscribe.permagate.io
       const manageLink = generateManageLink(decodedEmail);
@@ -217,6 +229,11 @@ apiRouter.post(
         to: [decodedEmail],
         text: `✨ Click here to sign in to your account and manage your subscription: ${manageLink}\n\nThis link is unique to you and will expire in 24 hours.`,
         subject: '✨ Your magic link is ready!',
+      });
+
+      logger.info('Manage link sent to email', {
+        email: decodedEmail,
+        manageLink,
       });
 
       return res.status(200).json({
