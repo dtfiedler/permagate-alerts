@@ -213,8 +213,8 @@ apiRouter.post(
       // generate a link that allows the user to manage their subscription at subscribe.permagate.io
       const manageLink = generateManageLink(decodedEmail);
       // send a raw email to the user with the manage link
-      req.notifier?.sendRawEmail({
-        to: [email],
+      await req.notifier?.sendRawEmail({
+        to: [decodedEmail],
         text: `✨ Click here to sign in to your account and manage your subscription: ${manageLink}\n\nThis link is unique to you and will expire in 24 hours.`,
         subject: '✨ Your magic link is ready!',
       });
