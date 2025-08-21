@@ -86,9 +86,9 @@ const slackNotifier = config.slackWebhookUrl
   : undefined;
 
 // Discord notification provider
-const discordNotifier = config.discordWebhookUrl
+const discordNotifier = config.discordWebhookUrls.length > 0
   ? new DiscordNotificationProvider({
-      webhookUrl: config.discordWebhookUrl,
+      webhookUrls: config.discordWebhookUrls,
       logger,
       enabled: config.enableDiscordNotifications,
     })
