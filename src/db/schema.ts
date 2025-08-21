@@ -4,12 +4,12 @@ export const subscriberEvents = [
   'buy-name-notice',
   'join-network-notice',
   'leave-network-notice',
-  'updated-demand-factor-notice',
   'epoch-created-notice',
   'epoch-distribution-notice',
-  'returned-name-notice',
-  'upgrade-name-notice',
-  'delegate-stake-notice',
+  // 'updated-demand-factor-notice',
+  // 'returned-name-notice',
+  // 'upgrade-name-notice',
+  // 'delegate-stake-notice',
 ] as const;
 
 export const processEventSubscriptionSchema = z.object({
