@@ -203,14 +203,15 @@ apiRouter.post(
         return res.status(400).json({ error: 'Email is required' });
       }
 
-      const subscriber = await req.db.getSubscriberByEmail(email);
+      const decodedEmail = decodeURIComponent(email);
+      const subscriber = await req.db.getSubscriberByEmail(decodedEmail);
 
       if (!subscriber) {
         return res.status(404).json({ error: 'Subscriber not found' });
       }
 
       // generate a link that allows the user to manage their subscription at subscribe.permagate.io
-      const manageLink = generateManageLink(email);
+      const manageLink = generateManageLink(decodedEmail);
       // send a raw email to the user with the manage link
       req.notifier?.sendRawEmail({
         to: [email],

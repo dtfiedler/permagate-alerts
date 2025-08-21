@@ -1944,11 +1944,11 @@ export async function getNotificationFields(
 
       fields.push(
         {
-          key: '# Observations',
+          key: 'Total Observations',
           value: `${totalObservations}/${totalPrescribedObservers}`,
         },
         {
-          key: '# Failures',
+          key: 'Total Failures',
           value: `${observations?.failureSummaries[event.eventData.target]?.length} / ${totalObservations}`,
         },
         { key: 'Epoch Status', value: status },
@@ -2161,7 +2161,7 @@ export async function getNotificationFields(
           value: `${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)}`,
         },
         {
-          key: '# Delegates',
+          key: 'Total Delegates',
           value: `${Object.keys(event.eventData.data.delegates).length}`,
         },
         {
