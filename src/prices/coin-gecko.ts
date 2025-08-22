@@ -19,7 +19,7 @@ export class CoinGeckoService implements IPriceService {
   private baseUrl = 'https://api.coingecko.com/api/v3';
   private cache = new Map<string, CacheEntry>();
   private ttlMilliseconds: number;
-  private tokenPricePromise: Promise<number>;
+  private tokenPricePromise: Promise<number> | undefined;
 
   constructor({
     defaultToken = 'ar-io-network',
