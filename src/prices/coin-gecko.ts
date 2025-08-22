@@ -19,6 +19,7 @@ export class CoinGeckoService implements IPriceService {
   private baseUrl = 'https://api.coingecko.com/api/v3';
   private cache = new Map<string, CacheEntry>();
   private ttlMilliseconds: number;
+  private tokenPricePromise: Promise<number>;
 
   constructor({
     defaultToken = 'ar-io-network',
@@ -43,18 +44,23 @@ export class CoinGeckoService implements IPriceService {
       return cachedEntry.price;
     }
 
-    const response = await fetch(
-      `${this.baseUrl}/simple/price?ids=${cacheKey}&vs_currencies=usd`,
-    );
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch price for ${tokenId}: ${response.status}`,
-      );
+    if (this.tokenPricePromise) {
+      return this.tokenPricePromise;
     }
 
-    const data = await response.json();
-    const price = data[cacheKey]?.usd;
+    this.tokenPricePromise = fetch(
+      `${this.baseUrl}/simple/price?ids=${cacheKey}&vs_currencies=usd`,
+    ).then(async (response) => {
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch price for ${tokenId}: ${response.status}`,
+        );
+      }
+      const data = await response.json();
+      return data[cacheKey]?.usd;
+    });
+
+    const price = await this.tokenPricePromise;
 
     if (price === undefined) {
       throw new Error(`Price not found for token: ${tokenId}`);
