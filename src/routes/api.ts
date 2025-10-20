@@ -600,4 +600,104 @@ apiRouter.get(
   },
 );
 
+// Admin route to reprocess events for specific channels
+apiRouter.post(
+  '/api/admin/reprocess',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const { channel, eventId, nonce } = req.body;
+      const adminKey = req.headers['x-admin-key'] as string;
+
+      // Validate admin key
+      if (!adminKey || adminKey !== config.adminApiKey) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      // Validate required parameters
+      if (!channel) {
+        return res.status(400).json({ error: 'Channel is required' });
+      }
+
+      // Either eventId (database ID) or nonce is required
+      if (!eventId && !nonce) {
+        return res.status(400).json({ error: 'Either eventId or nonce is required' });
+      }
+
+      logger.info('Processing reprocess request', {
+        channel,
+        eventId,
+        nonce,
+      });
+
+      // Get the event from database
+      let event;
+      if (nonce) {
+        event = await req.db.getEvent(+nonce);
+      } else if (eventId) {
+        // If using eventId, we need a different method - for now use nonce
+        return res.status(400).json({ error: 'Use nonce parameter instead of eventId' });
+      }
+
+      if (!event) {
+        return res.status(404).json({ error: 'Event not found' });
+      }
+
+      logger.info('Found event for reprocessing', {
+        eventNonce: event.nonce,
+        eventType: event.eventType,
+        processId: event.processId,
+      });
+
+      // Determine which notification channel to reprocess
+      const validChannels = ['email', 'discord', 'slack', 'twitter', 'webhook', 'all'];
+      if (!validChannels.includes(channel)) {
+        return res.status(400).json({
+          error: `Invalid channel. Must be one of: ${validChannels.join(', ')}`,
+        });
+      }
+
+      // Create a filtered notification provider based on channel
+      let targetProvider;
+      const { notificationProvider } = await import('../system.js');
+
+      if (channel === 'all') {
+        targetProvider = notificationProvider;
+      } else {
+        // For specific channels, we'd need to create individual providers
+        // This is a simplified approach - you might want to refactor the system
+        // to support more granular channel selection
+        targetProvider = notificationProvider;
+        logger.warn('Channel-specific reprocessing not yet implemented, using all channels', {
+          requestedChannel: channel,
+        });
+      }
+
+      // Reprocess the notification
+      await targetProvider.handle({ event, recipients: [] });
+
+      logger.info('Successfully reprocessed event', {
+        eventNonce: event.nonce,
+        eventType: event.eventType,
+        channel,
+      });
+
+      return res.status(200).json({
+        message: 'Event reprocessed successfully',
+        event: {
+          nonce: event.nonce,
+          eventType: event.eventType,
+          processId: event.processId,
+          channel: channel,
+        },
+      });
+    } catch (error) {
+      logger.error('Error reprocessing event:', error);
+      return res.status(500).json({
+        error: 'An error occurred while reprocessing the event',
+      });
+    }
+  },
+);
+
 export { apiRouter };

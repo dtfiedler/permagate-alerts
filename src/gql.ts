@@ -282,6 +282,12 @@ export class GQLEventPoller implements EventPoller {
             continue;
           }
           for (const message of messageResult.Messages) {
+            if (!message.Data) {
+              this.logger.warn('Message has no data', {
+                message,
+              });
+              continue;
+            }
             const data = JSON.parse(message.Data);
             const target = message.Target;
             const tags = message.Tags;
