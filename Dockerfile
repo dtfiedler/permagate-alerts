@@ -6,6 +6,11 @@ FROM node:${NODE_VERSION}-bookworm-slim AS builder
 # Needed for some dev deps
 RUN apt-get update && apt-get install -y git
 
+# Skip puppeteer download
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+# (optional extra coverage)
+ENV PUPPETEER_SKIP_CHROME_DOWNLOAD=true
+
 # Build
 WORKDIR /usr/src/app
 COPY . .
