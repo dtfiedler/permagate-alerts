@@ -179,6 +179,75 @@ const gqlEventSchema = z.object({
 });
 
 export type GQLEvent = z.infer<typeof gqlEventSchema>;
+
+// Webhook types
+export const webhookTypes = ['custom', 'discord', 'slack'] as const;
+export type WebhookType = (typeof webhookTypes)[number];
+
+// Webhook schema
+const webhookSchema = z.object({
+  id: z.number(),
+  subscriber_id: z.number(),
+  url: z.string().url(),
+  description: z.string().nullable(),
+  type: z.enum(webhookTypes).default('custom'),
+  active: z.boolean().default(true),
+  last_status: z.enum(['success', 'failed']).nullable(),
+  last_error: z.string().nullable(),
+  last_triggered_at: z.string().nullable(),
+  created_at: z.date(),
+  updated_at: z.date(),
+});
+
+export type Webhook = z.infer<typeof webhookSchema>;
+
+// New webhook schema (for insertion)
+const newWebhookSchema = webhookSchema.omit({
+  id: true,
+  last_status: true,
+  last_error: true,
+  last_triggered_at: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export type NewWebhook = z.infer<typeof newWebhookSchema>;
+
+// DB webhook schema (for database rows)
+const dbWebhookSchema = z.object({
+  id: z.number(),
+  subscriber_id: z.number(),
+  url: z.string(),
+  description: z.string().nullable(),
+  type: z.string(),
+  active: z.union([z.boolean(), z.number()]), // SQLite stores as 0/1
+  last_status: z.string().nullable(),
+  last_error: z.string().nullable(),
+  last_triggered_at: z.string().nullable(),
+  created_at: z.date(),
+  updated_at: z.date(),
+});
+
+export type DBWebhook = z.infer<typeof dbWebhookSchema>;
+
+// Webhook event link schema (join table for webhook <-> event_type)
+const webhookEventLinkSchema = z.object({
+  id: z.number(),
+  webhook_id: z.number(),
+  event_type: z.string(),
+  created_at: z.date(),
+});
+
+export type WebhookEventLink = z.infer<typeof webhookEventLinkSchema>;
+
+// New webhook event link schema (for insertion)
+const newWebhookEventLinkSchema = webhookEventLinkSchema.omit({
+  id: true,
+  created_at: true,
+});
+
+export type NewWebhookEventLink = z.infer<typeof newWebhookEventLinkSchema>;
+
 // Export schemas for validation
 export const schemas = {
   subscriber: subscriberSchema,
@@ -187,4 +256,6 @@ export const schemas = {
   rawEvent: aoRawEventSchema,
   webhookEvent: webhookEventSchema,
   gqlEvent: gqlEventSchema,
+  webhook: webhookSchema,
+  newWebhook: newWebhookSchema,
 };

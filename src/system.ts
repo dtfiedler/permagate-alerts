@@ -10,12 +10,9 @@ import { ARIO, ARIO_MAINNET_PROCESS_ID } from '@ar.io/sdk';
 import {
   CompositeNotificationProvider,
   EmailNotificationProvider,
-  SlackNotificationProvider,
   TwitterNotificationProvider,
   WebhookNotificationProvider,
-  WebhookRecipient,
 } from './notifications/index.js';
-import { DiscordNotificationProvider } from './notifications/discord.js';
 
 import { CachedArio } from './ario.js';
 import { connect } from '@permaweb/aoconnect';
@@ -77,36 +74,12 @@ const twitterNotifier = config.twitterBearerToken
     })
   : undefined;
 
-// Slack notification provider
-const slackNotifier = config.slackWebhookUrl
-  ? new SlackNotificationProvider({
-      webhookUrl: config.slackWebhookUrl,
-      logger,
-      enabled: config.enableSlackNotifications,
-    })
-  : undefined;
-
-// Discord notification provider
-const discordNotifier =
-  config.discordWebhookUrls.length > 0
-    ? new DiscordNotificationProvider({
-        webhookUrls: config.discordWebhookUrls,
-        logger,
-        enabled: config.enableDiscordNotifications,
-      })
-    : undefined;
-
-// Webhook notification provider
-const webhookEndpoints: WebhookRecipient[] = Array.isArray(
-  config.webhookEndpoints,
-)
-  ? config.webhookEndpoints
-  : [];
-
+// Webhook notification provider (database-stored webhooks with type-based formatting)
+// Supports 'custom', 'discord', and 'slack' webhook types
 const webhookNotifier = new WebhookNotificationProvider({
-  endpoints: webhookEndpoints,
+  db,
   logger,
-  enabled: webhookEndpoints.length > 0,
+  enabled: true,
 });
 
 // Create composite notification provider with all enabled providers
@@ -114,9 +87,7 @@ export const notificationProvider = new CompositeNotificationProvider({
   providers: [
     ...(emailNotifier ? [emailNotifier] : []),
     ...(twitterNotifier ? [twitterNotifier] : []),
-    ...(slackNotifier ? [slackNotifier] : []),
-    ...(discordNotifier ? [discordNotifier] : []),
-    ...(webhookNotifier ? [webhookNotifier] : []),
+    webhookNotifier,
   ],
   logger,
 });

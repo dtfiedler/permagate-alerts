@@ -6,6 +6,7 @@ import { z } from 'zod';
 import {
   processEventSubscriptionSchema,
   subscriberEvents,
+  webhookTypes,
 } from '../db/schema.js';
 import {
   generateManageLink,
@@ -597,6 +598,574 @@ apiRouter.get(
         .json({ error: 'An error occurred while processing your request' });
     }
     return;
+  },
+);
+
+// Unified notifications view - table format
+apiRouter.get(
+  '/api/subscribers/notifications',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      // Get email subscriptions (event types with addresses)
+      const emailSubscriptions = await req.db.getSubscribedEventsForSubscriber({
+        subscriberId: subscriber.id,
+      });
+
+      // Get webhooks grouped by event type
+      const webhooksByEventType =
+        await req.db.getWebhooksForSubscriberByEventType(subscriber.id);
+
+      // Build unified table view for all possible event types
+      const notifications = subscriberEvents.map((eventType) => {
+        // Find email subscription for this event type
+        const emailSub = emailSubscriptions.find(
+          (s) => s.eventType === eventType,
+        );
+
+        return {
+          event_type: eventType,
+          email_enabled: !!emailSub,
+          addresses: emailSub?.addresses || [],
+          webhooks: (webhooksByEventType.get(eventType) || []).map((w) => ({
+            id: w.id,
+            url: w.url,
+            description: w.description,
+            type: w.type,
+            active: w.active,
+          })),
+        };
+      });
+
+      return res.status(200).json(notifications);
+    } catch (error) {
+      logger.error('Error fetching notifications view:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while fetching notifications' });
+    }
+  },
+);
+
+// Webhook CRUD routes
+
+// Create a new webhook
+apiRouter.post(
+  '/api/webhooks',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      const { url, description, type, active } = req.body;
+
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ error: 'URL is required' });
+      }
+
+      // Validate webhook type if provided
+      const webhookType = type || 'custom';
+      if (!webhookTypes.includes(webhookType as any)) {
+        return res.status(400).json({
+          error: `Invalid webhook type. Must be one of: ${webhookTypes.join(', ')}`,
+        });
+      }
+
+      // Validate URL format
+      try {
+        new URL(url);
+      } catch {
+        return res.status(400).json({ error: 'Invalid URL format' });
+      }
+
+      const webhook = await req.db.createWebhook({
+        subscriber_id: subscriber.id,
+        url,
+        description: description || null,
+        type: webhookType,
+        active: active !== false,
+      });
+
+      if (!webhook) {
+        return res.status(500).json({ error: 'Failed to create webhook' });
+      }
+
+      logger.info('Created webhook', {
+        webhookId: webhook.id,
+        subscriberId: subscriber.id,
+      });
+
+      return res.status(201).json(webhook);
+    } catch (error: any) {
+      if (error.code === 'SQLITE_CONSTRAINT') {
+        return res.status(409).json({
+          error: 'A webhook with this URL already exists',
+        });
+      }
+      logger.error('Error creating webhook:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while creating the webhook' });
+    }
+  },
+);
+
+// List webhooks for subscriber
+apiRouter.get(
+  '/api/webhooks',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      const webhooks = await req.db.getWebhooksForSubscriber(subscriber.id);
+
+      return res.status(200).json(webhooks);
+    } catch (error) {
+      logger.error('Error listing webhooks:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while listing webhooks' });
+    }
+  },
+);
+
+// Update a webhook
+apiRouter.put(
+  '/api/webhooks/:id',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+      const webhookId = parseInt(req.params.id, 10);
+
+      if (isNaN(webhookId)) {
+        return res.status(400).json({ error: 'Invalid webhook ID' });
+      }
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      // Verify the webhook belongs to this subscriber
+      const existingWebhook = await req.db.getWebhook(webhookId);
+      if (!existingWebhook) {
+        return res.status(404).json({ error: 'Webhook not found' });
+      }
+      if (existingWebhook.subscriber_id !== subscriber.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      const { url, description, type, active } = req.body;
+
+      const updates: Record<string, any> = {};
+
+      if (url !== undefined) {
+        if (typeof url !== 'string') {
+          return res.status(400).json({ error: 'Invalid URL' });
+        }
+        try {
+          new URL(url);
+        } catch {
+          return res.status(400).json({ error: 'Invalid URL format' });
+        }
+        updates.url = url;
+      }
+
+      if (description !== undefined) {
+        updates.description = description;
+      }
+
+      if (type !== undefined) {
+        if (!webhookTypes.includes(type as any)) {
+          return res.status(400).json({
+            error: `Invalid webhook type. Must be one of: ${webhookTypes.join(', ')}`,
+          });
+        }
+        updates.type = type;
+      }
+
+      if (active !== undefined) {
+        updates.active = Boolean(active);
+      }
+
+      const updatedWebhook = await req.db.updateWebhook(webhookId, updates);
+
+      logger.info('Updated webhook', {
+        webhookId,
+        subscriberId: subscriber.id,
+        updates: Object.keys(updates),
+      });
+
+      return res.status(200).json(updatedWebhook);
+    } catch (error: any) {
+      if (error.code === 'SQLITE_CONSTRAINT') {
+        return res.status(409).json({
+          error: 'A webhook with this URL already exists',
+        });
+      }
+      logger.error('Error updating webhook:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while updating the webhook' });
+    }
+  },
+);
+
+// Delete a webhook
+apiRouter.delete(
+  '/api/webhooks/:id',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+      const webhookId = parseInt(req.params.id, 10);
+
+      if (isNaN(webhookId)) {
+        return res.status(400).json({ error: 'Invalid webhook ID' });
+      }
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      // Verify the webhook belongs to this subscriber
+      const existingWebhook = await req.db.getWebhook(webhookId);
+      if (!existingWebhook) {
+        return res.status(404).json({ error: 'Webhook not found' });
+      }
+      if (existingWebhook.subscriber_id !== subscriber.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      await req.db.deleteWebhook(webhookId);
+
+      logger.info('Deleted webhook', {
+        webhookId,
+        subscriberId: subscriber.id,
+      });
+
+      return res.status(200).json({ message: 'Webhook deleted successfully' });
+    } catch (error) {
+      logger.error('Error deleting webhook:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while deleting the webhook' });
+    }
+  },
+);
+
+// Webhook Events (linking) routes
+
+// Get linked event types for a webhook
+apiRouter.get(
+  '/api/webhooks/:id/events',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+      const webhookId = parseInt(req.params.id, 10);
+
+      if (isNaN(webhookId)) {
+        return res.status(400).json({ error: 'Invalid webhook ID' });
+      }
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      const webhook = await req.db.getWebhook(webhookId);
+      if (!webhook) {
+        return res.status(404).json({ error: 'Webhook not found' });
+      }
+      if (webhook.subscriber_id !== subscriber.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      const eventTypes = await req.db.getWebhookEvents(webhookId);
+
+      return res.status(200).json({ event_types: eventTypes });
+    } catch (error) {
+      logger.error('Error getting webhook events:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while getting webhook events' });
+    }
+  },
+);
+
+// Set/update linked event types for a webhook
+apiRouter.post(
+  '/api/webhooks/:id/events',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+      const webhookId = parseInt(req.params.id, 10);
+
+      if (isNaN(webhookId)) {
+        return res.status(400).json({ error: 'Invalid webhook ID' });
+      }
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      const webhook = await req.db.getWebhook(webhookId);
+      if (!webhook) {
+        return res.status(404).json({ error: 'Webhook not found' });
+      }
+      if (webhook.subscriber_id !== subscriber.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      const { event_types } = req.body;
+
+      if (!Array.isArray(event_types)) {
+        return res.status(400).json({ error: 'event_types must be an array' });
+      }
+
+      // Validate all event types
+      for (const eventType of event_types) {
+        if (!subscriberEvents.includes(eventType as any)) {
+          return res.status(400).json({
+            error: `Invalid event type: ${eventType}. Must be one of: ${subscriberEvents.join(', ')}`,
+          });
+        }
+      }
+
+      await req.db.setWebhookEvents(webhookId, event_types);
+
+      logger.info('Updated webhook events', {
+        webhookId,
+        subscriberId: subscriber.id,
+        eventTypes: event_types,
+      });
+
+      return res.status(200).json({
+        message: 'Webhook events updated successfully',
+        event_types,
+      });
+    } catch (error) {
+      logger.error('Error setting webhook events:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while setting webhook events' });
+    }
+  },
+);
+
+// Remove a single event type from a webhook
+apiRouter.delete(
+  '/api/webhooks/:id/events/:eventType',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+      const webhookId = parseInt(req.params.id, 10);
+      const eventType = req.params.eventType;
+
+      if (isNaN(webhookId)) {
+        return res.status(400).json({ error: 'Invalid webhook ID' });
+      }
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      const webhook = await req.db.getWebhook(webhookId);
+      if (!webhook) {
+        return res.status(404).json({ error: 'Webhook not found' });
+      }
+      if (webhook.subscriber_id !== subscriber.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      const deleted = await req.db.removeWebhookEvent(webhookId, eventType);
+
+      if (!deleted) {
+        return res.status(404).json({ error: 'Event type not linked to webhook' });
+      }
+
+      logger.info('Removed webhook event', {
+        webhookId,
+        subscriberId: subscriber.id,
+        eventType,
+      });
+
+      return res.status(200).json({ message: 'Event type removed from webhook' });
+    } catch (error) {
+      logger.error('Error removing webhook event:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while removing webhook event' });
+    }
   },
 );
 

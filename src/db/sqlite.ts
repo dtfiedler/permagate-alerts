@@ -10,6 +10,11 @@ import {
   Process,
   SubscribeToProcess,
   ProcessEventSubscription,
+  Webhook,
+  NewWebhook,
+  DBWebhook,
+  WebhookType,
+  WebhookEventLink,
 } from './schema.js';
 
 interface BaseStore {
@@ -424,5 +429,172 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
 
   async rawQuery(query: string): Promise<any> {
     return this.knex.raw(query);
+  }
+
+  // Webhook Store Methods
+  private dbWebhookToWebhook(dbWebhook: DBWebhook): Webhook {
+    return {
+      id: dbWebhook.id,
+      subscriber_id: dbWebhook.subscriber_id,
+      url: dbWebhook.url,
+      description: dbWebhook.description,
+      type: dbWebhook.type as WebhookType,
+      active: Boolean(dbWebhook.active),
+      last_status: dbWebhook.last_status as 'success' | 'failed' | null,
+      last_error: dbWebhook.last_error,
+      last_triggered_at: dbWebhook.last_triggered_at,
+      created_at: dbWebhook.created_at,
+      updated_at: dbWebhook.updated_at,
+    };
+  }
+
+  async createWebhook(webhook: NewWebhook): Promise<Webhook | undefined> {
+    const [id] = await this.knex<DBWebhook>('webhooks')
+      .insert({
+        subscriber_id: webhook.subscriber_id,
+        url: webhook.url,
+        description: webhook.description ?? null,
+        type: webhook.type ?? 'custom',
+        active: webhook.active ?? true,
+      })
+      .returning('id');
+
+    if (!id) {
+      return undefined;
+    }
+
+    return this.getWebhook(typeof id === 'object' ? id.id : id);
+  }
+
+  async getWebhook(id: number): Promise<Webhook | undefined> {
+    const webhook = await this.knex<DBWebhook>('webhooks').where({ id }).first();
+    if (!webhook) {
+      return undefined;
+    }
+    return this.dbWebhookToWebhook(webhook);
+  }
+
+  async getWebhooksForSubscriber(subscriberId: number): Promise<Webhook[]> {
+    const webhooks = await this.knex<DBWebhook>('webhooks')
+      .where({ subscriber_id: subscriberId })
+      .orderBy('created_at', 'desc');
+    return webhooks.map((w) => this.dbWebhookToWebhook(w));
+  }
+
+  async getActiveWebhooksForEventType(eventType: string): Promise<Webhook[]> {
+    // Get active webhooks that are linked to this event type via webhook_events
+    const webhooks = await this.knex<DBWebhook>('webhooks')
+      .join('webhook_events', 'webhooks.id', '=', 'webhook_events.webhook_id')
+      .where({
+        'webhooks.active': true,
+        'webhook_events.event_type': eventType,
+      })
+      .select('webhooks.*');
+    return webhooks.map((w) => this.dbWebhookToWebhook(w));
+  }
+
+  async updateWebhook(
+    id: number,
+    partial: Partial<Omit<Webhook, 'id' | 'created_at' | 'updated_at'>>,
+  ): Promise<Webhook | undefined> {
+    await this.knex<DBWebhook>('webhooks')
+      .where({ id })
+      .update({
+        ...partial,
+        updated_at: this.knex.fn.now(),
+      });
+    return this.getWebhook(id);
+  }
+
+  async updateWebhookStatus(
+    id: number,
+    status: 'success' | 'failed',
+    error?: string,
+  ): Promise<void> {
+    await this.knex<DBWebhook>('webhooks')
+      .where({ id })
+      .update({
+        last_status: status,
+        last_error: error ?? null,
+        last_triggered_at: new Date().toISOString(),
+        updated_at: this.knex.fn.now(),
+      });
+  }
+
+  async deleteWebhook(id: number): Promise<boolean> {
+    const deleted = await this.knex<DBWebhook>('webhooks').where({ id }).del();
+    return deleted > 0;
+  }
+
+  // Webhook Events (linking) Methods
+  async addWebhookEvent(webhookId: number, eventType: string): Promise<void> {
+    await this.knex<WebhookEventLink>('webhook_events')
+      .insert({
+        webhook_id: webhookId,
+        event_type: eventType,
+      })
+      .onConflict(['webhook_id', 'event_type'])
+      .ignore();
+  }
+
+  async removeWebhookEvent(
+    webhookId: number,
+    eventType: string,
+  ): Promise<boolean> {
+    const deleted = await this.knex<WebhookEventLink>('webhook_events')
+      .where({ webhook_id: webhookId, event_type: eventType })
+      .del();
+    return deleted > 0;
+  }
+
+  async getWebhookEvents(webhookId: number): Promise<string[]> {
+    const events = await this.knex<WebhookEventLink>('webhook_events')
+      .where({ webhook_id: webhookId })
+      .select('event_type');
+    return events.map((e) => e.event_type);
+  }
+
+  async setWebhookEvents(
+    webhookId: number,
+    eventTypes: string[],
+  ): Promise<void> {
+    // Delete existing and insert new ones
+    await this.knex<WebhookEventLink>('webhook_events')
+      .where({ webhook_id: webhookId })
+      .del();
+
+    if (eventTypes.length > 0) {
+      await this.knex<WebhookEventLink>('webhook_events').insert(
+        eventTypes.map((event_type) => ({
+          webhook_id: webhookId,
+          event_type,
+        })),
+      );
+    }
+  }
+
+  async getWebhooksForSubscriberByEventType(
+    subscriberId: number,
+  ): Promise<Map<string, Webhook[]>> {
+    // Get all webhooks for subscriber with their linked event types
+    const results = await this.knex<DBWebhook>('webhooks')
+      .leftJoin('webhook_events', 'webhooks.id', '=', 'webhook_events.webhook_id')
+      .where({ 'webhooks.subscriber_id': subscriberId })
+      .select('webhooks.*', 'webhook_events.event_type');
+
+    const webhooksByEventType = new Map<string, Webhook[]>();
+
+    for (const row of results) {
+      const eventType = (row as any).event_type;
+      if (!eventType) continue;
+
+      const webhook = this.dbWebhookToWebhook(row);
+      if (!webhooksByEventType.has(eventType)) {
+        webhooksByEventType.set(eventType, []);
+      }
+      webhooksByEventType.get(eventType)!.push(webhook);
+    }
+
+    return webhooksByEventType;
   }
 }
