@@ -6,6 +6,8 @@ export const subscriberEvents = [
   'leave-network-notice',
   'epoch-created-notice',
   'epoch-distribution-notice',
+  'update-gateway-settings-notice',
+  'save-observations-notice',
   // 'updated-demand-factor-notice',
   // 'returned-name-notice',
   // 'upgrade-name-notice',
