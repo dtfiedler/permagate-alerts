@@ -20,7 +20,7 @@ interface NotificationProvider {
 
 ### Available Providers
 
-1. **EmailNotificationProvider**: Sends email notifications using the configured email service (currently Mailgun)
+1. **EmailNotificationProvider**: Sends email notifications using the configured email service (currently AWS SES)
 2. **SlackNotificationProvider**: Posts notifications to a Slack channel via webhook
 3. **WebhookNotificationProvider**: Sends notification data to configurable HTTP endpoints
 
@@ -37,10 +37,7 @@ The `generateNotificationContent` function creates content appropriate for all n
 Configure notification providers in your environment variables:
 
 ```
-# Email (Mailgun)
-MAILGUN_API_KEY=your-api-key
-MAILGUN_DOMAIN=your-domain
-MAILGUN_FROM_EMAIL=noreply@example.com
+# Email (AWS SES)
 DISABLE_EMAILS=false
 
 # Slack
