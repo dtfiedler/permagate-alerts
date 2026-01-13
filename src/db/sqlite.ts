@@ -183,7 +183,8 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
       .where({
         subscriber_id: subscriberId,
       })
-      .select('process_id', 'event_type', 'address');
+      .select('process_id', 'event_type', 'address')
+      .groupBy('process_id', 'event_type');
 
     return subscribedEvents.map((event) => ({
       processId: event.process_id,

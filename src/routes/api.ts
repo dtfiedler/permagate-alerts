@@ -611,77 +611,6 @@ apiRouter.get(
   },
 );
 
-// Unified notifications view - table format
-apiRouter.get(
-  '/api/subscribers/notifications',
-  // @ts-ignore
-  async (req: Request, res: Response) => {
-    try {
-      const email = req.headers['x-user-email'] as string;
-      const authHeader = req.headers.authorization;
-
-      if (!email) {
-        return res.status(400).json({ error: 'Email is required' });
-      }
-
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res
-          .status(401)
-          .json({ error: 'Authorization token is required' });
-      }
-
-      const token = authHeader.split(' ')[1];
-      const { valid: validHash, decodedEmail } = verifyHash(token);
-
-      if (!validHash || decodedEmail !== email) {
-        return res.status(401).json({ error: 'Invalid authorization token' });
-      }
-
-      const subscriber = await req.db.getSubscriberByEmail(email);
-      if (!subscriber) {
-        return res.status(404).json({ error: 'Subscriber not found' });
-      }
-
-      // Get email subscriptions (event types with addresses)
-      const emailSubscriptions = await req.db.getSubscribedEventsForSubscriber({
-        subscriberId: subscriber.id,
-      });
-
-      // Get webhooks grouped by event type
-      const webhooksByEventType =
-        await req.db.getWebhooksForSubscriberByEventType(subscriber.id);
-
-      // Build unified table view for all possible event types
-      const notifications = subscriberEvents.map((eventType) => {
-        // Find email subscription for this event type
-        const emailSub = emailSubscriptions.find(
-          (s) => s.eventType === eventType,
-        );
-
-        return {
-          event_type: eventType,
-          email_enabled: !!emailSub,
-          addresses: emailSub?.addresses || [],
-          webhooks: (webhooksByEventType.get(eventType) || []).map((w) => ({
-            id: w.id,
-            url: w.url,
-            description: w.description,
-            type: w.type,
-            active: w.active,
-          })),
-        };
-      });
-
-      return res.status(200).json(notifications);
-    } catch (error) {
-      logger.error('Error fetching notifications view:', error);
-      return res
-        .status(500)
-        .json({ error: 'An error occurred while fetching notifications' });
-    }
-  },
-);
-
 // Webhook CRUD routes
 
 // Create a new webhook
@@ -1168,7 +1097,9 @@ apiRouter.delete(
       const deleted = await req.db.removeWebhookEvent(webhookId, eventType);
 
       if (!deleted) {
-        return res.status(404).json({ error: 'Event type not linked to webhook' });
+        return res
+          .status(404)
+          .json({ error: 'Event type not linked to webhook' });
       }
 
       logger.info('Removed webhook event', {
@@ -1177,7 +1108,9 @@ apiRouter.delete(
         eventType,
       });
 
-      return res.status(200).json({ message: 'Event type removed from webhook' });
+      return res
+        .status(200)
+        .json({ message: 'Event type removed from webhook' });
     } catch (error) {
       logger.error('Error removing webhook event:', error);
       return res
@@ -1208,7 +1141,9 @@ apiRouter.post(
 
       // Either eventId (database ID) or nonce is required
       if (!eventId && !nonce) {
-        return res.status(400).json({ error: 'Either eventId or nonce is required' });
+        return res
+          .status(400)
+          .json({ error: 'Either eventId or nonce is required' });
       }
 
       logger.info('Processing reprocess request', {
@@ -1223,7 +1158,9 @@ apiRouter.post(
         event = await req.db.getEvent(+nonce);
       } else if (eventId) {
         // If using eventId, we need a different method - for now use nonce
-        return res.status(400).json({ error: 'Use nonce parameter instead of eventId' });
+        return res
+          .status(400)
+          .json({ error: 'Use nonce parameter instead of eventId' });
       }
 
       if (!event) {
@@ -1237,7 +1174,14 @@ apiRouter.post(
       });
 
       // Determine which notification channel to reprocess
-      const validChannels = ['email', 'discord', 'slack', 'twitter', 'webhook', 'all'];
+      const validChannels = [
+        'email',
+        'discord',
+        'slack',
+        'twitter',
+        'webhook',
+        'all',
+      ];
       if (!validChannels.includes(channel)) {
         return res.status(400).json({
           error: `Invalid channel. Must be one of: ${validChannels.join(', ')}`,
@@ -1255,9 +1199,12 @@ apiRouter.post(
         // This is a simplified approach - you might want to refactor the system
         // to support more granular channel selection
         targetProvider = notificationProvider;
-        logger.warn('Channel-specific reprocessing not yet implemented, using all channels', {
-          requestedChannel: channel,
-        });
+        logger.warn(
+          'Channel-specific reprocessing not yet implemented, using all channels',
+          {
+            requestedChannel: channel,
+          },
+        );
       }
 
       // Reprocess the notification
