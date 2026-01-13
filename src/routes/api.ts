@@ -791,7 +791,15 @@ apiRouter.get(
 
       const webhooks = await req.db.getWebhooksForSubscriber(subscriber.id);
 
-      return res.status(200).json(webhooks);
+      // Fetch event types for each webhook
+      const webhooksWithEvents = await Promise.all(
+        webhooks.map(async (webhook) => {
+          const event_types = await req.db.getWebhookEvents(webhook.id);
+          return { ...webhook, event_types };
+        }),
+      );
+
+      return res.status(200).json(webhooksWithEvents);
     } catch (error) {
       logger.error('Error listing webhooks:', error);
       return res
