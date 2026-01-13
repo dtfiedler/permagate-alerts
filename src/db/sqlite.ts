@@ -441,6 +441,7 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
       description: dbWebhook.description,
       type: dbWebhook.type as WebhookType,
       active: Boolean(dbWebhook.active),
+      authorization: dbWebhook.authorization,
       last_status: dbWebhook.last_status as 'success' | 'failed' | null,
       last_error: dbWebhook.last_error,
       last_triggered_at: dbWebhook.last_triggered_at,
@@ -457,6 +458,7 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
         description: webhook.description ?? null,
         type: webhook.type ?? 'custom',
         active: webhook.active ?? true,
+        authorization: webhook.authorization ?? null,
       })
       .returning('id');
 

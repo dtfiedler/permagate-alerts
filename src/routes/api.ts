@@ -644,7 +644,7 @@ apiRouter.post(
         return res.status(404).json({ error: 'Subscriber not found' });
       }
 
-      const { url, description, type, active } = req.body;
+      const { url, description, type, active, authorization } = req.body;
 
       if (!url || typeof url !== 'string') {
         return res.status(400).json({ error: 'URL is required' });
@@ -671,6 +671,7 @@ apiRouter.post(
         description: description || null,
         type: webhookType,
         active: active !== false,
+        authorization: authorization || null,
       });
 
       if (!webhook) {
@@ -793,7 +794,7 @@ apiRouter.put(
         return res.status(403).json({ error: 'Forbidden' });
       }
 
-      const { url, description, type, active } = req.body;
+      const { url, description, type, active, authorization } = req.body;
 
       const updates: Record<string, any> = {};
 
@@ -824,6 +825,10 @@ apiRouter.put(
 
       if (active !== undefined) {
         updates.active = Boolean(active);
+      }
+
+      if (authorization !== undefined) {
+        updates.authorization = authorization || null;
       }
 
       const updatedWebhook = await req.db.updateWebhook(webhookId, updates);

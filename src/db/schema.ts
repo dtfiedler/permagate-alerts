@@ -194,6 +194,7 @@ const webhookSchema = z.object({
   description: z.string().nullable(),
   type: z.enum(webhookTypes).default('custom'),
   active: z.boolean().default(true),
+  authorization: z.string().nullable(),
   last_status: z.enum(['success', 'failed']).nullable(),
   last_error: z.string().nullable(),
   last_triggered_at: z.string().nullable(),
@@ -223,6 +224,7 @@ const dbWebhookSchema = z.object({
   description: z.string().nullable(),
   type: z.string(),
   active: z.union([z.boolean(), z.number()]), // SQLite stores as 0/1
+  authorization: z.string().nullable(),
   last_status: z.string().nullable(),
   last_error: z.string().nullable(),
   last_triggered_at: z.string().nullable(),

@@ -72,11 +72,18 @@ export class WebhookNotificationProvider implements NotificationProvider {
     try {
       const payload = await this.formatPayload(webhook.type, data);
 
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add authorization header for custom webhooks if provided
+      if (webhook.authorization) {
+        headers['Authorization'] = webhook.authorization;
+      }
+
       const response = await fetch(webhook.url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(30000), // 30 second timeout
       });
