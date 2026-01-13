@@ -1,5 +1,6 @@
 services:
   api:
+    image: ghcr.io/dtfiedler/permagate-alerts:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -28,11 +29,10 @@ services:
       - ./data:/usr/src/app/data
 
   worker:
+    image: ghcr.io/dtfiedler/permagate-alerts:latest
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - RUN_MIGRATIONS=true
     environment:
       - PORT=${PORT:-3000}
       - NODE_ENV=${NODE_ENV:-development}
