@@ -327,19 +327,29 @@ apiRouter.get(
         subscriberId: subscriber.id,
       });
 
+      // Get webhooks by event type for this subscriber
+      const webhooksByEventType =
+        await req.db.getWebhooksForSubscriberByEventType(subscriber.id);
+
       // reduce by processId
       const subscriptionsByProcessId = subscriptions.reduce(
         (acc, subscription) => {
+          const webhooksForEvent =
+            webhooksByEventType.get(subscription.eventType) || [];
           acc[subscription.processId] = [
             ...(acc[subscription.processId] || []),
             {
               eventType: subscription.eventType,
               addresses: subscription.addresses,
+              webhookIds: webhooksForEvent.map((w) => w.id),
             },
           ];
           return acc;
         },
-        {} as Record<string, { eventType: string; addresses: string[] }[]>,
+        {} as Record<
+          string,
+          { eventType: string; addresses: string[]; webhookIds: number[] }[]
+        >,
       );
       return res.status(200).json(subscriptionsByProcessId);
     } catch (error) {
