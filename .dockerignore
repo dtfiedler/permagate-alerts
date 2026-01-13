@@ -2,3 +2,15 @@ app
 data
 tests
 .env*
+node_modules
+**/node_modules
+.git
+dist
+build
+coverage
+.cache
+tmp
+.env
+*.log
+Dockerfile*
+docker-compose*.yml
