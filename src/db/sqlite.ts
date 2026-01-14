@@ -15,6 +15,11 @@ import {
   DBWebhook,
   WebhookType,
   WebhookEventLink,
+  ArNSName,
+  NewArNSName,
+  ArNSExpirationNotification,
+  ArNSNameSubscription,
+  ArNSNotificationType,
 } from './schema.js';
 
 interface BaseStore {
@@ -599,5 +604,175 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
     }
 
     return webhooksByEventType;
+  }
+
+  // ArNS Name Store Methods
+  async upsertArNSName(data: NewArNSName): Promise<void> {
+    await this.knex('arns_names')
+      .insert({
+        name: data.name,
+        process_id: data.process_id,
+        owner: data.owner,
+        root_tx_id: data.root_tx_id,
+        end_timestamp: data.end_timestamp,
+        start_timestamp: data.start_timestamp,
+        last_synced_at: this.knex.fn.now(),
+      })
+      .onConflict('name')
+      .merge({
+        process_id: data.process_id,
+        owner: data.owner,
+        root_tx_id: data.root_tx_id,
+        end_timestamp: data.end_timestamp,
+        start_timestamp: data.start_timestamp,
+        last_synced_at: this.knex.fn.now(),
+        updated_at: this.knex.fn.now(),
+      });
+  }
+
+  async getArNSName(name: string): Promise<ArNSName | undefined> {
+    return this.knex<ArNSName>('arns_names').where({ name }).first();
+  }
+
+  async getAllArNSNames(): Promise<ArNSName[]> {
+    return this.knex<ArNSName>('arns_names').select('*');
+  }
+
+  async findArNSNamesEnteringGracePeriod(now: number): Promise<ArNSName[]> {
+    // Find leased names where endTimestamp <= now (grace period has started)
+    return this.knex<ArNSName>('arns_names')
+      .whereNotNull('end_timestamp')
+      .where('end_timestamp', '<=', now)
+      .select('*');
+  }
+
+  async findArNSNamesGracePeriodEnding(threshold: number): Promise<ArNSName[]> {
+    // Find leased names where endTimestamp <= threshold
+    // threshold = now - 13 days (meaning grace period ends in ~1 day)
+    return this.knex<ArNSName>('arns_names')
+      .whereNotNull('end_timestamp')
+      .where('end_timestamp', '<=', threshold)
+      .select('*');
+  }
+
+  // ArNS Expiration Notification Tracking Methods
+  async hasNotificationBeenSent(
+    name: string,
+    notificationType: ArNSNotificationType,
+    endTimestamp: number,
+  ): Promise<boolean> {
+    const result = await this.knex<ArNSExpirationNotification>(
+      'arns_expiration_notifications',
+    )
+      .where({
+        name,
+        notification_type: notificationType,
+        end_timestamp: endTimestamp,
+      })
+      .first();
+    return !!result;
+  }
+
+  async recordNotificationSent(
+    name: string,
+    notificationType: ArNSNotificationType,
+    endTimestamp: number,
+  ): Promise<void> {
+    await this.knex<ArNSExpirationNotification>('arns_expiration_notifications')
+      .insert({
+        name,
+        notification_type: notificationType,
+        end_timestamp: endTimestamp,
+      })
+      .onConflict(['name', 'notification_type', 'end_timestamp'])
+      .ignore();
+  }
+
+  // ArNS Name Subscription Methods
+  async addArNSNameSubscription(
+    subscriberId: number,
+    name: string,
+  ): Promise<void> {
+    await this.knex<ArNSNameSubscription>('arns_name_subscriptions')
+      .insert({
+        subscriber_id: subscriberId,
+        name: name.toLowerCase(),
+      })
+      .onConflict(['subscriber_id', 'name'])
+      .ignore();
+  }
+
+  async removeArNSNameSubscription(
+    subscriberId: number,
+    name: string,
+  ): Promise<boolean> {
+    const deleted = await this.knex<ArNSNameSubscription>(
+      'arns_name_subscriptions',
+    )
+      .where({ subscriber_id: subscriberId, name: name.toLowerCase() })
+      .del();
+    return deleted > 0;
+  }
+
+  async getArNSNameSubscriptions(subscriberId: number): Promise<string[]> {
+    const results = await this.knex<ArNSNameSubscription>(
+      'arns_name_subscriptions',
+    )
+      .where({ subscriber_id: subscriberId })
+      .select('name');
+    return results.map((r) => r.name);
+  }
+
+  async findSubscribersForArNSExpiration(
+    name: string,
+    owner: string,
+  ): Promise<Subscriber[]> {
+    // Find subscribers who:
+    // 1. Are subscribed to 'arns-name-expiration-notice' event AND have owner in address filter
+    // 2. OR have the specific name in arns_name_subscriptions
+
+    const byProcessSubscription = await this.knex<Subscriber>('subscribers')
+      .join(
+        'subscriber_processes',
+        'subscribers.id',
+        '=',
+        'subscriber_processes.subscriber_id',
+      )
+      .where({
+        'subscribers.verified': 1,
+        'subscriber_processes.event_type': 'arns-name-expiration-notice',
+      })
+      .andWhere(function () {
+        this.whereNull('subscriber_processes.address')
+          .orWhere('subscriber_processes.address', '')
+          .orWhere('subscriber_processes.address', 'like', `%${owner}%`);
+      })
+      .select('subscribers.*');
+
+    const byNameSubscription = await this.knex<Subscriber>('subscribers')
+      .join(
+        'arns_name_subscriptions',
+        'subscribers.id',
+        '=',
+        'arns_name_subscriptions.subscriber_id',
+      )
+      .where({
+        'subscribers.verified': 1,
+        'arns_name_subscriptions.name': name.toLowerCase(),
+      })
+      .select('subscribers.*');
+
+    // Deduplicate by id
+    const seen = new Set<number>();
+    const result: Subscriber[] = [];
+
+    for (const sub of [...byProcessSubscription, ...byNameSubscription]) {
+      if (!seen.has(sub.id)) {
+        seen.add(sub.id);
+        result.push(sub);
+      }
+    }
+
+    return result;
   }
 }

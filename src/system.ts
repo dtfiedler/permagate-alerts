@@ -18,6 +18,7 @@ import { CachedArio } from './ario.js';
 import { connect } from '@permaweb/aoconnect';
 import { SESEmailProvider } from './email/ses.js';
 import { CoinGeckoService } from './prices/coin-gecko.js';
+import { ArNSSyncService, ArNSExpirationProcessor } from './arns/index.js';
 
 export const ario = new CachedArio({
   ario: ARIO.mainnet(),
@@ -137,6 +138,64 @@ export const eventGqlCron = config.disableEventProcessing
       },
     );
 
+// ArNS Name Expiration Tracking
+export const arnsSyncService = new ArNSSyncService({
+  ario: ARIO.mainnet(),
+  db,
+  logger,
+  resolverBaseUrl: config.arnsResolverUrl,
+});
+
+export const arnsExpirationProcessor = new ArNSExpirationProcessor({
+  db,
+  logger,
+  notificationProvider,
+});
+
+// Daily sync at 00:00:00 UTC - fetch all leased ArNS names
+export const arnsSyncCron = config.disableArnsSync
+  ? {
+      start: () => {
+        logger.info('ArNS sync is disabled');
+      },
+      stop: () => {
+        logger.info('ArNS sync is disabled');
+      },
+    }
+  : cron.schedule(
+      '0 0 * * *', // Every day at midnight UTC
+      async () => {
+        logger.info('Running daily ArNS sync');
+        await arnsSyncService.syncAllArNSNames();
+      },
+      {
+        scheduled: true,
+        timezone: 'UTC',
+      },
+    );
+
+// Daily check for expiring ArNS names (runs 5 minutes after sync)
+export const arnsExpirationCron = config.disableArnsSync
+  ? {
+      start: () => {
+        logger.info('ArNS expiration check is disabled');
+      },
+      stop: () => {
+        logger.info('ArNS expiration check is disabled');
+      },
+    }
+  : cron.schedule(
+      '5 0 * * *', // Every day at 00:05 UTC (5 minutes after sync)
+      async () => {
+        logger.info('Checking for ArNS name expirations');
+        await arnsExpirationProcessor.processExpiringNames();
+      },
+      {
+        scheduled: true,
+        timezone: 'UTC',
+      },
+    );
+
 process.on('unhandledRejection', (error: any) => {
   logger.error('Unhandled Rejection at:', error);
 });
@@ -157,5 +216,7 @@ process.on('SIGINT', () => {
 
 export const shutdown = () => {
   eventGqlCron.stop();
+  arnsSyncCron.stop();
+  arnsExpirationCron.stop();
   process.exit(0);
 };

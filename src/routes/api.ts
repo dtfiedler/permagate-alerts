@@ -1239,4 +1239,185 @@ apiRouter.post(
   },
 );
 
+// ArNS Name Subscription routes
+
+// Get subscriber's ArNS name subscriptions
+apiRouter.get(
+  '/api/arns/subscriptions',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      const names = await req.db.getArNSNameSubscriptions(subscriber.id);
+
+      return res.status(200).json({ names });
+    } catch (error) {
+      logger.error('Error getting ArNS subscriptions:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while getting ArNS subscriptions' });
+    }
+  },
+);
+
+// Add ArNS name subscription
+apiRouter.post(
+  '/api/arns/subscriptions',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const { name } = req.body;
+
+      if (!name || typeof name !== 'string') {
+        return res.status(400).json({ error: 'Name is required' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      await req.db.addArNSNameSubscription(subscriber.id, name);
+
+      logger.info('Added ArNS name subscription', {
+        subscriberId: subscriber.id,
+        name,
+      });
+
+      return res
+        .status(201)
+        .json({ message: 'Subscription added', name: name.toLowerCase() });
+    } catch (error) {
+      logger.error('Error adding ArNS subscription:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while adding ArNS subscription' });
+    }
+  },
+);
+
+// Remove ArNS name subscription
+apiRouter.delete(
+  '/api/arns/subscriptions/:name',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+      const { name } = req.params;
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      const deleted = await req.db.removeArNSNameSubscription(
+        subscriber.id,
+        name,
+      );
+
+      if (!deleted) {
+        return res.status(404).json({ error: 'Subscription not found' });
+      }
+
+      logger.info('Removed ArNS name subscription', {
+        subscriberId: subscriber.id,
+        name,
+      });
+
+      return res.status(200).json({ message: 'Subscription removed' });
+    } catch (error) {
+      logger.error('Error removing ArNS subscription:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while removing ArNS subscription' });
+    }
+  },
+);
+
+// Get ArNS name info (for UI preview)
+apiRouter.get(
+  '/api/arns/names/:name',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const { name } = req.params;
+
+      const arnsName = await req.db.getArNSName(name);
+
+      if (!arnsName) {
+        return res.status(404).json({ error: 'Name not found' });
+      }
+
+      return res.status(200).json(arnsName);
+    } catch (error) {
+      logger.error('Error getting ArNS name:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while getting ArNS name info' });
+    }
+  },
+);
+
 export { apiRouter };

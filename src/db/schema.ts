@@ -8,6 +8,7 @@ export const subscriberEvents = [
   'epoch-distribution-notice',
   'update-gateway-settings-notice',
   'save-observations-notice',
+  'arns-name-expiration-notice',
   // 'updated-demand-factor-notice',
   // 'returned-name-notice',
   // 'upgrade-name-notice',
@@ -252,6 +253,61 @@ const newWebhookEventLinkSchema = webhookEventLinkSchema.omit({
 
 export type NewWebhookEventLink = z.infer<typeof newWebhookEventLinkSchema>;
 
+// ArNS Name schema (leased names for expiration tracking)
+const arnsNameSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  process_id: z.string(),
+  owner: z.string(),
+  root_tx_id: z.string().nullable(),
+  end_timestamp: z.number(),
+  start_timestamp: z.number(),
+  last_synced_at: z.date(),
+  created_at: z.date(),
+  updated_at: z.date(),
+});
+
+export type ArNSName = z.infer<typeof arnsNameSchema>;
+
+// New ArNS name schema (for insertion/update)
+const newArnsNameSchema = arnsNameSchema.omit({
+  id: true,
+  last_synced_at: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export type NewArNSName = z.infer<typeof newArnsNameSchema>;
+
+// ArNS expiration notification schema (tracks sent notifications)
+export const arnsNotificationTypes = [
+  'grace_period_start',
+  'grace_period_ending',
+] as const;
+export type ArNSNotificationType = (typeof arnsNotificationTypes)[number];
+
+const arnsExpirationNotificationSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  notification_type: z.enum(arnsNotificationTypes),
+  end_timestamp: z.number(),
+  sent_at: z.date(),
+});
+
+export type ArNSExpirationNotification = z.infer<
+  typeof arnsExpirationNotificationSchema
+>;
+
+// ArNS name subscription schema (subscribe to specific names)
+const arnsNameSubscriptionSchema = z.object({
+  id: z.number(),
+  subscriber_id: z.number(),
+  name: z.string(),
+  created_at: z.date(),
+});
+
+export type ArNSNameSubscription = z.infer<typeof arnsNameSubscriptionSchema>;
+
 // Export schemas for validation
 export const schemas = {
   subscriber: subscriberSchema,
@@ -262,4 +318,8 @@ export const schemas = {
   gqlEvent: gqlEventSchema,
   webhook: webhookSchema,
   newWebhook: newWebhookSchema,
+  arnsName: arnsNameSchema,
+  newArnsName: newArnsNameSchema,
+  arnsExpirationNotification: arnsExpirationNotificationSchema,
+  arnsNameSubscription: arnsNameSubscriptionSchema,
 };
