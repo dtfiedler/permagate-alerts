@@ -90,3 +90,8 @@ export const enableTwitterNotifications =
   process.env.ENABLE_TWITTER_NOTIFICATIONS === 'true';
 export const twitterApiKey = process.env.TWITTER_API_KEY;
 export const twitterApiSecret = process.env.TWITTER_API_SECRET;
+
+// ArNS Expiration Tracking
+export const arnsResolverUrl =
+  process.env.ARNS_RESOLVER_URL || 'https://permagate.io/ar-io/resolver';
+export const disableArnsSync = process.env.DISABLE_ARNS_SYNC === 'true';

@@ -119,6 +119,17 @@ export const getEmailSubjectForEvent = async (event: NewEvent) => {
         '...' +
         event.eventData.target.slice(-4);
       return `💸 ${sender} sent ${debitAmount} $ARIO to ${debitRecipient}`;
+    case 'arns-name-expiration-notice': {
+      const arnsName = event.eventData.data.name;
+      const notificationType = event.eventData.data.notificationType;
+      const daysRemaining = event.eventData.data.daysRemaining;
+      const displayName = formatNameForDisplay(arnsName);
+      if (notificationType === 'grace_period_start') {
+        return `⚠️ ArNS name "${displayName}" has entered grace period (${daysRemaining} days remaining)`;
+      } else {
+        return `🚨 URGENT: ArNS name "${displayName}" expires in ${daysRemaining} day!`;
+      }
+    }
     default:
       return `🚨 New ${event.eventType.replace(/-/g, ' ').toLowerCase()}!`;
   }
@@ -1724,6 +1735,101 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
 </mjml>
   `;
     }
+    case 'arns-name-expiration-notice': {
+      const arnsName = event.eventData.data.name;
+      const owner = event.eventData.data.owner;
+      const gracePeriodEndsAt = event.eventData.data.gracePeriodEndsAt;
+      const daysRemaining = event.eventData.data.daysRemaining;
+      const notificationType = event.eventData.data.notificationType;
+      const isUrgent = notificationType === 'grace_period_ending';
+      const displayName = formatNameForDisplay(arnsName);
+      const expirationDate = new Date(gracePeriodEndsAt).toLocaleString();
+
+      return `
+<mjml>
+  <mj-head>
+    <mj-title>ArNS Name Expiration Notice</mj-title>
+    <mj-font name="Geist" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" />
+    <mj-attributes>
+      <mj-all font-family="Geist, sans-serif" />
+      <mj-text font-size="12px" color="#333" line-height="1.5" />
+    </mj-attributes>
+    <mj-style inline="inline">
+      .info-table th {
+        background-color: #fafafa !important;
+        font-weight: 600 !important;
+      }
+      .info-table th,
+      .info-table td {
+        border-bottom: 1px solid #eaeaea !important;
+        text-align: left !important;
+        padding: 8px !important;
+      }
+      .shadow-box {
+        box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f5f5f5">
+    <mj-wrapper padding="30px">
+      <mj-section css-class="shadow-box" background-color="#ffffff" border-radius="8px" padding="20px">
+        <mj-column>
+          <mj-text font-size="20px" font-weight="bold" color="${isUrgent ? '#dc2626' : '#f59e0b'}">
+            ${isUrgent ? '🚨 URGENT: ArNS Name Expiring Soon!' : '⚠️ ArNS Name Grace Period Notice'}
+          </mj-text>
+          <mj-text>
+            ${
+              isUrgent
+                ? `Your ArNS name <strong>${displayName}</strong> will expire in approximately 1 day. Act now to avoid losing this name!`
+                : `Your ArNS name <strong>${displayName}</strong> has entered the 14-day grace period. You have ${daysRemaining} days to renew before it becomes available to others.`
+            }
+          </mj-text>
+          <mj-table css-class="info-table">
+            <tr>
+              <th width="40%">Name</th>
+              <td width="60%">${displayName}</td>
+            </tr>
+            <tr>
+              <th>Owner</th>
+              <td>${owner.slice(0, 6)}...${owner.slice(-4)}</td>
+            </tr>
+            <tr>
+              <th>Grace Period Ends</th>
+              <td>${expirationDate}</td>
+            </tr>
+            <tr>
+              <th>Days Remaining</th>
+              <td>${daysRemaining}</td>
+            </tr>
+          </mj-table>
+          <mj-button
+            background-color="${isUrgent ? '#dc2626' : '#f59e0b'}"
+            border-radius="5px"
+            font-weight="600"
+            href="https://arns.app/manage/${arnsName}"
+          >
+            Renew Now
+          </mj-button>
+        </mj-column>
+      </mj-section>
+
+      <mj-section>
+        <mj-column width="60%">
+          <mj-text
+            font-size="12px"
+            color="#afafaf"
+            align="center"
+          >
+            <br/>
+            You are receiving this email because you subscribed to subscribe.permagate.io
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+  </mj-body>
+</mjml>
+  `;
+    }
     default: {
       return `
 <mjml>
@@ -2370,6 +2476,32 @@ export async function getNotificationFields(
           value: `${totalDistributedRewards.toFixed(2).toLocaleString()} $ARIO ($${totalDistributedRewardsUSD.toFixed(2).toLocaleString()} USD) (${((totalDistributedRewards / totalEligibleRewards) * 100).toFixed(2)}%)`,
         },
         { key: 'Distribution Timestamp', value: distributedTimestamp },
+      );
+      break;
+    }
+    case 'arns-name-expiration-notice': {
+      const arnsName = event.eventData.data.name;
+      const owner = event.eventData.data.owner;
+      const gracePeriodEndsAt = event.eventData.data.gracePeriodEndsAt;
+      const daysRemaining = event.eventData.data.daysRemaining;
+      const notificationType = event.eventData.data.notificationType;
+      const displayName = formatNameForDisplay(arnsName);
+
+      fields.push(
+        { key: 'Name', value: displayName },
+        { key: 'Owner', value: `${owner.slice(0, 6)}...${owner.slice(-4)}` },
+        {
+          key: 'Status',
+          value:
+            notificationType === 'grace_period_start'
+              ? 'Grace Period Started'
+              : 'Expiring Soon',
+        },
+        { key: 'Days Remaining', value: `${daysRemaining}` },
+        {
+          key: 'Grace Period Ends',
+          value: new Date(gracePeriodEndsAt).toLocaleString(),
+        },
       );
       break;
     }
