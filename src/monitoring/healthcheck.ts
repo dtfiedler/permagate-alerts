@@ -83,8 +83,10 @@ export class GatewayHealthcheckService {
         } else {
           // Check for nested cause (e.g., certificate errors from fetch)
           const cause = (error as any).cause as Error & { code?: string };
-          if (cause?.code) {
-            errorMessage = `${error.message} (${cause.code})`;
+          if (cause?.message && cause?.code) {
+            errorMessage = `${cause.message} (${cause.code})`;
+          } else if (cause?.message) {
+            errorMessage = cause.message;
           } else {
             errorMessage = error.message;
           }
