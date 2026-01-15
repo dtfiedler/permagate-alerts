@@ -95,3 +95,14 @@ export const twitterApiSecret = process.env.TWITTER_API_SECRET;
 export const arnsResolverUrl =
   process.env.ARNS_RESOLVER_URL || 'https://permagate.io/ar-io/resolver';
 export const disableArnsSync = process.env.DISABLE_ARNS_SYNC === 'true';
+
+// Gateway Monitoring
+export const disableGatewayMonitoring =
+  process.env.DISABLE_GATEWAY_MONITORING === 'true';
+export const gatewayHealthcheckTimeoutMs = process.env
+  .GATEWAY_HEALTHCHECK_TIMEOUT_MS
+  ? +process.env.GATEWAY_HEALTHCHECK_TIMEOUT_MS
+  : 10000;
+export const maxMonitorsPerSubscriber = process.env.MAX_MONITORS_PER_SUBSCRIBER
+  ? +process.env.MAX_MONITORS_PER_SUBSCRIBER
+  : 3;

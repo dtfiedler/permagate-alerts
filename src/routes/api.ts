@@ -341,14 +341,14 @@ apiRouter.get(
             {
               eventType: subscription.eventType,
               addresses: subscription.addresses,
-              webhookIds: webhooksForEvent.map((w) => w.id),
+              webhook_ids: webhooksForEvent.map((w) => w.id),
             },
           ];
           return acc;
         },
         {} as Record<
           string,
-          { eventType: string; addresses: string[]; webhookIds: number[] }[]
+          { eventType: string; addresses: string[]; webhook_ids: number[] }[]
         >,
       );
       return res.status(200).json(subscriptionsByProcessId);
@@ -1416,6 +1416,734 @@ apiRouter.get(
       return res
         .status(500)
         .json({ error: 'An error occurred while getting ArNS name info' });
+    }
+  },
+);
+
+// Gateway Monitor routes
+
+// List subscriber's gateway monitors
+apiRouter.get(
+  '/api/monitors',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      const monitors = await req.db.getGatewayMonitorsForSubscriber(
+        subscriber.id,
+      );
+
+      // Fetch webhook IDs for each monitor
+      const monitorsWithWebhooks = await Promise.all(
+        monitors.map(async (monitor) => {
+          const webhookLinks = await req.db.getMonitorWebhooks(monitor.id);
+          return {
+            ...monitor,
+            webhook_ids: webhookLinks.map((link) => link.webhook_id),
+          };
+        }),
+      );
+
+      return res.status(200).json(monitorsWithWebhooks);
+    } catch (error) {
+      logger.error('Error listing gateway monitors:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while listing monitors' });
+    }
+  },
+);
+
+// Create a new gateway monitor
+apiRouter.post(
+  '/api/monitors',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      const {
+        fqdn,
+        checkIntervalMinutes,
+        failureThreshold,
+        notifyEmail,
+        webhook_ids,
+      } = req.body;
+
+      if (!fqdn || typeof fqdn !== 'string') {
+        return res.status(400).json({ error: 'FQDN is required' });
+      }
+
+      // Validate FQDN format (basic check)
+      const fqdnRegex = /^[a-zA-Z0-9][a-zA-Z0-9-_.]+[a-zA-Z0-9]$/;
+      if (!fqdnRegex.test(fqdn)) {
+        return res.status(400).json({ error: 'Invalid FQDN format' });
+      }
+
+      // Check monitor limit (max 3 per subscriber)
+      const { maxMonitorsPerSubscriber } = await import('../config.js');
+      const monitorCount = await req.db.getMonitorCountForSubscriber(
+        subscriber.id,
+      );
+      if (monitorCount >= maxMonitorsPerSubscriber) {
+        return res.status(400).json({
+          error: `Maximum ${maxMonitorsPerSubscriber} monitors allowed per subscriber`,
+        });
+      }
+
+      // Validate check interval (minimum 1 minute)
+      const interval = checkIntervalMinutes ?? 5;
+      if (interval < 1) {
+        return res
+          .status(400)
+          .json({ error: 'Check interval must be at least 1 minute' });
+      }
+
+      // Validate webhook IDs if provided
+      if (webhook_ids !== undefined) {
+        if (!Array.isArray(webhook_ids)) {
+          return res
+            .status(400)
+            .json({ error: 'webhook_ids must be an array of numbers' });
+        }
+        // Verify all webhooks belong to this subscriber
+        for (const webhookId of webhook_ids) {
+          const webhook = await req.db.getWebhook(webhookId);
+          if (!webhook) {
+            return res
+              .status(404)
+              .json({ error: `Webhook ${webhookId} not found` });
+          }
+          if (webhook.subscriber_id !== subscriber.id) {
+            return res.status(403).json({
+              error: `Webhook ${webhookId} does not belong to this subscriber`,
+            });
+          }
+        }
+      }
+
+      const monitor = await req.db.createGatewayMonitor({
+        subscriber_id: subscriber.id,
+        fqdn: fqdn.toLowerCase(),
+        enabled: true,
+        check_interval_minutes: interval,
+        failure_threshold: failureThreshold ?? 3,
+        notify_email: notifyEmail ?? true,
+      });
+
+      if (!monitor) {
+        return res.status(500).json({ error: 'Failed to create monitor' });
+      }
+
+      // Link webhooks if provided
+      if (webhook_ids && webhook_ids.length > 0) {
+        for (const webhookId of webhook_ids) {
+          await req.db.addMonitorWebhook(monitor.id, webhookId, {
+            notifyOnDown: true,
+            notifyOnRecovery: true,
+          });
+        }
+      }
+
+      logger.info('Created gateway monitor', {
+        monitorId: monitor.id,
+        subscriberId: subscriber.id,
+        fqdn: monitor.fqdn,
+        linkedWebhooks: webhook_ids?.length ?? 0,
+      });
+
+      return res.status(201).json(monitor);
+    } catch (error: any) {
+      if (error.code === 'SQLITE_CONSTRAINT') {
+        return res.status(409).json({
+          error: 'A monitor for this gateway already exists',
+        });
+      }
+      logger.error('Error creating gateway monitor:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while creating the monitor' });
+    }
+  },
+);
+
+// Get a specific gateway monitor
+apiRouter.get(
+  '/api/monitors/:id',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+      const monitorId = parseInt(req.params.id, 10);
+
+      if (isNaN(monitorId)) {
+        return res.status(400).json({ error: 'Invalid monitor ID' });
+      }
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      const monitor = await req.db.getGatewayMonitor(monitorId);
+      if (!monitor) {
+        return res.status(404).json({ error: 'Monitor not found' });
+      }
+      if (monitor.subscriber_id !== subscriber.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      // Include webhook IDs
+      const webhookLinks = await req.db.getMonitorWebhooks(monitorId);
+      const monitorWithWebhooks = {
+        ...monitor,
+        webhook_ids: webhookLinks.map((link) => link.webhook_id),
+      };
+
+      return res.status(200).json(monitorWithWebhooks);
+    } catch (error) {
+      logger.error('Error getting gateway monitor:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while getting the monitor' });
+    }
+  },
+);
+
+// Update a gateway monitor
+apiRouter.put(
+  '/api/monitors/:id',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+      const monitorId = parseInt(req.params.id, 10);
+
+      if (isNaN(monitorId)) {
+        return res.status(400).json({ error: 'Invalid monitor ID' });
+      }
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      const existingMonitor = await req.db.getGatewayMonitor(monitorId);
+      if (!existingMonitor) {
+        return res.status(404).json({ error: 'Monitor not found' });
+      }
+      if (existingMonitor.subscriber_id !== subscriber.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      const {
+        enabled,
+        checkIntervalMinutes,
+        failureThreshold,
+        notifyEmail,
+        webhook_ids,
+      } = req.body;
+
+      const updates: Record<string, any> = {};
+
+      if (enabled !== undefined) {
+        updates.enabled = Boolean(enabled);
+      }
+
+      if (checkIntervalMinutes !== undefined) {
+        if (checkIntervalMinutes < 1) {
+          return res
+            .status(400)
+            .json({ error: 'Check interval must be at least 1 minute' });
+        }
+        updates.check_interval_minutes = checkIntervalMinutes;
+      }
+
+      if (failureThreshold !== undefined) {
+        if (failureThreshold < 1) {
+          return res
+            .status(400)
+            .json({ error: 'Failure threshold must be at least 1' });
+        }
+        updates.failure_threshold = failureThreshold;
+      }
+
+      if (notifyEmail !== undefined) {
+        updates.notify_email = Boolean(notifyEmail);
+      }
+
+      // Validate webhook IDs if provided
+      if (webhook_ids !== undefined) {
+        if (!Array.isArray(webhook_ids)) {
+          return res
+            .status(400)
+            .json({ error: 'webhook_ids must be an array of numbers' });
+        }
+        // Verify all webhooks belong to this subscriber
+        for (const webhookId of webhook_ids) {
+          const webhook = await req.db.getWebhook(webhookId);
+          if (!webhook) {
+            return res
+              .status(404)
+              .json({ error: `Webhook ${webhookId} not found` });
+          }
+          if (webhook.subscriber_id !== subscriber.id) {
+            return res.status(403).json({
+              error: `Webhook ${webhookId} does not belong to this subscriber`,
+            });
+          }
+        }
+      }
+
+      const updatedMonitor = await req.db.updateGatewayMonitor(
+        monitorId,
+        updates,
+      );
+
+      // Update webhook links if provided (replace existing links)
+      if (webhook_ids !== undefined) {
+        // Get current webhooks and remove them
+        const currentWebhooks = await req.db.getMonitorWebhooks(monitorId);
+        for (const link of currentWebhooks) {
+          await req.db.removeMonitorWebhook(monitorId, link.webhook_id);
+        }
+        // Add new webhook links
+        for (const webhookId of webhook_ids) {
+          await req.db.addMonitorWebhook(monitorId, webhookId, {
+            notifyOnDown: true,
+            notifyOnRecovery: true,
+          });
+        }
+      }
+
+      logger.info('Updated gateway monitor', {
+        monitorId,
+        subscriberId: subscriber.id,
+        updates: Object.keys(updates),
+        webhooksUpdated: webhook_ids !== undefined,
+      });
+
+      return res.status(200).json(updatedMonitor);
+    } catch (error) {
+      logger.error('Error updating gateway monitor:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while updating the monitor' });
+    }
+  },
+);
+
+// Delete a gateway monitor
+apiRouter.delete(
+  '/api/monitors/:id',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+      const monitorId = parseInt(req.params.id, 10);
+
+      if (isNaN(monitorId)) {
+        return res.status(400).json({ error: 'Invalid monitor ID' });
+      }
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      const existingMonitor = await req.db.getGatewayMonitor(monitorId);
+      if (!existingMonitor) {
+        return res.status(404).json({ error: 'Monitor not found' });
+      }
+      if (existingMonitor.subscriber_id !== subscriber.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      await req.db.deleteGatewayMonitor(monitorId);
+
+      logger.info('Deleted gateway monitor', {
+        monitorId,
+        subscriberId: subscriber.id,
+      });
+
+      return res.status(200).json({ message: 'Monitor deleted successfully' });
+    } catch (error) {
+      logger.error('Error deleting gateway monitor:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while deleting the monitor' });
+    }
+  },
+);
+
+// Get healthcheck history for a monitor
+apiRouter.get(
+  '/api/monitors/:id/history',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+      const monitorId = parseInt(req.params.id, 10);
+      const limit = parseInt(req.query.limit as string, 10) || 100;
+
+      if (isNaN(monitorId)) {
+        return res.status(400).json({ error: 'Invalid monitor ID' });
+      }
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      const monitor = await req.db.getGatewayMonitor(monitorId);
+      if (!monitor) {
+        return res.status(404).json({ error: 'Monitor not found' });
+      }
+      if (monitor.subscriber_id !== subscriber.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      const history = await req.db.getHealthcheckHistory(monitorId, limit);
+
+      return res.status(200).json(history);
+    } catch (error) {
+      logger.error('Error getting healthcheck history:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while getting history' });
+    }
+  },
+);
+
+// Get webhooks linked to a monitor
+apiRouter.get(
+  '/api/monitors/:id/webhooks',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+      const monitorId = parseInt(req.params.id, 10);
+
+      if (isNaN(monitorId)) {
+        return res.status(400).json({ error: 'Invalid monitor ID' });
+      }
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      const monitor = await req.db.getGatewayMonitor(monitorId);
+      if (!monitor) {
+        return res.status(404).json({ error: 'Monitor not found' });
+      }
+      if (monitor.subscriber_id !== subscriber.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      const webhooks = await req.db.getMonitorWebhooks(monitorId);
+
+      return res.status(200).json(webhooks);
+    } catch (error) {
+      logger.error('Error getting monitor webhooks:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while getting monitor webhooks' });
+    }
+  },
+);
+
+// Link a webhook to a monitor
+apiRouter.post(
+  '/api/monitors/:id/webhooks',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+      const monitorId = parseInt(req.params.id, 10);
+
+      if (isNaN(monitorId)) {
+        return res.status(400).json({ error: 'Invalid monitor ID' });
+      }
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      const monitor = await req.db.getGatewayMonitor(monitorId);
+      if (!monitor) {
+        return res.status(404).json({ error: 'Monitor not found' });
+      }
+      if (monitor.subscriber_id !== subscriber.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      const { webhookId, notifyOnDown, notifyOnRecovery } = req.body;
+
+      if (!webhookId || typeof webhookId !== 'number') {
+        return res.status(400).json({ error: 'Webhook ID is required' });
+      }
+
+      // Verify the webhook belongs to this subscriber
+      const webhook = await req.db.getWebhook(webhookId);
+      if (!webhook) {
+        return res.status(404).json({ error: 'Webhook not found' });
+      }
+      if (webhook.subscriber_id !== subscriber.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      await req.db.addMonitorWebhook(monitorId, webhookId, {
+        notifyOnDown: notifyOnDown ?? true,
+        notifyOnRecovery: notifyOnRecovery ?? true,
+      });
+
+      logger.info('Linked webhook to monitor', {
+        monitorId,
+        webhookId,
+        subscriberId: subscriber.id,
+      });
+
+      return res
+        .status(201)
+        .json({ message: 'Webhook linked to monitor successfully' });
+    } catch (error: any) {
+      if (error.code === 'SQLITE_CONSTRAINT') {
+        return res.status(409).json({
+          error: 'Webhook is already linked to this monitor',
+        });
+      }
+      logger.error('Error linking webhook to monitor:', error);
+      return res
+        .status(500)
+        .json({ error: 'An error occurred while linking webhook to monitor' });
+    }
+  },
+);
+
+// Unlink a webhook from a monitor
+apiRouter.delete(
+  '/api/monitors/:id/webhooks/:webhookId',
+  // @ts-ignore
+  async (req: Request, res: Response) => {
+    try {
+      const email = req.headers['x-user-email'] as string;
+      const authHeader = req.headers.authorization;
+      const monitorId = parseInt(req.params.id, 10);
+      const webhookId = parseInt(req.params.webhookId, 10);
+
+      if (isNaN(monitorId) || isNaN(webhookId)) {
+        return res.status(400).json({ error: 'Invalid monitor or webhook ID' });
+      }
+
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res
+          .status(401)
+          .json({ error: 'Authorization token is required' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { valid: validHash, decodedEmail } = verifyHash(token);
+
+      if (!validHash || decodedEmail !== email) {
+        return res.status(401).json({ error: 'Invalid authorization token' });
+      }
+
+      const subscriber = await req.db.getSubscriberByEmail(email);
+      if (!subscriber) {
+        return res.status(404).json({ error: 'Subscriber not found' });
+      }
+
+      const monitor = await req.db.getGatewayMonitor(monitorId);
+      if (!monitor) {
+        return res.status(404).json({ error: 'Monitor not found' });
+      }
+      if (monitor.subscriber_id !== subscriber.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      const deleted = await req.db.removeMonitorWebhook(monitorId, webhookId);
+
+      if (!deleted) {
+        return res
+          .status(404)
+          .json({ error: 'Webhook not linked to this monitor' });
+      }
+
+      logger.info('Unlinked webhook from monitor', {
+        monitorId,
+        webhookId,
+        subscriberId: subscriber.id,
+      });
+
+      return res
+        .status(200)
+        .json({ message: 'Webhook unlinked from monitor successfully' });
+    } catch (error) {
+      logger.error('Error unlinking webhook from monitor:', error);
+      return res.status(500).json({
+        error: 'An error occurred while unlinking webhook from monitor',
+      });
     }
   },
 );
