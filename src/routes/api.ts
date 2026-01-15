@@ -1514,7 +1514,7 @@ apiRouter.post(
         checkIntervalMinutes,
         failureThreshold,
         notifyEmail,
-        webhook_ids,
+        webhookIds,
       } = req.body;
 
       if (!fqdn || typeof fqdn !== 'string') {
@@ -1547,14 +1547,14 @@ apiRouter.post(
       }
 
       // Validate webhook IDs if provided
-      if (webhook_ids !== undefined) {
-        if (!Array.isArray(webhook_ids)) {
+      if (webhookIds !== undefined) {
+        if (!Array.isArray(webhookIds)) {
           return res
             .status(400)
-            .json({ error: 'webhook_ids must be an array of numbers' });
+            .json({ error: 'webhookIds must be an array of numbers' });
         }
         // Verify all webhooks belong to this subscriber
-        for (const webhookId of webhook_ids) {
+        for (const webhookId of webhookIds) {
           const webhook = await req.db.getWebhook(webhookId);
           if (!webhook) {
             return res
@@ -1583,8 +1583,8 @@ apiRouter.post(
       }
 
       // Link webhooks if provided
-      if (webhook_ids && webhook_ids.length > 0) {
-        for (const webhookId of webhook_ids) {
+      if (webhookIds && webhookIds.length > 0) {
+        for (const webhookId of webhookIds) {
           await req.db.addMonitorWebhook(monitor.id, webhookId, {
             notifyOnDown: true,
             notifyOnRecovery: true,
@@ -1596,7 +1596,7 @@ apiRouter.post(
         monitorId: monitor.id,
         subscriberId: subscriber.id,
         fqdn: monitor.fqdn,
-        linkedWebhooks: webhook_ids?.length ?? 0,
+        linkedWebhooks: webhookIds?.length ?? 0,
       });
 
       return res.status(201).json(monitor);
@@ -1724,7 +1724,7 @@ apiRouter.put(
         checkIntervalMinutes,
         failureThreshold,
         notifyEmail,
-        webhook_ids,
+        webhookIds,
       } = req.body;
 
       const updates: Record<string, any> = {};
@@ -1756,14 +1756,14 @@ apiRouter.put(
       }
 
       // Validate webhook IDs if provided
-      if (webhook_ids !== undefined) {
-        if (!Array.isArray(webhook_ids)) {
+      if (webhookIds !== undefined) {
+        if (!Array.isArray(webhookIds)) {
           return res
             .status(400)
-            .json({ error: 'webhook_ids must be an array of numbers' });
+            .json({ error: 'webhookIds must be an array of numbers' });
         }
         // Verify all webhooks belong to this subscriber
-        for (const webhookId of webhook_ids) {
+        for (const webhookId of webhookIds) {
           const webhook = await req.db.getWebhook(webhookId);
           if (!webhook) {
             return res
@@ -1784,14 +1784,14 @@ apiRouter.put(
       );
 
       // Update webhook links if provided (replace existing links)
-      if (webhook_ids !== undefined) {
+      if (webhookIds !== undefined) {
         // Get current webhooks and remove them
         const currentWebhooks = await req.db.getMonitorWebhooks(monitorId);
         for (const link of currentWebhooks) {
           await req.db.removeMonitorWebhook(monitorId, link.webhook_id);
         }
         // Add new webhook links
-        for (const webhookId of webhook_ids) {
+        for (const webhookId of webhookIds) {
           await req.db.addMonitorWebhook(monitorId, webhookId, {
             notifyOnDown: true,
             notifyOnRecovery: true,
@@ -1803,7 +1803,7 @@ apiRouter.put(
         monitorId,
         subscriberId: subscriber.id,
         updates: Object.keys(updates),
-        webhooksUpdated: webhook_ids !== undefined,
+        webhooksUpdated: webhookIds !== undefined,
       });
 
       return res.status(200).json(updatedMonitor);
