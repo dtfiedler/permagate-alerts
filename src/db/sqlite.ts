@@ -20,6 +20,11 @@ import {
   ArNSExpirationNotification,
   ArNSNameSubscription,
   ArNSNotificationType,
+  GatewayMonitor,
+  NewGatewayMonitor,
+  GatewayMonitorStatus,
+  GatewayHealthcheckHistory,
+  GatewayMonitorWebhook,
 } from './schema.js';
 
 interface BaseStore {
@@ -773,6 +778,275 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
       }
     }
 
+    return result;
+  }
+
+  // Gateway Monitor Methods
+  async createGatewayMonitor(
+    data: NewGatewayMonitor,
+  ): Promise<GatewayMonitor | undefined> {
+    const [id] = await this.knex('gateway_monitors')
+      .insert({
+        subscriber_id: data.subscriber_id,
+        fqdn: data.fqdn.toLowerCase(),
+        enabled: data.enabled ?? true,
+        check_interval_minutes: data.check_interval_minutes ?? 5,
+        failure_threshold: data.failure_threshold ?? 3,
+        notify_email: data.notify_email ?? true,
+      })
+      .returning('id');
+
+    if (!id) {
+      return undefined;
+    }
+
+    return this.getGatewayMonitor(typeof id === 'object' ? id.id : id);
+  }
+
+  async getGatewayMonitor(id: number): Promise<GatewayMonitor | undefined> {
+    const monitor = await this.knex<GatewayMonitor>('gateway_monitors')
+      .where({ id })
+      .first();
+    if (!monitor) {
+      return undefined;
+    }
+    return {
+      ...monitor,
+      enabled: Boolean(monitor.enabled),
+      notify_email: Boolean(monitor.notify_email),
+    };
+  }
+
+  async getGatewayMonitorsForSubscriber(
+    subscriberId: number,
+  ): Promise<GatewayMonitor[]> {
+    const monitors = await this.knex<GatewayMonitor>('gateway_monitors')
+      .where({ subscriber_id: subscriberId })
+      .orderBy('created_at', 'desc');
+    return monitors.map((m) => ({
+      ...m,
+      enabled: Boolean(m.enabled),
+      notify_email: Boolean(m.notify_email),
+    }));
+  }
+
+  async getMonitorCountForSubscriber(subscriberId: number): Promise<number> {
+    const result = await this.knex('gateway_monitors')
+      .where({ subscriber_id: subscriberId })
+      .count<{ count: string | number }>('* as count')
+      .first();
+    return Number(result?.count || 0);
+  }
+
+  async updateGatewayMonitor(
+    id: number,
+    data: Partial<
+      Omit<GatewayMonitor, 'id' | 'subscriber_id' | 'created_at' | 'updated_at'>
+    >,
+  ): Promise<GatewayMonitor | undefined> {
+    await this.knex('gateway_monitors')
+      .where({ id })
+      .update({
+        ...data,
+        updated_at: this.knex.fn.now(),
+      });
+    return this.getGatewayMonitor(id);
+  }
+
+  async deleteGatewayMonitor(id: number): Promise<boolean> {
+    const deleted = await this.knex('gateway_monitors').where({ id }).del();
+    return deleted > 0;
+  }
+
+  async getMonitorsDueForCheck(): Promise<GatewayMonitor[]> {
+    // Get enabled monitors where enough time has passed since last check
+    const monitors = await this.knex<GatewayMonitor>('gateway_monitors')
+      .where({ enabled: true })
+      .andWhere(function () {
+        this.whereNull('last_check_at').orWhereRaw(
+          "datetime(last_check_at, '+' || check_interval_minutes || ' minutes') <= datetime('now')",
+        );
+      })
+      .select('*');
+
+    return monitors.map((m) => ({
+      ...m,
+      enabled: Boolean(m.enabled),
+      notify_email: Boolean(m.notify_email),
+    }));
+  }
+
+  async updateMonitorAfterCheck(
+    id: number,
+    result: {
+      success: boolean;
+      responseTimeMs: number | null;
+      statusCode: number | null;
+      errorMessage: string | null;
+    },
+  ): Promise<GatewayMonitor | undefined> {
+    const monitor = await this.getGatewayMonitor(id);
+    if (!monitor) {
+      return undefined;
+    }
+
+    const newStatus: GatewayMonitorStatus = result.success
+      ? 'healthy'
+      : 'unhealthy';
+    const newConsecutiveFailures = result.success
+      ? 0
+      : monitor.consecutive_failures + 1;
+
+    await this.knex('gateway_monitors')
+      .where({ id })
+      .update({
+        current_status: newStatus,
+        consecutive_failures: newConsecutiveFailures,
+        last_check_at: this.knex.fn.now(),
+        updated_at: this.knex.fn.now(),
+      });
+
+    return this.getGatewayMonitor(id);
+  }
+
+  async markMonitorAlertSent(id: number): Promise<void> {
+    await this.knex('gateway_monitors')
+      .where({ id })
+      .update({
+        last_alert_sent_at: this.knex.fn.now(),
+        updated_at: this.knex.fn.now(),
+      });
+  }
+
+  async markMonitorRecoverySent(id: number): Promise<void> {
+    await this.knex('gateway_monitors')
+      .where({ id })
+      .update({
+        last_recovery_sent_at: this.knex.fn.now(),
+        updated_at: this.knex.fn.now(),
+      });
+  }
+
+  // Gateway Healthcheck History Methods
+  async addHealthcheckHistory(
+    monitorId: number,
+    result: {
+      success: boolean;
+      responseTimeMs: number | null;
+      statusCode: number | null;
+      errorMessage: string | null;
+    },
+  ): Promise<void> {
+    await this.knex('gateway_healthcheck_history').insert({
+      monitor_id: monitorId,
+      status: result.success ? 'success' : 'failed',
+      response_time_ms: result.responseTimeMs,
+      status_code: result.statusCode,
+      error_message: result.errorMessage,
+    });
+  }
+
+  async getHealthcheckHistory(
+    monitorId: number,
+    limit: number = 100,
+  ): Promise<GatewayHealthcheckHistory[]> {
+    return this.knex<GatewayHealthcheckHistory>('gateway_healthcheck_history')
+      .where({ monitor_id: monitorId })
+      .orderBy('checked_at', 'desc')
+      .limit(limit);
+  }
+
+  async pruneHealthcheckHistory(olderThanDays: number): Promise<number> {
+    const deleted = await this.knex('gateway_healthcheck_history')
+      .whereRaw(
+        "datetime(checked_at, '+' || ? || ' days') < datetime('now')",
+        [olderThanDays],
+      )
+      .del();
+    return deleted;
+  }
+
+  // Gateway Monitor Webhook Methods
+  async addMonitorWebhook(
+    monitorId: number,
+    webhookId: number,
+    options?: { notifyOnDown?: boolean; notifyOnRecovery?: boolean },
+  ): Promise<void> {
+    await this.knex<GatewayMonitorWebhook>('gateway_monitor_webhooks')
+      .insert({
+        monitor_id: monitorId,
+        webhook_id: webhookId,
+        notify_on_down: options?.notifyOnDown ?? true,
+        notify_on_recovery: options?.notifyOnRecovery ?? true,
+      })
+      .onConflict(['monitor_id', 'webhook_id'])
+      .merge({
+        notify_on_down: options?.notifyOnDown ?? true,
+        notify_on_recovery: options?.notifyOnRecovery ?? true,
+      });
+  }
+
+  async removeMonitorWebhook(
+    monitorId: number,
+    webhookId: number,
+  ): Promise<boolean> {
+    const deleted = await this.knex<GatewayMonitorWebhook>(
+      'gateway_monitor_webhooks',
+    )
+      .where({ monitor_id: monitorId, webhook_id: webhookId })
+      .del();
+    return deleted > 0;
+  }
+
+  async getMonitorWebhooks(monitorId: number): Promise<GatewayMonitorWebhook[]> {
+    const results = await this.knex<GatewayMonitorWebhook>(
+      'gateway_monitor_webhooks',
+    )
+      .where({ monitor_id: monitorId })
+      .select('*');
+    return results.map((r) => ({
+      ...r,
+      notify_on_down: Boolean(r.notify_on_down),
+      notify_on_recovery: Boolean(r.notify_on_recovery),
+    }));
+  }
+
+  async getWebhooksForMonitorAlert(
+    monitorId: number,
+    alertType: 'down' | 'recovery',
+  ): Promise<Webhook[]> {
+    const column =
+      alertType === 'down' ? 'notify_on_down' : 'notify_on_recovery';
+    const webhooks = await this.knex<DBWebhook>('webhooks')
+      .join(
+        'gateway_monitor_webhooks',
+        'webhooks.id',
+        '=',
+        'gateway_monitor_webhooks.webhook_id',
+      )
+      .where({
+        'gateway_monitor_webhooks.monitor_id': monitorId,
+        [`gateway_monitor_webhooks.${column}`]: true,
+        'webhooks.active': true,
+      })
+      .select('webhooks.*');
+
+    return webhooks.map((w) => this.dbWebhookToWebhook(w));
+  }
+
+  async getSubscriberForMonitor(
+    monitorId: number,
+  ): Promise<Subscriber | undefined> {
+    const result = await this.knex<Subscriber>('subscribers')
+      .join(
+        'gateway_monitors',
+        'subscribers.id',
+        '=',
+        'gateway_monitors.subscriber_id',
+      )
+      .where({ 'gateway_monitors.id': monitorId })
+      .select('subscribers.*')
+      .first();
     return result;
   }
 }

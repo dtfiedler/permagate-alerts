@@ -308,6 +308,76 @@ const arnsNameSubscriptionSchema = z.object({
 
 export type ArNSNameSubscription = z.infer<typeof arnsNameSubscriptionSchema>;
 
+// Gateway Monitor schemas
+export const gatewayMonitorStatuses = [
+  'unknown',
+  'healthy',
+  'unhealthy',
+] as const;
+export type GatewayMonitorStatus = (typeof gatewayMonitorStatuses)[number];
+
+const gatewayMonitorSchema = z.object({
+  id: z.number(),
+  subscriber_id: z.number(),
+  fqdn: z.string(),
+  enabled: z.boolean().default(true),
+  check_interval_minutes: z.number().default(5),
+  failure_threshold: z.number().default(3),
+  current_status: z.enum(gatewayMonitorStatuses).default('unknown'),
+  consecutive_failures: z.number().default(0),
+  last_check_at: z.date().nullable(),
+  last_alert_sent_at: z.date().nullable(),
+  last_recovery_sent_at: z.date().nullable(),
+  notify_email: z.boolean().default(true),
+  created_at: z.date(),
+  updated_at: z.date(),
+});
+
+export type GatewayMonitor = z.infer<typeof gatewayMonitorSchema>;
+
+const newGatewayMonitorSchema = gatewayMonitorSchema.omit({
+  id: true,
+  current_status: true,
+  consecutive_failures: true,
+  last_check_at: true,
+  last_alert_sent_at: true,
+  last_recovery_sent_at: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export type NewGatewayMonitor = z.infer<typeof newGatewayMonitorSchema>;
+
+// Gateway healthcheck history schema
+export const healthcheckStatuses = ['success', 'failed'] as const;
+export type HealthcheckStatus = (typeof healthcheckStatuses)[number];
+
+const gatewayHealthcheckHistorySchema = z.object({
+  id: z.number(),
+  monitor_id: z.number(),
+  status: z.enum(healthcheckStatuses),
+  response_time_ms: z.number().nullable(),
+  status_code: z.number().nullable(),
+  error_message: z.string().nullable(),
+  checked_at: z.date(),
+});
+
+export type GatewayHealthcheckHistory = z.infer<
+  typeof gatewayHealthcheckHistorySchema
+>;
+
+// Gateway monitor webhook link schema
+const gatewayMonitorWebhookSchema = z.object({
+  id: z.number(),
+  monitor_id: z.number(),
+  webhook_id: z.number(),
+  notify_on_down: z.boolean().default(true),
+  notify_on_recovery: z.boolean().default(true),
+  created_at: z.date(),
+});
+
+export type GatewayMonitorWebhook = z.infer<typeof gatewayMonitorWebhookSchema>;
+
 // Export schemas for validation
 export const schemas = {
   subscriber: subscriberSchema,
@@ -322,4 +392,8 @@ export const schemas = {
   newArnsName: newArnsNameSchema,
   arnsExpirationNotification: arnsExpirationNotificationSchema,
   arnsNameSubscription: arnsNameSubscriptionSchema,
+  gatewayMonitor: gatewayMonitorSchema,
+  newGatewayMonitor: newGatewayMonitorSchema,
+  gatewayHealthcheckHistory: gatewayHealthcheckHistorySchema,
+  gatewayMonitorWebhook: gatewayMonitorWebhookSchema,
 };
