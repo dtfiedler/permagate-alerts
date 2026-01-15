@@ -644,6 +644,25 @@ apiRouter.post(
         return res.status(404).json({ error: 'Subscriber not found' });
       }
 
+      // Check webhook limit based on subscription tier
+      const { freeWebhookLimit, premiumWebhookLimit } = await import(
+        '../config.js'
+      );
+      const webhookLimit = subscriber.premium
+        ? premiumWebhookLimit
+        : freeWebhookLimit;
+      const webhookCount = await req.db.getWebhookCountForSubscriber(
+        subscriber.id,
+      );
+      if (webhookCount >= webhookLimit) {
+        const upgradeMessage = subscriber.premium
+          ? ''
+          : ' Upgrade to premium for up to 10 webhooks.';
+        return res.status(403).json({
+          error: `Maximum ${webhookLimit} webhook${webhookLimit === 1 ? '' : 's'} allowed for your subscription tier.${upgradeMessage}`,
+        });
+      }
+
       const { url, description, type, active, authorization } = req.body;
 
       if (!url || typeof url !== 'string') {
@@ -1527,14 +1546,22 @@ apiRouter.post(
         return res.status(400).json({ error: 'Invalid FQDN format' });
       }
 
-      // Check monitor limit (max 3 per subscriber)
-      const { maxMonitorsPerSubscriber } = await import('../config.js');
+      // Check monitor limit based on subscription tier
+      const { freeMonitorLimit, premiumMonitorLimit } = await import(
+        '../config.js'
+      );
+      const monitorLimit = subscriber.premium
+        ? premiumMonitorLimit
+        : freeMonitorLimit;
       const monitorCount = await req.db.getMonitorCountForSubscriber(
         subscriber.id,
       );
-      if (monitorCount >= maxMonitorsPerSubscriber) {
-        return res.status(400).json({
-          error: `Maximum ${maxMonitorsPerSubscriber} monitors allowed per subscriber`,
+      if (monitorCount >= monitorLimit) {
+        const upgradeMessage = subscriber.premium
+          ? ''
+          : ' Upgrade to premium for up to 10 monitors.';
+        return res.status(403).json({
+          error: `Maximum ${monitorLimit} monitor${monitorLimit === 1 ? '' : 's'} allowed for your subscription tier.${upgradeMessage}`,
         });
       }
 

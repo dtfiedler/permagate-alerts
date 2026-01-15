@@ -33,6 +33,10 @@ export const auth0ClientSecret = process.env.AUTH0_CLIENT_SECRET;
 // Email
 export const disableEmails = process.env.DISABLE_EMAIL_NOTIFICATIONS === 'true';
 
+// Webhooks (subscriber-defined webhooks)
+export const disableWebhookNotifications =
+  process.env.DISABLE_WEBHOOK_NOTIFICATIONS === 'true';
+
 // Notifications
 export const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
 export const enableSlackNotifications =
@@ -103,6 +107,21 @@ export const gatewayHealthcheckTimeoutMs = process.env
   .GATEWAY_HEALTHCHECK_TIMEOUT_MS
   ? +process.env.GATEWAY_HEALTHCHECK_TIMEOUT_MS
   : 10000;
+// Subscriber limits (free vs premium)
+export const freeWebhookLimit = process.env.FREE_WEBHOOK_LIMIT
+  ? +process.env.FREE_WEBHOOK_LIMIT
+  : 1;
+export const premiumWebhookLimit = process.env.PREMIUM_WEBHOOK_LIMIT
+  ? +process.env.PREMIUM_WEBHOOK_LIMIT
+  : 10;
+export const freeMonitorLimit = process.env.FREE_MONITOR_LIMIT
+  ? +process.env.FREE_MONITOR_LIMIT
+  : 1;
+export const premiumMonitorLimit = process.env.PREMIUM_MONITOR_LIMIT
+  ? +process.env.PREMIUM_MONITOR_LIMIT
+  : 10;
+
+// Legacy config - now uses tier-based limits
 export const maxMonitorsPerSubscriber = process.env.MAX_MONITORS_PER_SUBSCRIBER
   ? +process.env.MAX_MONITORS_PER_SUBSCRIBER
   : 3;

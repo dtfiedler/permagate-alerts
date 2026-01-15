@@ -86,7 +86,7 @@ const twitterNotifier = config.twitterBearerToken
 const webhookNotifier = new WebhookNotificationProvider({
   db,
   logger,
-  enabled: true,
+  enabled: !config.disableWebhookNotifications,
 });
 
 // Create composite notification provider with all enabled providers
@@ -216,6 +216,11 @@ async function sendGatewayMonitorWebhook(
   alertType: string,
   data: MonitorAlertData,
 ): Promise<void> {
+  if (config.disableWebhookNotifications) {
+    logger.debug('Webhook notifications are disabled, skipping gateway monitor webhook');
+    return;
+  }
+
   const payload = formatGatewayMonitorWebhookPayload(webhook.type, alertType, data);
 
   const headers: Record<string, string> = {

@@ -539,6 +539,14 @@ export class SqliteDatabase implements SubscriberStore, EventStore {
     return deleted > 0;
   }
 
+  async getWebhookCountForSubscriber(subscriberId: number): Promise<number> {
+    const result = await this.knex('webhooks')
+      .where({ subscriber_id: subscriberId })
+      .count<{ count: string | number }>('* as count')
+      .first();
+    return Number(result?.count || 0);
+  }
+
   // Webhook Events (linking) Methods
   async addWebhookEvent(webhookId: number, eventType: string): Promise<void> {
     await this.knex<WebhookEventLink>('webhook_events')
