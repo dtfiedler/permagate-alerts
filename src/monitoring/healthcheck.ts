@@ -81,7 +81,13 @@ export class GatewayHealthcheckService {
         if (error.name === 'TimeoutError' || error.name === 'AbortError') {
           errorMessage = `Connection timeout after ${this.timeoutMs}ms`;
         } else {
-          errorMessage = error.message;
+          // Check for nested cause (e.g., certificate errors from fetch)
+          const cause = (error as any).cause as Error & { code?: string };
+          if (cause?.code) {
+            errorMessage = `${error.message} (${cause.code})`;
+          } else {
+            errorMessage = error.message;
+          }
         }
       } else {
         errorMessage = 'Unknown error';
