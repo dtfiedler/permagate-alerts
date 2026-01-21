@@ -82,6 +82,10 @@ export class GatewayMonitorProcessor {
       // Get previous status before update
       const previousStatus = monitor.current_status;
       const wasUnhealthy = previousStatus === 'unhealthy';
+      const hadAlertedDown =
+        Boolean(monitor.last_alert_sent_at) &&
+        (!monitor.last_recovery_sent_at ||
+          monitor.last_alert_sent_at > monitor.last_recovery_sent_at);
 
       // Update monitor status
       const updatedMonitor = await this.db.updateMonitorAfterCheck(
@@ -96,7 +100,7 @@ export class GatewayMonitorProcessor {
       // Check if we need to send alerts
       if (result.success) {
         // Gateway is healthy - check if we need to send recovery alert
-        if (wasUnhealthy) {
+        if (wasUnhealthy && hadAlertedDown) {
           await this.sendRecoveryAlert(updatedMonitor, result);
         }
       } else {
