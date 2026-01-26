@@ -97,7 +97,7 @@ export const getEmailSubjectForEvent = async (event: NewEvent) => {
     case 'leave-network-notice':
       return `😢 ${event.eventData.data.settings.fqdn} has left the network!`;
     case 'update-gateway-settings-notice':
-      return `🔄 ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)} (${event.eventData.data.settings.fqdn}) has updated their gateway!`;
+      return `🔄 ${event.eventData.data.settings.fqdn} has updated their gateway!`;
     case 'credit-notice':
       return `💸 ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)} received ${parseInt(event.eventData.tags.find((tag) => tag.name === 'Quantity')?.value || '0') / 1_000_000} $ARIO from ${event.eventData.tags.find((tag) => tag.name === 'Sender')?.value.slice(0, 6) + '...' + event.eventData.tags.find((tag) => tag.name === 'Sender')?.value.slice(-4)}`;
     case 'debit-notice':
@@ -1153,7 +1153,7 @@ export const getEmailBodyForEvent = async (event: NewEvent) => {
             font-weight="600"
             align="center"
           >
-            ${event.eventData.target.slice(0, 6)}...${event.eventData.target.slice(-4)} has updated their gateway (${event.eventData.data.settings.fqdn})
+            ${event.eventData.data.settings.fqdn} has updated their gateway
           </mj-text>
         </mj-column>
       </mj-section>
